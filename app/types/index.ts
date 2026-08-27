@@ -68,6 +68,7 @@ export interface SessionPerformanceEntry {
   exercise_id: string;
   set_number: number;
   reps: number;
+  rir?: number; // patient-reported reps-in-reserve for this specific set, captured on the rest screen
 }
 
 export interface WorkoutLog {

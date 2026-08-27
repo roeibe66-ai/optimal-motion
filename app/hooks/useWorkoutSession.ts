@@ -79,6 +79,10 @@ export function useWorkoutSession({
   const [currentBlockSet, setCurrentBlockSet] = useState(1);
   const [isResting, setIsResting] = useState(false);
   const [restTimer, setRestTimer] = useState(60);
+  // Tracks the starting duration alongside restTimer, purely so the rest
+  // screen's progress ring can show real elapsed-vs-total rather than a
+  // static decoration. Doesn't affect the countdown logic itself.
+  const [restTimerTotal, setRestTimerTotal] = useState(60);
   const [exTimer, setExTimer] = useState<number | null>(null);
   const [isExTimerRunning, setIsExTimerRunning] = useState(false);
 
@@ -90,6 +94,16 @@ export function useWorkoutSession({
   const [painBefore, setPainBefore] = useState<number | null>(null);
   const [rpeScore, setRpeScore] = useState<number | null>(null);
   const [selectedPainAreas, setSelectedPainAreas] = useState<string[]>([]);
+
+  // Reps/RIR are now reported on the rest screen, after the set, rather than
+  // typed live during the set. pendingSetRir is the RIR selection for the set
+  // just finished. repAdjustments is a session-local, per-assignment override
+  // for "make easier/harder" — there's no difficulty/progression data on
+  // exercises in the schema (checked the live table directly), so this
+  // adjusts the current set's own target numbers rather than swapping to a
+  // different exercise; it never touches the underlying patient_exercises row.
+  const [pendingSetRir, setPendingSetRir] = useState<number | null>(null);
+  const [repAdjustments, setRepAdjustments] = useState<Record<string, { reps: number; rir: number | null }>>({});
 
   // --- Derived session data (recomputed each render, same as the original) ---
 
@@ -132,6 +146,12 @@ export function useWorkoutSession({
 
   // The exercise actually shown/played — a swap replaces it for this slot only.
   const displayedExercise = activeAssign ? swappedExercises[activeAssign.id] || activeAssign.exercise : undefined;
+
+  // The "make easier/harder" target for this slot — falls back to the
+  // assignment's own prescribed reps/RIR until adjusted.
+  const activeAdjustment = activeAssign ? repAdjustments[activeAssign.id] : undefined;
+  const effectiveTargetReps = activeAdjustment?.reps ?? activeAssign?.reps;
+  const effectiveTargetRir = activeAdjustment ? activeAdjustment.rir : (activeAssign?.rir ?? null);
 
   // Single "what's coming up" look-ahead, used for both the background video
   // and the "Up Next" card so they can never disagree. When the next step is
@@ -182,21 +202,27 @@ export function useWorkoutSession({
         {
           exercise_id: activeAssign.exercise.id,
           set_number: currentBlockSet,
-          reps: actualRepsLogged ? parseInt(actualRepsLogged) : activeAssign.reps,
+          reps: actualRepsLogged ? parseInt(actualRepsLogged) : (effectiveTargetReps ?? activeAssign.reps),
+          rir: pendingSetRir ?? undefined,
         },
       ]);
     }
 
-    setActualRepsLogged("");
+    // actualRepsLogged/pendingSetRir are deliberately NOT cleared here — the
+    // rest screen (or, for the workout's final set, nothing) shows/edits
+    // these values for the set just finished. The reset effect below is what
+    // reseeds them, and only fires once the active slot actually advances.
 
     if (activeExInBlockIdx < activeBlockExercises.length - 1) {
       setActiveExInBlockIdx((prev) => prev + 1);
     } else if (currentBlockSet < maxSetsInBlock) {
       setIsResting(true);
       setRestTimer(60);
+      setRestTimerTotal(60);
     } else if (activeBlockIdx < blocksKeys.length - 1) {
       setIsResting(true);
       setRestTimer(90);
+      setRestTimerTotal(90);
     } else {
       triggerHaptic("success");
       setWorkoutFinished(true);
@@ -218,17 +244,20 @@ export function useWorkoutSession({
 
   // --- Effects ---
 
-  // Reset the per-set inputs whenever the active slot changes: prefill "actual
-  // reps" with the target, and clear the exercise timer so each new timed set
-  // starts fresh (seeded on play, see toggleExerciseTimer) instead of
-  // inheriting the previous set's finished countdown.
+  // Reset the per-set inputs whenever the active slot changes: prefill
+  // "actual reps" and the pending RIR with the (possibly adjusted) target,
+  // and clear the exercise timer so each new timed set starts fresh (seeded
+  // on play, see toggleExerciseTimer) instead of inheriting the previous
+  // set's finished countdown.
   useEffect(() => {
     if (isWorkoutMode && activeAssign) {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- resetting editable/per-set fields' defaults when their subject (the active set) changes, not deriving external state
-      setActualRepsLogged(activeAssign.reps.toString());
+      setActualRepsLogged((effectiveTargetReps ?? activeAssign.reps).toString());
+      setPendingSetRir(effectiveTargetRir);
       setExTimer(null);
       setIsExTimerRunning(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isWorkoutMode, activeAssign, activeExInBlockIdx, activeBlockIdx, currentBlockSet]);
 
   // Lock-screen media controls during a workout.
@@ -348,6 +377,7 @@ export function useWorkoutSession({
   const addRestTime = () => {
     triggerHaptic("light");
     setRestTimer((prev) => prev + 15);
+    setRestTimerTotal((prev) => prev + 15);
   };
 
   const toggleExerciseTimer = () => {
@@ -359,6 +389,60 @@ export function useWorkoutSession({
       setExTimer(activeAssign.reps);
     }
     setIsExTimerRunning((prev) => !prev);
+  };
+
+  // "Make easier/harder" — adjusts this set's own target reps/RIR rather than
+  // swapping to a different exercise (see repAdjustments above for why).
+  // Persists per assignment id, so it carries over to the remaining sets of
+  // the same exercise, but never touches the underlying patient_exercises row.
+  const makeHarder = () => {
+    triggerHaptic("light");
+    if (!activeAssign) return;
+    const baseReps = effectiveTargetReps ?? activeAssign.reps;
+    const baseRir = effectiveTargetRir;
+    setRepAdjustments((prev) => ({
+      ...prev,
+      [activeAssign.id]: { reps: baseReps + 2, rir: baseRir !== null ? Math.max(0, baseRir - 1) : null },
+    }));
+  };
+
+  const makeEasier = () => {
+    triggerHaptic("light");
+    if (!activeAssign) return;
+    const baseReps = effectiveTargetReps ?? activeAssign.reps;
+    const baseRir = effectiveTargetRir;
+    setRepAdjustments((prev) => ({
+      ...prev,
+      [activeAssign.id]: { reps: Math.max(1, baseReps - 2), rir: baseRir !== null ? baseRir + 1 : null },
+    }));
+  };
+
+  // Rest-screen editing of the set just finished: both update the displayed
+  // value and patch the sessionPerformance entry handleFinishAction already
+  // pushed for it (there's no rest screen after the workout's very last set,
+  // so that one entry keeps its provisional/target value — flagged, not
+  // silently patched around).
+  const updateLastPerformanceEntry = (patch: Partial<SessionPerformanceEntry>) => {
+    setSessionPerformance((prev) => {
+      if (prev.length === 0) return prev;
+      const updated = [...prev];
+      updated[updated.length - 1] = { ...updated[updated.length - 1], ...patch };
+      return updated;
+    });
+  };
+
+  const adjustRestReps = (delta: number) => {
+    triggerHaptic("light");
+    const current = parseInt(actualRepsLogged) || 0;
+    const next = Math.max(0, current + delta);
+    setActualRepsLogged(String(next));
+    updateLastPerformanceEntry({ reps: next });
+  };
+
+  const selectRestRir = (value: number) => {
+    triggerHaptic("light");
+    setPendingSetRir(value);
+    updateLastPerformanceEntry({ rir: value });
   };
 
   const submitFinalFeedback = async (postPain: number | null = null) => {
@@ -435,6 +519,8 @@ export function useWorkoutSession({
     setPainBefore(null);
     setRpeScore(null);
     setSwappedExercises({});
+    setRepAdjustments({});
+    setPendingSetRir(null);
     setViewingExInfo(null);
     setIsExTimerRunning(false);
     setSelectedPainAreas([]);
@@ -460,6 +546,7 @@ export function useWorkoutSession({
     // plan preview (used by PlanTab before a workout starts, and by the
     // active session once it does — both read the same grouping)
     patientCategories,
+    weekFilteredPatientExercises,
     displayedExercises,
     blocksMap,
     blocksKeys,
@@ -470,18 +557,26 @@ export function useWorkoutSession({
     currentBlockSet,
     maxSetsInBlock,
     activeAssign,
+    effectiveTargetReps,
+    effectiveTargetRir,
     nextExercise,
     isResting,
     restTimer,
+    restTimerTotal,
     addRestTime,
     exTimer,
     isExTimerRunning,
     toggleExerciseTimer,
     actualRepsLogged,
     setActualRepsLogged,
+    pendingSetRir,
+    adjustRestReps,
+    selectRestRir,
     handleFinishAction,
     handleEndRest,
     handleSwapExercise,
+    makeHarder,
+    makeEasier,
     onTouchStart,
     onTouchMove,
     onTouchEnd,

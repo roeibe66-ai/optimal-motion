@@ -74,49 +74,49 @@ export default function PatientShell() {
       {showOnboarding && <OnboardingFlow onFinish={() => setShowOnboarding(false)} />}
       <WorkoutPlayer session={session} triggerHaptic={triggerHaptic} />
 
-      <div className="min-h-screen bg-stone-950 text-white pb-24">
+      <div className="min-h-screen bg-warm-bg text-warm-text pb-24">
         {session.viewingExInfo && (
           <ExerciseInfoModal exercise={session.viewingExInfo} historyData={session.exHistoryData} onClose={() => session.setViewingExInfo(null)} />
         )}
 
-        <header className="bg-stone-950/80 backdrop-blur-lg border-b border-stone-800 py-4 px-6 sticky top-0 z-40 shadow-sm print:hidden">
+        <header className="bg-warm-bg/80 backdrop-blur-lg border-b border-warm-wood/20 py-4 px-6 sticky top-0 z-40 shadow-sm print:hidden">
           <div className="max-w-5xl mx-auto flex justify-between items-center">
             <div className="flex items-center gap-3">
-              <button onClick={() => setPatientTab("plan")} className="w-10 h-10 bg-teal-500 text-stone-900 rounded-2xl flex items-center justify-center font-bold shadow-lg hover:scale-105 transition-transform">
+              <button onClick={() => setPatientTab("plan")} className="w-10 h-10 bg-warm-green text-warm-text rounded-2xl flex items-center justify-center font-bold shadow-lg hover:bg-warm-green-bright hover:scale-105 transition-all">
                 {loggedInPatient.full_name.charAt(0)}
               </button>
               <div>
-                <h1 className="font-black text-white">{loggedInPatient.full_name}</h1>
-                <p className="text-xs text-teal-500 font-medium">OptimalMotion</p>
+                <h1 className="font-black text-warm-text">{loggedInPatient.full_name}</h1>
+                <p className="text-xs text-warm-glow font-medium">OptimalMotion</p>
               </div>
             </div>
           </div>
         </header>
 
         {/* BOTTOM NAVIGATION BAR */}
-        <nav className="fixed bottom-0 left-0 right-0 bg-[#1c1c1e]/90 backdrop-blur-lg border-t border-stone-800 z-50 print:hidden pb-safe">
+        <nav className="fixed bottom-0 left-0 right-0 bg-warm-surface/90 backdrop-blur-lg border-t border-warm-wood/20 z-50 print:hidden pb-safe">
           <div className="flex justify-around items-center h-16 max-w-5xl mx-auto px-2">
-            <button onClick={() => switchTab("plan")} className={`flex flex-col items-center justify-center w-16 h-full gap-1 transition-colors ${patientTab === "plan" ? "text-teal-400" : "text-stone-500 hover:text-stone-300"}`}>
-              <HomeIcon size={22} className={patientTab === "plan" ? "fill-teal-400/20" : ""} />
+            <button onClick={() => switchTab("plan")} className={`flex flex-col items-center justify-center w-16 h-full gap-1 transition-colors ${patientTab === "plan" ? "text-warm-green-bright" : "text-warm-text/40 hover:text-warm-text/70"}`}>
+              <HomeIcon size={22} className={patientTab === "plan" ? "fill-warm-green-bright/20" : ""} />
               <span className="text-[10px] font-bold">ראשי</span>
             </button>
 
             {loggedInPatient.patient_type === "fitness" && (
-              <button onClick={() => switchTab("diy")} className={`flex flex-col items-center justify-center w-16 h-full gap-1 transition-colors ${patientTab === "diy" ? "text-teal-400" : "text-stone-500 hover:text-stone-300"}`}>
+              <button onClick={() => switchTab("diy")} className={`flex flex-col items-center justify-center w-16 h-full gap-1 transition-colors ${patientTab === "diy" ? "text-warm-green-bright" : "text-warm-text/40 hover:text-warm-text/70"}`}>
                 <Dumbbell size={22} />
                 <span className="text-[10px] font-bold">בנה אימון</span>
               </button>
             )}
 
             {loggedInPatient.patient_type === "fitness" && (
-              <button onClick={() => switchTab("premium")} className={`flex flex-col items-center justify-center w-16 h-full gap-1 transition-colors ${patientTab === "premium" ? "text-amber-400" : "text-stone-500 hover:text-stone-300"}`}>
-                <Crown size={22} className={patientTab === "premium" ? "fill-amber-400/20" : ""} />
+              <button onClick={() => switchTab("premium")} className={`flex flex-col items-center justify-center w-16 h-full gap-1 transition-colors ${patientTab === "premium" ? "text-warm-glow" : "text-warm-text/40 hover:text-warm-text/70"}`}>
+                <Crown size={22} className={patientTab === "premium" ? "fill-warm-glow/20" : ""} />
                 <span className="text-[10px] font-bold">תוכניות</span>
               </button>
             )}
 
-            <button onClick={() => switchTab("profile")} className={`flex flex-col items-center justify-center w-16 h-full gap-1 transition-colors ${patientTab === "profile" ? "text-purple-400" : "text-stone-500 hover:text-stone-300"}`}>
-              <User size={22} className={patientTab === "profile" ? "fill-purple-400/20" : ""} />
+            <button onClick={() => switchTab("profile")} className={`flex flex-col items-center justify-center w-16 h-full gap-1 transition-colors ${patientTab === "profile" ? "text-warm-wood" : "text-warm-text/40 hover:text-warm-text/70"}`}>
+              <User size={22} className={patientTab === "profile" ? "fill-warm-wood/20" : ""} />
               <span className="text-[10px] font-bold">פרופיל</span>
             </button>
           </div>
@@ -188,6 +188,7 @@ export default function PatientShell() {
               isDiyMode={planSelection.isDiyMode}
               diyWorkoutName={planSelection.diyWorkoutName}
               patientCategories={session.patientCategories}
+              weekFilteredExercises={session.weekFilteredPatientExercises}
               displayedExercises={session.displayedExercises}
               blocksMap={session.blocksMap}
               blocksKeys={session.blocksKeys}

@@ -1,6 +1,6 @@
 "use client";
 
-import { Info, PauseCircle, PlayCircle, Repeat, SkipForward, Trophy, X } from "lucide-react";
+import { Info, Minus, Plus, SkipForward, Trophy, X } from "lucide-react";
 import { useAuth } from "@/app/context/AuthContext";
 import ExerciseInfoModal from "@/app/components/patient/workout/ExerciseInfoModal";
 import PreWorkoutFlow from "@/app/components/patient/PreWorkoutFlow";
@@ -13,6 +13,10 @@ interface WorkoutPlayerProps {
   session: ReturnType<typeof useWorkoutSession>;
   triggerHaptic: (type: HapticType) => void;
 }
+
+const REST_RING_RADIUS = 81;
+const REST_RING_CIRCUMFERENCE = 2 * Math.PI * REST_RING_RADIUS;
+const RIR_OPTIONS = [0, 1, 2, 3, 4];
 
 // The whole active-workout experience: the pre-workout pain check-in, the
 // immersive full-screen player, and the post-workout feedback flow. Renders
@@ -50,6 +54,7 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
 
   const ex = session.displayedExercise;
   const isSameExerciseNext = session.nextExercise && ex && session.nextExercise.exercise.id === ex.id;
+  const restProgress = session.restTimerTotal > 0 ? Math.min(1, Math.max(0, session.restTimer / session.restTimerTotal)) : 0;
 
   return (
     <div
@@ -94,14 +99,17 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
               />
             )
           ) : (
-            <div className="w-full h-full bg-stone-900 opacity-50 blur-xl"></div>
+            <div className="w-full h-full bg-[#1c1c1e] opacity-50 blur-xl"></div>
           )
         ) : (
-          <div className="w-full h-full bg-stone-900"></div>
+          <div className="w-full h-full bg-[#1c1c1e]"></div>
         )}
 
-        {/* Gradients for text readability */}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-transparent to-black/90 pointer-events-none"></div>
+        {/* Ambient teal glow, matching the mockup's tint for this screen */}
+        <div className="absolute inset-0" style={{ background: "radial-gradient(circle at 30% 65%, rgba(20,184,166,0.16), transparent 55%)" }}></div>
+
+        {/* Gradient for text readability */}
+        <div className="absolute inset-0 bg-gradient-to-b from-stone-950/80 via-transparent to-stone-950/90 pointer-events-none"></div>
       </div>
 
       {/* Top Bar Floating Controls */}
@@ -115,36 +123,39 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
             <X size={20} />
           </button>
 
-          {/* Exercise Title and Tags (Top Right/Center) */}
+          {/* Exercise Title (no block chip anymore) */}
           {!session.isResting && (
-            <div className="flex flex-col items-end gap-2 text-right max-w-[75%]">
+            <div className="text-right max-w-[70%]">
               <h2 className="text-2xl md:text-4xl font-black text-white drop-shadow-md leading-tight">{ex?.title}</h2>
-              <div className="flex items-center gap-2 flex-wrap justify-end mt-1">
-                <span className="bg-teal-500/90 backdrop-blur-sm text-stone-900 font-black px-3 py-1 rounded-full text-[10px] tracking-widest uppercase shadow-sm">
-                  Block {session.activeBlockKey}
-                </span>
-                <span className="bg-black/50 border border-white/10 backdrop-blur-md text-white font-bold px-3 py-1 rounded-full text-[10px] tracking-widest uppercase shadow-sm">
-                  Set {session.currentBlockSet} of {session.maxSetsInBlock}
-                </span>
-              </div>
             </div>
           )}
         </div>
 
-        {/* Action Buttons (Info / Swap) */}
+        {/* Compact reps·set pill + Info / Easier / Harder */}
         {!session.isResting && (
-          <div className="flex justify-end mt-4 gap-3 pointer-events-auto">
+          <div className="flex justify-end items-center mt-4 gap-2 pointer-events-auto">
+            <span className="bg-black/40 border border-white/10 backdrop-blur-md text-white font-bold text-[11px] px-3 h-[38px] rounded-full flex items-center whitespace-nowrap">
+              {session.effectiveTargetReps} חזרות · סט {session.currentBlockSet}/{session.maxSetsInBlock}
+            </span>
             <button
               onClick={() => ex && session.setViewingExInfo(ex)}
-              className="w-10 h-10 bg-black/40 backdrop-blur-md rounded-full flex items-center justify-center text-white hover:bg-black/60 transition-colors border border-white/10 shadow-lg"
+              className="w-[38px] h-[38px] bg-black/35 backdrop-blur-md rounded-full flex items-center justify-center text-white hover:bg-black/50 transition-colors border border-white/10"
             >
-              <Info size={16} />
+              <Info size={15} />
             </button>
             <button
-              onClick={session.handleSwapExercise}
-              className="w-10 h-10 bg-black/40 backdrop-blur-md rounded-full flex items-center justify-center text-white hover:bg-black/60 transition-colors border border-white/10 shadow-lg"
+              onClick={session.makeEasier}
+              aria-label="הפוך לקל יותר"
+              className="w-[38px] h-[38px] bg-black/35 backdrop-blur-md rounded-full flex items-center justify-center text-white hover:bg-black/50 transition-colors border border-white/10"
             >
-              <Repeat size={16} />
+              <Minus size={15} />
+            </button>
+            <button
+              onClick={session.makeHarder}
+              aria-label="הפוך לקשה יותר"
+              className="w-[38px] h-[38px] bg-black/35 backdrop-blur-md rounded-full flex items-center justify-center text-white hover:bg-black/50 transition-colors border border-white/10"
+            >
+              <Plus size={15} />
             </button>
           </div>
         )}
@@ -153,113 +164,138 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
       {/* Main Content Area (Layered over video at bottom center) */}
       <div className="relative z-10 flex-1 flex flex-col justify-end pb-8 px-4 w-full max-w-lg mx-auto pointer-events-auto">
         {!session.isResting ? (
-          <div className="animate-in slide-in-from-bottom-8 duration-500 w-full flex flex-col items-center">
-            {/* Compact Bottom Card */}
-            {session.activeAssign?.is_time ? (
-              <div className="w-full bg-stone-900/80 backdrop-blur-2xl border border-white/10 rounded-[2rem] p-6 text-center flex flex-col items-center shadow-2xl">
-                <h3 className="text-stone-400 font-bold text-xs tracking-widest uppercase mb-4">טיימר עבודה</h3>
-                <div className={`text-6xl font-black tracking-tighter mb-6 ${session.exTimer === 0 ? "text-teal-400" : "text-white"}`} dir="ltr">
-                  {formatTime(session.exTimer ?? session.activeAssign.reps)}
-                </div>
-                {session.exTimer === 0 ? (
-                  <button
-                    onClick={session.handleFinishAction}
-                    className="w-full bg-teal-500 text-stone-900 py-4 rounded-xl font-black text-lg shadow-[0_0_30px_rgba(20,184,166,0.3)] transition-transform hover:scale-[1.02]"
-                  >
-                    המשך
-                  </button>
-                ) : (
-                  <button
-                    onClick={session.toggleExerciseTimer}
-                    className={`flex items-center justify-center w-full gap-3 py-4 rounded-xl font-black text-lg transition-all ${
-                      session.isExTimerRunning ? "bg-amber-500/20 text-amber-400 border border-amber-500/50" : "bg-white text-stone-900 shadow-xl"
-                    }`}
-                  >
-                    {session.isExTimerRunning ? (
-                      <>
-                        <PauseCircle size={20} /> השהה טיימר
-                      </>
-                    ) : (
-                      <>
-                        <PlayCircle size={20} /> הפעל טיימר
-                      </>
-                    )}
-                  </button>
-                )}
+          session.activeAssign?.is_time ? (
+            // Timed exercises aren't covered by the approved mockups — kept as
+            // the existing card-based timer UI, only recolored for consistency.
+            <div className="w-full bg-[#1c1c1e]/80 backdrop-blur-2xl border border-stone-800 rounded-[2rem] p-6 text-center flex flex-col items-center shadow-2xl animate-in slide-in-from-bottom-8 duration-500">
+              <h3 className="text-stone-400 font-bold text-xs tracking-widest uppercase mb-4">טיימר עבודה</h3>
+              <div className="text-6xl font-black tracking-tighter mb-6 text-white" dir="ltr">
+                {formatTime(session.exTimer ?? session.activeAssign.reps)}
               </div>
-            ) : (
-              <div className="w-full bg-stone-900/80 backdrop-blur-2xl border border-white/10 rounded-[2rem] p-6 flex flex-col items-center shadow-2xl">
-                <div className="flex justify-between w-full mb-6 gap-4">
-                  {/* Target Box */}
-                  <div className="flex-1 flex flex-col items-center justify-center bg-black/40 rounded-2xl p-4 border border-white/5 relative">
-                    <span className="text-[10px] text-stone-400 font-bold uppercase tracking-widest mb-1">Target Reps</span>
-                    <span className="text-4xl font-black text-teal-400 drop-shadow-md">{session.activeAssign?.reps}</span>
-                    {session.activeAssign?.rir && (
-                      <span className="absolute top-2 left-2 bg-stone-800 text-stone-400 text-[8px] font-bold px-2 py-0.5 rounded-full">
-                        RIR {session.activeAssign.rir}
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Actual Box */}
-                  <div className="flex-1 flex flex-col items-center justify-center bg-black/40 rounded-2xl p-4 border border-white/5 relative group">
-                    <span className="text-[10px] text-stone-400 font-bold uppercase tracking-widest mb-1">Actual Reps</span>
-                    <input
-                      type="number"
-                      value={session.actualRepsLogged}
-                      onChange={(e) => session.setActualRepsLogged(e.target.value)}
-                      placeholder={String(session.activeAssign?.reps)}
-                      className="w-full bg-transparent text-center text-4xl font-black text-white focus:text-teal-400 outline-none transition-colors placeholder-white/20"
-                    />
-                  </div>
-                </div>
-
+              {session.exTimer === 0 ? (
                 <button
                   onClick={session.handleFinishAction}
-                  className="w-full bg-teal-500 text-stone-900 py-4 rounded-xl font-black text-lg shadow-[0_0_30px_rgba(20,184,166,0.2)] flex justify-center items-center gap-2 transition-transform hover:scale-[1.02] group/btn"
+                  className="w-full bg-teal-500 hover:bg-teal-400 text-stone-900 py-4 rounded-xl font-black text-lg transition-transform hover:scale-[1.02]"
                 >
-                  סיום סט <SkipForward size={20} className="group-hover/btn:translate-x-1 transition-transform" />
+                  המשך
                 </button>
-              </div>
-            )}
-          </div>
+              ) : (
+                <button
+                  onClick={session.toggleExerciseTimer}
+                  className={`flex items-center justify-center w-full gap-3 py-4 rounded-xl font-black text-lg transition-all ${
+                    session.isExTimerRunning ? "bg-stone-800 text-white border border-stone-700" : "bg-white text-stone-900 shadow-xl"
+                  }`}
+                >
+                  {session.isExTimerRunning ? "השהה טיימר" : "הפעל טיימר"}
+                </button>
+              )}
+            </div>
+          ) : (
+            // Single floating primary action — no card, matching the mockup.
+            <button
+              onClick={session.handleFinishAction}
+              className="w-full bg-teal-500 hover:bg-teal-400 text-stone-950 font-black text-lg py-5 rounded-3xl flex items-center justify-center gap-2.5 shadow-[0_12px_32px_-8px_rgba(20,184,166,0.45)] transition-transform hover:scale-[1.01] animate-in slide-in-from-bottom-8 duration-500"
+            >
+              סיום סט
+              <SkipForward size={19} />
+            </button>
+          )
         ) : (
-          <div className="flex flex-col items-center justify-center text-center animate-in zoom-in duration-500 h-full w-full">
-            {isSameExerciseNext ? (
-              <div className="mb-8 text-center bg-black/40 backdrop-blur-md p-6 rounded-3xl border border-white/5 w-full max-w-sm">
-                <span className="text-stone-400 font-bold text-xs uppercase tracking-widest mb-2 inline-block">מנוחה בין סטים</span>
-                <h3 className="text-xl font-black text-white">התכונן לסט {session.currentBlockSet + 1} מתוך {session.maxSetsInBlock}</h3>
+          <div className="flex flex-col items-center justify-center text-center animate-in zoom-in duration-500 h-full w-full gap-5">
+            {/* Reps + RIR — reported here, after the set, not typed live during it */}
+            <div className="w-full max-w-sm bg-black/40 border border-white/10 backdrop-blur-md rounded-3xl p-5 flex flex-col gap-4">
+              <div className="flex items-center justify-between">
+                <span className="text-[12px] font-extrabold text-stone-400">כמה חזרות עשית?</span>
+                <div className="flex items-center gap-3.5">
+                  <button
+                    onClick={() => session.adjustRestReps(-1)}
+                    className="w-[30px] h-[30px] rounded-full bg-white/10 border border-white/15 flex items-center justify-center text-white"
+                  >
+                    <Minus size={13} />
+                  </button>
+                  <span className="text-2xl font-black text-white min-w-[28px] text-center" dir="ltr">
+                    {session.actualRepsLogged}
+                  </span>
+                  <button
+                    onClick={() => session.adjustRestReps(1)}
+                    className="w-[30px] h-[30px] rounded-full bg-emerald-400/20 border border-emerald-400/40 flex items-center justify-center text-emerald-400"
+                  >
+                    <Plus size={13} />
+                  </button>
+                </div>
               </div>
-            ) : session.nextExercise ? (
-              <div className="mb-8 text-center bg-black/40 backdrop-blur-md p-6 rounded-3xl border border-white/5 w-full max-w-sm">
-                <span className="bg-teal-500/20 text-teal-400 border border-teal-500/30 font-bold px-4 py-1.5 rounded-full text-[10px] uppercase tracking-widest mb-4 inline-flex items-center gap-2">
-                  <SkipForward size={12} /> Up Next
-                </span>
-                <h3 className="text-2xl font-black text-white drop-shadow-md">{session.nextExercise.exercise.title}</h3>
-              </div>
-            ) : (
-              <div className="mb-8 bg-black/40 backdrop-blur-md p-6 rounded-3xl border border-white/5 w-full max-w-sm">
-                <Trophy size={40} className="text-yellow-400 mx-auto mb-3 drop-shadow-lg" />
-                <h3 className="text-2xl font-black text-white">הסט האחרון לאימון!</h3>
-              </div>
-            )}
 
-            <div className="flex justify-center items-center w-64 h-64 border-4 border-stone-800 rounded-full relative mb-12 bg-black/60 backdrop-blur-xl shadow-2xl">
-              <div className="text-8xl font-black text-white tracking-tighter drop-shadow-lg" dir="ltr">
-                {session.restTimer}
+              <div className="h-px bg-white/10"></div>
+
+              <div className="flex items-center justify-between">
+                <span className="text-[12px] font-extrabold text-stone-400">RIR — חזרות בהספק</span>
+                <div className="flex gap-1.5">
+                  {RIR_OPTIONS.map((val) => {
+                    const isSelected = session.pendingSetRir === val;
+                    return (
+                      <button
+                        key={val}
+                        onClick={() => session.selectRestRir(val)}
+                        className={`w-[26px] h-[26px] rounded-full flex items-center justify-center text-[11px] font-bold transition-colors ${
+                          isSelected ? "bg-emerald-400 text-stone-900" : "text-stone-400 border border-white/15"
+                        }`}
+                      >
+                        {val === 4 ? "4+" : val}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             </div>
 
-            <div className="flex w-full gap-4 max-w-sm">
+            {/* Rest timer ring */}
+            <div className="w-[176px] h-[176px] rounded-full border-[5px] border-emerald-400/25 bg-black/35 backdrop-blur-xl flex items-center justify-center relative shadow-2xl">
+              <svg width="176" height="176" viewBox="0 0 176 176" className="absolute inset-0 -rotate-90">
+                <circle
+                  cx="88"
+                  cy="88"
+                  r={REST_RING_RADIUS}
+                  fill="none"
+                  stroke="#10b981"
+                  strokeWidth="5"
+                  strokeLinecap="round"
+                  strokeDasharray={REST_RING_CIRCUMFERENCE}
+                  strokeDashoffset={REST_RING_CIRCUMFERENCE * (1 - restProgress)}
+                  opacity="0.9"
+                />
+              </svg>
+              <span className="text-5xl font-black text-white tracking-tighter" dir="ltr">
+                {session.restTimer}
+              </span>
+            </div>
+
+            {/* Up next — compact row */}
+            {isSameExerciseNext ? (
+              <div className="text-stone-400 text-[13px] font-bold">
+                מנוחה בין סטים · התכונן לסט {session.currentBlockSet + 1} מתוך {session.maxSetsInBlock}
+              </div>
+            ) : session.nextExercise ? (
+              <div className="flex items-center gap-2 text-stone-400 text-[13px] font-bold">
+                <SkipForward size={13} />
+                הבא בתור: <span className="text-white">{session.nextExercise.exercise.title}</span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 text-white text-[13px] font-bold">
+                <Trophy size={16} className="text-emerald-400" />
+                הסט האחרון לאימון!
+              </div>
+            )}
+
+            <div className="flex gap-3 w-full max-w-sm">
               <button
                 onClick={session.addRestTime}
-                className="flex-1 bg-white/10 backdrop-blur-md hover:bg-white/20 border border-white/20 text-white font-bold py-4 rounded-2xl transition-colors shadow-lg"
+                className="flex-1 bg-white/10 backdrop-blur-md hover:bg-white/20 border border-white/18 text-white font-bold py-4 rounded-2xl transition-colors"
               >
-                +15s
+                +15 שנ&apos;
               </button>
               <button
                 onClick={session.handleEndRest}
-                className="flex-[2] bg-white text-stone-900 font-black py-4 rounded-2xl shadow-lg transition-transform hover:scale-[1.02]"
+                className="flex-[2] bg-white hover:bg-stone-200 text-stone-900 font-black py-4 rounded-2xl transition-transform hover:scale-[1.02]"
               >
                 דלג למנוחה
               </button>

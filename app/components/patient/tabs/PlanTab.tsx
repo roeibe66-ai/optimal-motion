@@ -1,33 +1,19 @@
 "use client";
 
 import {
-  ArrowRight,
-  Activity,
-  CalendarCheck,
   ChevronLeft,
   Dumbbell,
   Info,
   Lock,
   MoreHorizontal,
+  Play,
   Timer,
   User,
   Wind,
 } from "lucide-react";
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Legend,
-  Line,
-  LineChart,
-  ResponsiveContainer,
-  Tooltip as RechartsTooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
 import { useAuth } from "@/app/context/AuthContext";
-import { AVAILABLE_MUSCLES, CATEGORY_IMAGES, DAYS_OF_WEEK, DEFAULT_COURSE_IMG } from "@/app/constants/catalog";
 import { getTrackAccess } from "@/app/utils/premium";
+import { AVAILABLE_MUSCLES } from "@/app/constants/catalog";
 import type { Exercise, WorkoutLog } from "@/app/types";
 import type { HydratedPatientExercise, SessionExercise } from "@/app/hooks/useWorkoutSession";
 
@@ -43,12 +29,37 @@ interface PlanTabProps {
   isDiyMode: boolean;
   diyWorkoutName: string;
   patientCategories: string[];
+  weekFilteredExercises: HydratedPatientExercise[];
   displayedExercises: HydratedPatientExercise[];
   blocksMap: Record<string, SessionExercise[]>;
   blocksKeys: string[];
   onViewExerciseInfo: (exercise: Exercise) => void;
   onStartWorkout: () => void;
 }
+
+// Warm-tinted glow per category track, matching the approved mockup's
+// per-card gradients — generalized (dark card base + a category-tinted
+// radial glow) rather than hand-authored per category, since the real
+// patient category list isn't fixed to the 3 categories shown in the mockup.
+const TRACK_GLOW_TINTS: Record<string, string> = {
+  "יוגה": "rgba(248,113,86,0.32)",
+  "קטלבל": "rgba(245,158,11,0.3)",
+  "מוביליטי": "rgba(234,179,8,0.3)",
+  "קליסטניקס": "rgba(20,184,166,0.3)",
+  "מכון כושר": "rgba(234,88,12,0.3)",
+  "שיקום": "rgba(16,185,129,0.25)",
+};
+const DEFAULT_TRACK_GLOW = "rgba(245,158,11,0.22)";
+
+const DAYS_OF_WEEK_SHORT = [
+  { id: "0", short: "א׳" },
+  { id: "1", short: "ב׳" },
+  { id: "2", short: "ג׳" },
+  { id: "3", short: "ד׳" },
+  { id: "4", short: "ה׳" },
+  { id: "5", short: "ו׳" },
+  { id: "6", short: "ש׳" },
+];
 
 export default function PlanTab({
   workoutLogs,
@@ -62,6 +73,7 @@ export default function PlanTab({
   isDiyMode,
   diyWorkoutName,
   patientCategories,
+  weekFilteredExercises,
   displayedExercises,
   blocksMap,
   blocksKeys,
@@ -70,20 +82,9 @@ export default function PlanTab({
 }: PlanTabProps) {
   const { loggedInPatient } = useAuth();
 
-  const progressData = [...workoutLogs].reverse().map((log, index) => ({
-    name: `אימון ${index + 1}`,
-    date: new Date(log.created_at).toLocaleDateString("he-IL", { day: "2-digit", month: "2-digit" }),
-    "כאב לפני": log.pain_before,
-    "כאב אחרי": log.pain_after,
-    "מאמץ (RPE)": log.rpe,
-  }));
-
-  // Week Switcher: the original never exposed a way to change
-  // patientSelectedWeek at all, so patients could never navigate past
-  // whichever week happened to be the lowest with assigned exercises. This
-  // steps through availablePatientWeeks (the only weeks that actually have
-  // content) rather than raw +1/-1, so it can't get stuck on a gap between
-  // sparsely-assigned week numbers.
+  // Week Switcher: steps through availablePatientWeeks (the only weeks that
+  // actually have content) rather than raw +1/-1, so it can't get stuck on a
+  // gap between sparsely-assigned week numbers.
   const weeks = availablePatientWeeks.length > 0 ? availablePatientWeeks : [1];
   const weekIndex = weeks.indexOf(activePatientWeek);
   const goPrevWeek = () => {
@@ -95,6 +96,41 @@ export default function PlanTab({
 
   // ----- Overview screen -----
   if (!selectedCategory) {
+    const todayCat = patientCategories[0] ?? null;
+
+    // Real stats for today's hero card (replacing the original's hardcoded
+    // "45 Minutes" / "For All Levels") — mirrors the same category+day
+    // filter useWorkoutSession applies for displayedExercises, and the same
+    // sets->minutes estimate the Detail screen already uses, just computed
+    // here for todayCat specifically since that data isn't scoped to a
+    // selected category yet on this screen.
+    let todayExerciseCount = 0;
+    let todayBlockCount = 0;
+    let todayEstimatedMinutes = 0;
+    if (todayCat) {
+      const todayCategoryExercises = weekFilteredExercises.filter((pe) => {
+        if (pe.exercise.category !== todayCat) return false;
+        if (selectedDayFilter === "all") return true;
+        if (!pe.scheduled_days || pe.scheduled_days.trim() === "") return true;
+        return pe.scheduled_days.split(",").includes(selectedDayFilter);
+      });
+      todayExerciseCount = todayCategoryExercises.length;
+      todayBlockCount = new Set(todayCategoryExercises.map((pe) => pe.block || "A")).size;
+      const todayTotalSets = todayCategoryExercises.reduce((acc, pe) => acc + (pe.sets || 0), 0);
+      todayEstimatedMinutes = Math.max(10, Math.round(todayTotalSets * 1.5));
+    }
+
+    // Recent-trend sparkline: last 6 logs' RPE, plus their average.
+    const recentLogs = [...workoutLogs].slice(0, 6).reverse();
+    const avgRpe = recentLogs.length > 0 ? recentLogs.reduce((acc, l) => acc + l.rpe, 0) / recentLogs.length : 0;
+    const sparklinePoints = recentLogs.map((log, i) => {
+      const x = recentLogs.length > 1 ? (i / (recentLogs.length - 1)) * 320 : 160;
+      const y = 58 - (Math.max(0, Math.min(10, log.rpe)) / 10) * 52;
+      return `${x},${y}`;
+    });
+    const sparklinePath = sparklinePoints.join(" ");
+    const sparklineAreaPath = sparklinePoints.length > 0 ? `0,64 ${sparklinePath} 320,64` : "";
+
     return (
       <div className="animate-in fade-in duration-700 print:hidden">
         {/* Week Switcher */}
@@ -103,209 +139,161 @@ export default function PlanTab({
             onClick={goPrevWeek}
             disabled={weekIndex <= 0}
             aria-label="Previous week"
-            className="w-9 h-9 rounded-full bg-[#1c1c1e] border border-stone-800 flex items-center justify-center text-stone-300 hover:bg-stone-800 transition-colors disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-[#1c1c1e]"
+            className="w-8 h-8 rounded-full bg-[#1c1c1e] border border-stone-800 flex items-center justify-center text-stone-300 hover:bg-stone-800 transition-colors disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-[#1c1c1e]"
           >
-            <ChevronLeft size={18} />
+            <ChevronLeft size={14} />
           </button>
-          <span className="text-sm font-black text-white tracking-wide px-5 py-1.5 bg-[#1c1c1e] border border-stone-800 rounded-full min-w-[110px] text-center">
-            Week {activePatientWeek}
+          <span className="text-[13px] font-black text-white tracking-wide px-5 py-1.5 bg-[#1c1c1e] border border-stone-800 rounded-full min-w-[100px] text-center">
+            שבוע {activePatientWeek}
           </span>
           <button
             onClick={goNextWeek}
             disabled={weekIndex >= weeks.length - 1}
             aria-label="Next week"
-            className="w-9 h-9 rounded-full bg-[#1c1c1e] border border-stone-800 flex items-center justify-center text-stone-300 hover:bg-stone-800 transition-colors disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-[#1c1c1e]"
+            className="w-8 h-8 rounded-full bg-[#1c1c1e] border border-stone-800 flex items-center justify-center text-stone-300 hover:bg-stone-800 transition-colors disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-[#1c1c1e]"
           >
-            <ChevronLeft size={18} className="rotate-180" />
+            <ChevronLeft size={14} className="rotate-180" />
           </button>
         </div>
 
-        {/* לוח שנה עליון */}
-        <div className="mb-10">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-black text-white tracking-tight">Daily Workout</h2>
-            <button className="bg-white text-stone-900 px-4 py-1.5 rounded-full text-xs font-bold flex items-center gap-1">
-              <CalendarCheck size={14} /> Calendar
+        {/* Day selector */}
+        <div className="flex justify-between items-center bg-[#1c1c1e] p-1.5 rounded-full border border-stone-800 mb-8">
+          {DAYS_OF_WEEK_SHORT.map((day) => {
+            const isActive = selectedDayFilter === day.id;
+            return (
+              <button
+                key={day.id}
+                onClick={() => setSelectedDayFilter(day.id)}
+                className={`flex-1 h-9 flex items-center justify-center rounded-full text-xs font-bold transition-all ${isActive ? "bg-white text-[#1b1b1b]" : "text-stone-400 hover:text-stone-200"}`}
+              >
+                {day.short}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Today hero card */}
+        {todayCat ? (
+          <div
+            className="relative h-[280px] rounded-[2rem] overflow-hidden border border-stone-800 mb-10"
+            style={{
+              background:
+                "radial-gradient(120% 100% at 20% 0%, #3d2a14 0%, #0c0a09 60%), linear-gradient(160deg, #35230f, #0c0a09 70%)",
+            }}
+          >
+            <div
+              className="absolute inset-0"
+              style={{ background: "radial-gradient(circle at 75% 30%, rgba(245,158,11,0.38), transparent 55%)" }}
+            ></div>
+            <div className="absolute inset-0 bg-gradient-to-t from-stone-950 via-stone-950/15 to-transparent"></div>
+
+            <button
+              onClick={() => setSelectedCategory(String(todayCat))}
+              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-14 h-14 rounded-full bg-white/15 border border-white/25 backdrop-blur-md flex items-center justify-center hover:bg-white/25 transition-colors"
+            >
+              <Play size={20} className="fill-white text-white" />
             </button>
-          </div>
 
-          <div className="flex justify-between items-center bg-[#1c1c1e] p-3 rounded-full border border-stone-800 mb-8 overflow-x-auto no-scrollbar gap-2">
-            {DAYS_OF_WEEK.map((day) => {
-              const isActive = selectedDayFilter === day.id;
-              return (
-                <button
-                  key={day.id}
-                  onClick={() => setSelectedDayFilter(day.id)}
-                  className={`w-10 h-10 flex items-center justify-center rounded-full text-sm font-bold transition-all shrink-0 ${isActive ? "bg-white text-stone-900 shadow-md" : "text-stone-500 hover:text-stone-300"}`}
-                >
-                  {day.short}
-                </button>
-              );
-            })}
-          </div>
+            <div className="absolute top-4 right-4 bg-white/15 backdrop-blur-md border border-white/20 text-white text-[10px] font-bold tracking-wide px-3 py-1.5 rounded-full">
+              האימון של היום
+            </div>
 
-          {/* כרטיס אימון היום */}
-          {patientCategories.length > 0 ? (
-            (() => {
-              const todayCat = patientCategories[0];
-              const imgUrl = CATEGORY_IMAGES[String(todayCat)] || DEFAULT_COURSE_IMG;
-              return (
-                <div className="bg-stone-900 rounded-[2.5rem] shadow-xl overflow-hidden relative border border-stone-800 h-[400px]">
-                  <img src={imgUrl} className="absolute inset-0 w-full h-full object-cover opacity-60 mix-blend-overlay" alt="" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-stone-950 via-stone-900/60 to-transparent z-10"></div>
-
-                  <div className="absolute top-6 left-6 right-6 flex justify-between z-20">
-                    <div className="bg-white/20 backdrop-blur-md text-white font-bold text-xs px-3 py-1.5 rounded-full flex items-center gap-1 border border-white/10">
-                      <Timer size={12} /> To be Completed
-                    </div>
-                  </div>
-
-                  <div className="absolute bottom-6 left-6 right-6 z-20">
-                    <h3 className="text-4xl font-black text-white mb-1">{isDiyMode ? diyWorkoutName : todayCat}</h3>
-                    <p className="text-stone-400 font-medium mb-4">{new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}</p>
-
-                    <div className="flex items-center gap-4 mb-6">
-                      <span className="flex items-center gap-1 text-stone-300 text-sm font-bold">
-                        <Timer size={16} /> 45 Minutes
-                      </span>
-                      <span className="flex items-center gap-1 text-stone-300 text-sm font-bold">
-                        <Activity size={16} /> For All Levels
-                      </span>
-                    </div>
-
-                    <button
-                      onClick={() => setSelectedCategory(String(todayCat))}
-                      className="w-14 h-14 bg-white text-stone-900 rounded-full flex items-center justify-center hover:bg-stone-200 transition-transform hover:scale-105 shadow-lg absolute bottom-0 right-0"
-                    >
-                      <ArrowRight size={24} />
-                    </button>
-                  </div>
-                </div>
-              );
-            })()
-          ) : (
-            <div className="bg-[#1c1c1e] rounded-[2.5rem] p-10 text-center border border-stone-800 h-[300px] flex flex-col items-center justify-center relative overflow-hidden">
-              {/* Fallback to basic mobility track if nothing is assigned */}
-              <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?auto=format&fit=crop&w=800&q=80')] bg-cover opacity-20 mix-blend-screen grayscale"></div>
-              <div className="relative z-10">
-                <Wind size={48} className="text-teal-500 mx-auto mb-4" />
-                <h3 className="text-2xl font-black text-white mb-2">Morning Mobility</h3>
-                <p className="text-stone-400 text-sm">אין אימוני כוח מתוכננים להיום. מומלץ לבצע את רוטינת התנועתיות הבסיסית.</p>
+            <div className="absolute bottom-5 right-5 left-5 flex flex-col gap-2.5">
+              <h3 className="text-[28px] font-black tracking-tight leading-tight text-white">{isDiyMode ? diyWorkoutName : todayCat}</h3>
+              <div className="flex items-center gap-3.5 text-stone-300 text-[13px] font-semibold">
+                <span className="flex items-center gap-1.5">
+                  <Timer size={14} /> כ-{todayEstimatedMinutes} דק&apos;
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <Dumbbell size={14} />
+                  {todayExerciseCount} תרגילים · {todayBlockCount} בלוקים
+                </span>
               </div>
+            </div>
+          </div>
+        ) : (
+          <div className="rounded-[2rem] p-10 text-center border border-stone-800 h-[280px] flex flex-col items-center justify-center relative overflow-hidden mb-10 bg-[#1c1c1e]">
+            <Wind size={44} className="text-teal-400 mb-4" />
+            <h3 className="text-xl font-black text-white mb-2">מנוחה פעילה</h3>
+            <p className="text-stone-400 text-sm">אין אימוני כוח מתוכננים להיום. מומלץ לבצע רוטינת תנועתיות בסיסית.</p>
+          </div>
+        )}
+
+        {/* Tracks */}
+        <div className="mb-10">
+          <div className="text-[11px] font-extrabold tracking-widest text-stone-400 uppercase mb-3.5">המסלולים שלך</div>
+          {patientCategories.length === 0 ? (
+            <div className="bg-[#1c1c1e] p-10 rounded-[2rem] border border-stone-800 text-center flex flex-col items-center">
+              <p className="text-stone-500 text-sm">אתה יכול גם להסתכל על שאר התוכניות שלך (אם קיימות).</p>
+            </div>
+          ) : (
+            <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1">
+              {patientCategories.map((cat, idx) => {
+                const { owned: userOwnsTrack } = getTrackAccess(loggedInPatient, cat);
+                const isLocked = loggedInPatient?.patient_type === "fitness" && activePatientWeek >= 3 && !userOwnsTrack;
+                const glowTint = TRACK_GLOW_TINTS[cat] ?? DEFAULT_TRACK_GLOW;
+
+                return (
+                  <button
+                    key={idx}
+                    onClick={() => setSelectedCategory(String(cat))}
+                    className="min-w-[158px] rounded-3xl overflow-hidden border border-stone-800 bg-[#1c1c1e] text-right shrink-0"
+                  >
+                    <div className="h-[120px] relative bg-[#1c1c1e]">
+                      <div
+                        className="absolute inset-0"
+                        style={{ background: `radial-gradient(circle at 70% 25%, ${glowTint}, transparent 55%)` }}
+                      ></div>
+                    </div>
+                    <div className="p-3 flex flex-col gap-2">
+                      <div className="font-bold text-[13px] text-white">{cat}</div>
+                      {isLocked ? (
+                        <div className="text-[11px] font-bold px-2.5 py-1 rounded-full w-fit" style={{ color: "#fdba74", backgroundColor: "rgba(251,146,60,0.16)" }}>
+                          נפתח בשבוע 3
+                        </div>
+                      ) : (
+                        <div className="text-[11px] font-bold px-2.5 py-1 rounded-full w-fit" style={{ color: "#facc15", backgroundColor: "rgba(234,179,8,0.14)" }}>
+                          פעיל
+                        </div>
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           )}
         </div>
 
-        <div className="flex justify-between items-end mb-4 pt-4">
-          <h2 className="text-xl font-bold text-stone-400 uppercase tracking-widest text-xs">All Programs</h2>
-        </div>
-
-        {patientCategories.length === 0 ? (
-          <div className="mt-4 bg-[#1c1c1e] p-10 rounded-[2rem] border border-stone-800 text-center flex flex-col items-center shadow-sm mb-12">
-            <p className="text-stone-500">אתה יכול גם להסתכל על שאר התוכניות שלך (אם קיימות).</p>
-          </div>
-        ) : (
-          <div className="flex overflow-x-auto gap-5 pb-12 snap-x no-scrollbar">
-            {patientCategories.map((cat, idx) => {
-              const { owned: userOwnsTrack } = getTrackAccess(loggedInPatient, cat);
-              const isLocked = loggedInPatient?.patient_type === "fitness" && activePatientWeek >= 3 && !userOwnsTrack;
-
-              const imgUrl = CATEGORY_IMAGES[String(cat)] || DEFAULT_COURSE_IMG;
-              const fakeProgressPercent = Math.min(activePatientWeek * 8, 100);
-
-              return (
-                <div key={idx} className={`min-w-[280px] w-[280px] md:min-w-[320px] bg-[#1c1c1e] text-white rounded-[2rem] shadow-lg overflow-hidden group snap-center relative border border-stone-800 ${isLocked ? "opacity-90" : ""}`}>
-                  <div className="h-64 w-full relative overflow-hidden">
-                    <div className="absolute inset-0 bg-gradient-to-t from-[#1c1c1e] to-transparent z-10"></div>
-                    <img src={imgUrl} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 opacity-50" alt={String(cat)} />
-                    {isLocked && (
-                      <div className="absolute inset-0 z-20 flex items-center justify-center">
-                        <Lock size={40} className="text-white/30" />
-                      </div>
-                    )}
-
-                    <div className="absolute inset-0 z-20 flex flex-col justify-between p-6">
-                      <div className="flex justify-between items-start">
-                        <span className="bg-stone-900/80 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold border border-stone-700">L1</span>
-                      </div>
-                      <div className="text-center">
-                        <div className="w-12 h-12 border-2 border-white/20 rounded-full mx-auto flex items-center justify-center mb-2 backdrop-blur-md">
-                          <Activity size={20} className="text-white" />
-                        </div>
-                        <h3 className="text-2xl font-black text-white uppercase tracking-widest">{cat}</h3>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="p-5 bg-[#1c1c1e] border-t border-stone-800">
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="flex-1 h-1.5 bg-stone-800 rounded-full overflow-hidden">
-                        <div className={`h-full rounded-full transition-all duration-1000 ${isLocked ? "bg-amber-500" : "bg-teal-500"}`} style={{ width: `${fakeProgressPercent}%` }}></div>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => setSelectedCategory(String(cat))}
-                      className={`w-full py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-colors text-sm ${isLocked ? "bg-stone-900 text-amber-500 hover:bg-stone-800 border border-stone-800" : "bg-white text-stone-900 hover:bg-stone-200"}`}
-                    >
-                      {isLocked ? (
-                        <>
-                          <Lock size={14} /> פתח מסלול נעול
-                        </>
-                      ) : (
-                        <>המשך אימון</>
-                      )}
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        {/* שילוב מנגנון ההתקדמות (Progress) לתוך המסך הראשי! */}
-        <div className="border-t border-stone-800 pt-10">
-          <h2 className="text-2xl font-black text-white mb-8 tracking-tight">מגמות והתקדמות אישית</h2>
+        {/* Recent trend */}
+        <div>
+          <div className="text-[11px] font-extrabold tracking-widest text-stone-400 uppercase mb-3.5">מגמה אחרונה</div>
           {workoutLogs.length === 0 ? (
             <div className="bg-[#1c1c1e] p-10 rounded-[2rem] border border-stone-800 text-center">
-              <p className="text-stone-500">הנתונים יופיעו כאן ברגע שתסיים את האימון הראשון.</p>
+              <p className="text-stone-500 text-sm">הנתונים יופיעו כאן ברגע שתסיים את האימון הראשון.</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              {loggedInPatient?.patient_type !== "fitness" && (
-                <div className="bg-[#1c1c1e] p-6 rounded-3xl shadow-sm border border-stone-800">
-                  <h3 className="text-lg font-black text-white mb-6 flex items-center gap-2">
-                    <Activity size={18} className="text-teal-500" /> מגמת כאב לאורך זמן
-                  </h3>
-                  <div className="h-64 w-full" dir="ltr">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={progressData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#333" vertical={false} />
-                        <XAxis dataKey="date" tick={{ fontSize: 10, fill: "#888" }} />
-                        <YAxis domain={[0, 10]} tick={{ fontSize: 10, fill: "#888" }} />
-                        <RechartsTooltip contentStyle={{ backgroundColor: "#1c1c1e", borderColor: "#333", color: "#fff" }} />
-                        <Legend wrapperStyle={{ fontSize: "12px", fontWeight: "bold", marginTop: "10px", color: "#888" }} />
-                        <Line type="monotone" dataKey="כאב לפני" stroke="#f59e0b" strokeWidth={3} dot={{ r: 4, strokeWidth: 2 }} activeDot={{ r: 6 }} isAnimationActive={false} />
-                        <Line type="monotone" dataKey="כאב אחרי" stroke="#14b8a6" strokeWidth={3} dot={{ r: 4, strokeWidth: 2 }} activeDot={{ r: 6 }} isAnimationActive={false} />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
-              )}
-              <div className="bg-[#1c1c1e] p-6 rounded-3xl shadow-sm border border-stone-800">
-                <h3 className="text-lg font-black text-white mb-6 flex items-center gap-2">
-                  <Activity size={18} className="text-amber-500" /> עומס ומאמץ (RPE)
-                </h3>
-                <div className="h-64 w-full" dir="ltr">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={progressData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#333" vertical={false} />
-                      <XAxis dataKey="date" tick={{ fontSize: 10, fill: "#888" }} />
-                      <YAxis domain={[0, 10]} tick={{ fontSize: 10, fill: "#888" }} />
-                      <RechartsTooltip cursor={{ fill: "#333" }} contentStyle={{ backgroundColor: "#1c1c1e", borderColor: "#333", color: "#fff" }} />
-                      <Bar dataKey="מאמץ (RPE)" fill="#14b8a6" radius={[6, 6, 0, 0]} barSize={32} isAnimationActive={false} />
-                    </BarChart>
-                  </ResponsiveContainer>
+            <div className="bg-[#1c1c1e] border border-stone-800 rounded-[1.75rem] p-5">
+              <div className="flex justify-between items-start mb-3.5">
+                <span className="text-[13px] font-bold text-stone-300">מאמץ (RPE) · {recentLogs.length} אימונים אחרונים</span>
+                <div className="text-left" dir="ltr">
+                  <div className="text-xl font-black text-amber-400">{avgRpe.toFixed(1)}</div>
+                  <div className="text-[10px] text-stone-500 font-semibold">ממוצע</div>
                 </div>
               </div>
+              <svg width="100%" height="64" viewBox="0 0 320 64" preserveAspectRatio="none">
+                {sparklinePoints.length > 1 && (
+                  <>
+                    <polyline points={sparklineAreaPath} fill="url(#rpeGradient)" stroke="none" opacity="0.5" />
+                    <polyline points={sparklinePath} fill="none" stroke="#f59e0b" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                  </>
+                )}
+                <defs>
+                  <linearGradient id="rpeGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#f59e0b" stopOpacity="0.35" />
+                    <stop offset="100%" stopColor="#f59e0b" stopOpacity="0" />
+                  </linearGradient>
+                </defs>
+              </svg>
             </div>
           )}
         </div>
@@ -314,12 +302,14 @@ export default function PlanTab({
   }
 
   // ----- Detail / summary screen -----
+  // No mockup covers this state yet — recolored to the same base palette for
+  // consistency with the overview above, structure otherwise unchanged.
   const { owned: userOwnsTrack } = getTrackAccess(loggedInPatient, selectedCategory);
 
   return (
     <div className="animate-in slide-in-from-left duration-500 print:hidden max-w-lg mx-auto">
       <div className="mb-6 flex items-center justify-between">
-        <button onClick={() => setSelectedCategory(null)} className="p-2 bg-stone-900 rounded-full hover:bg-stone-800 transition-colors text-white">
+        <button onClick={() => setSelectedCategory(null)} className="p-2 bg-[#1c1c1e] rounded-full hover:bg-stone-800 transition-colors text-white">
           <ChevronLeft size={24} />
         </button>
         <span className="text-xs font-bold uppercase tracking-widest text-stone-500">Details</span>
@@ -329,7 +319,7 @@ export default function PlanTab({
       </div>
 
       {loggedInPatient?.patient_type === "fitness" && activePatientWeek >= 3 && !userOwnsTrack && !isDiyMode ? (
-        <div className="bg-gradient-to-b from-[#1c1c1e] to-stone-900 rounded-[2.5rem] p-10 text-center text-white relative overflow-hidden shadow-2xl border border-stone-800">
+        <div className="bg-gradient-to-b from-[#1c1c1e] to-stone-950 rounded-[2.5rem] p-10 text-center text-white relative overflow-hidden shadow-2xl border border-stone-800">
           <Lock size={60} className="text-amber-500 mx-auto mb-6 relative z-10" />
           <h2 className="text-3xl md:text-5xl font-black mb-4 relative z-10 tracking-tight">המשך המסלול נעול</h2>
           <p className="text-lg text-stone-400 mb-8 max-w-md mx-auto relative z-10 font-medium">
@@ -405,7 +395,7 @@ export default function PlanTab({
               <div className="space-y-4 pb-32">
                 {blocksKeys.map((blockKey) => (
                   <div key={blockKey} className="space-y-4">
-                    {blocksMap[blockKey].length > 1 && <div className="text-xs font-bold text-teal-500 uppercase tracking-widest mt-6 mb-2">Block {blockKey} (Super-Set)</div>}
+                    {blocksMap[blockKey].length > 1 && <div className="text-xs font-bold text-teal-400 uppercase tracking-widest mt-6 mb-2">Block {blockKey} (Super-Set)</div>}
 
                     {blocksMap[blockKey].map((assignment) => (
                       <div key={assignment.id} className="flex items-center gap-4 group cursor-pointer hover:bg-stone-900 p-2 -mx-2 rounded-2xl transition-colors" onClick={() => onViewExerciseInfo(assignment.exercise)}>
@@ -436,7 +426,7 @@ export default function PlanTab({
 
               {displayedExercises.length > 0 && (
                 <div className="fixed bottom-[4.5rem] left-0 right-0 p-6 bg-gradient-to-t from-stone-950 via-stone-950/90 to-transparent z-40 flex justify-center pointer-events-none">
-                  <button onClick={onStartWorkout} className="w-full max-w-sm bg-orange-600/90 backdrop-blur-md text-white py-4 rounded-full font-black text-lg hover:bg-orange-500 transition-colors shadow-[0_10px_40px_rgba(234,88,12,0.3)] pointer-events-auto tracking-widest">
+                  <button onClick={onStartWorkout} className="w-full max-w-sm bg-orange-600/90 backdrop-blur-md text-white py-4 rounded-full font-black text-lg hover:bg-orange-500 transition-colors shadow-[0_10px_40px_-5px_rgba(234,88,12,0.3)] pointer-events-auto tracking-widest">
                     START SESSION
                   </button>
                 </div>

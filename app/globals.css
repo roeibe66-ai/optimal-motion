@@ -12,6 +12,22 @@
   --font-mono: var(--font-geist-mono);
 }
 
+/* "Warm Studio" design tokens — organic/premium direction for the patient
+   domain (PatientShell, PlanTab, WorkoutPlayer). Additive only: existing
+   stone/teal/amber utilities elsewhere in the app are untouched until they
+   get the same treatment. -bright variants exist for the hover/active shade
+   half of the app's existing two-tone button pattern (base -> hover:bright). */
+@theme {
+  --color-warm-bg: #1b1712;
+  --color-warm-surface: #262019;
+  --color-warm-green: #4f7358;
+  --color-warm-green-bright: #6b8f6d;
+  --color-warm-glow: #d9a65c;
+  --color-warm-glow-bright: #e8b96a;
+  --color-warm-wood: #8b6f47;
+  --color-warm-text: #f1eae0;
+}
+
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #0a0a0a;
