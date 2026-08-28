@@ -62,3 +62,16 @@ export const TRACK_GLOW_TINTS: Record<string, string> = {
   "שיקום": "rgba(16,185,129,0.25)",
 };
 export const DEFAULT_TRACK_GLOW = "rgba(245,158,11,0.22)";
+
+// Patient-facing DIY-builder category tag colors — a separate, smaller
+// taxonomy from ADMIN_TAGS (which is admin-only and has 7 values). Exercises'
+// `category` is a free-text column, so any value not in this map (e.g. a
+// legacy value like "כוח וסיבולת") falls back to DEFAULT_DIY_CATEGORY_STYLE
+// rather than being hidden.
+export const DIY_CATEGORY_STYLES: Record<string, { text: string; bg: string; border: string }> = {
+  "קטלבל": { text: "#f59e0b", bg: "rgba(245,158,11,0.14)", border: "rgba(245,158,11,0.3)" },
+  "יוגה": { text: "#f87156", bg: "rgba(248,113,86,0.14)", border: "rgba(248,113,86,0.3)" },
+  "שרירים": { text: "#60a5fa", bg: "rgba(59,130,246,0.14)", border: "rgba(59,130,246,0.3)" },
+  "מוביליטי": { text: "#facc15", bg: "rgba(234,179,8,0.14)", border: "rgba(234,179,8,0.3)" },
+};
+export const DEFAULT_DIY_CATEGORY_STYLE = { text: "#a8a29e", bg: "rgba(168,162,158,0.14)", border: "rgba(168,162,158,0.3)" };

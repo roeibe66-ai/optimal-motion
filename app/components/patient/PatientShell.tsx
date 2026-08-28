@@ -8,13 +8,16 @@ import { useReminders } from "@/app/hooks/useReminders";
 import { usePatientData } from "@/app/hooks/usePatientData";
 import { usePlanSelection } from "@/app/hooks/usePlanSelection";
 import { useWorkoutSession } from "@/app/hooks/useWorkoutSession";
+import { useSavedWorkouts } from "@/app/hooks/useSavedWorkouts";
 import OnboardingFlow from "@/app/components/patient/OnboardingFlow";
 import WorkoutPlayer from "@/app/components/patient/workout/WorkoutPlayer";
 import ExerciseInfoModal from "@/app/components/patient/workout/ExerciseInfoModal";
 import PlanTab from "@/app/components/patient/tabs/PlanTab";
 import DiyBuilderTab from "@/app/components/patient/tabs/DiyBuilderTab";
+import MyWorkoutsScreen from "@/app/components/patient/tabs/MyWorkoutsScreen";
 import PremiumStoreTab from "@/app/components/patient/tabs/PremiumStoreTab";
 import ProfileTab from "@/app/components/patient/tabs/ProfileTab";
+import type { SavedWorkout } from "@/app/types";
 
 type PatientTab = "plan" | "diy" | "premium" | "profile";
 
@@ -30,6 +33,8 @@ export default function PatientShell() {
 
   const [patientTab, setPatientTab] = useState<PatientTab>("plan");
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [showMyWorkouts, setShowMyWorkouts] = useState(false);
+  const [editingSavedWorkoutId, setEditingSavedWorkoutId] = useState<string | null>(null);
 
   useEffect(() => {
     if (justRegistered) {
@@ -43,6 +48,7 @@ export default function PatientShell() {
   const reminders = useReminders(triggerHaptic);
   const patientData = usePatientData();
   const planSelection = usePlanSelection(patientData.patientExercises);
+  const savedWorkoutsData = useSavedWorkouts();
 
   const session = useWorkoutSession({
     patientExercises: patientData.patientExercises,
@@ -67,6 +73,44 @@ export default function PatientShell() {
   const switchTab = (tab: PatientTab) => {
     setPatientTab(tab);
     planSelection.setIsDiyMode(false);
+    setShowMyWorkouts(false);
+    setEditingSavedWorkoutId(null);
+  };
+
+  // Hydrates a saved workout's ordered exercise_ids against the live catalog,
+  // silently dropping any id that no longer exists (e.g. an exercise deleted
+  // from the catalog since the workout was saved).
+  const hydrateSavedWorkout = (workout: SavedWorkout) =>
+    workout.exercise_ids
+      .map((id) => patientData.exerciseCatalog.find((ex) => ex.id === id))
+      .filter((ex): ex is (typeof patientData.exerciseCatalog)[number] => !!ex);
+
+  const handleStartSavedWorkout = (workout: SavedWorkout) => {
+    planSelection.setDiySelectedExercises(hydrateSavedWorkout(workout));
+    planSelection.setDiyScheduleDay(workout.scheduled_day || planSelection.diyScheduleDay);
+    planSelection.setDiyWorkoutName(workout.name);
+    setShowMyWorkouts(false);
+    planSelection.setIsDiyMode(true);
+    session.startDiyWorkoutNow();
+  };
+
+  const handleEditSavedWorkout = (workout: SavedWorkout) => {
+    planSelection.setDiySelectedExercises(hydrateSavedWorkout(workout));
+    planSelection.setDiyScheduleDay(workout.scheduled_day || planSelection.diyScheduleDay);
+    planSelection.setDiyWorkoutName(workout.name);
+    setEditingSavedWorkoutId(workout.id);
+    setShowMyWorkouts(false);
+  };
+
+  const handleSaveDiyWorkout = async () => {
+    if (planSelection.diySelectedExercises.length === 0) return;
+    await savedWorkoutsData.saveWorkout({
+      editingId: editingSavedWorkoutId,
+      name: planSelection.diyWorkoutName,
+      scheduledDay: planSelection.diyScheduleDay,
+      exerciseIds: planSelection.diySelectedExercises.map((ex) => ex.id),
+    });
+    setEditingSavedWorkoutId(null);
   };
 
   return (
@@ -139,13 +183,25 @@ export default function PatientShell() {
             </div>
           )}
 
-          {patientTab === "diy" && (
+          {patientTab === "diy" && showMyWorkouts && (
+            <MyWorkoutsScreen
+              savedWorkouts={savedWorkoutsData.savedWorkouts}
+              exerciseCatalog={patientData.exerciseCatalog}
+              onBack={() => setShowMyWorkouts(false)}
+              onStartWorkout={handleStartSavedWorkout}
+              onEditWorkout={handleEditSavedWorkout}
+            />
+          )}
+
+          {patientTab === "diy" && !showMyWorkouts && (
             <DiyBuilderTab
               exerciseCatalog={patientData.exerciseCatalog}
               diyMuscleFilter={planSelection.diyMuscleFilter}
               setDiyMuscleFilter={planSelection.setDiyMuscleFilter}
               diyEquipFilter={planSelection.diyEquipFilter}
               setDiyEquipFilter={planSelection.setDiyEquipFilter}
+              diyCategoryFilter={planSelection.diyCategoryFilter}
+              setDiyCategoryFilter={planSelection.setDiyCategoryFilter}
               diySelectedExercises={planSelection.diySelectedExercises}
               setDiySelectedExercises={planSelection.setDiySelectedExercises}
               diyScheduleDay={planSelection.diyScheduleDay}
@@ -156,6 +212,10 @@ export default function PatientShell() {
                 planSelection.setIsDiyMode(true);
                 session.startDiyWorkoutNow();
               }}
+              onOpenMyWorkouts={() => setShowMyWorkouts(true)}
+              onSaveDiyWorkout={handleSaveDiyWorkout}
+              isEditingSavedWorkout={editingSavedWorkoutId !== null}
+              onCancelEditSavedWorkout={() => setEditingSavedWorkoutId(null)}
             />
           )}
 

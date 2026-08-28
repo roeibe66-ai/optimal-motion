@@ -97,6 +97,15 @@ export interface BuilderExercise extends Exercise {
 export type BuilderDayPlan = Record<string, BuilderExercise[]>; // keyed by DAYS_OF_WEEK id
 export type BuilderWeekPlan = Record<number, BuilderDayPlan>; // keyed by week number
 
+export interface SavedWorkout {
+  id: string;
+  patient_id: string;
+  name: string;
+  scheduled_day: string | null; // DAYS_OF_WEEK id
+  exercise_ids: string[]; // ordered, references exercises.id
+  created_at: string;
+}
+
 export interface OnboardingAnswers {
   goal: string;
   location: string;

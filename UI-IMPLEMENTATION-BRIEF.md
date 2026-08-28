@@ -157,7 +157,7 @@ Don't touch these now, but keep them on the radar for later:
 - Plaintext passwords + hardcoded admin login (`admin`/`admin`)
 - `email_verified` never gets set to `true` — permanently blocks premium purchases
 - Broken exercise timer (`exTimer` never seeded in `useWorkoutSession.ts`)
-- No server-side auth boundary (single Supabase client with anon key)
+- No server-side auth boundary (single Supabase client with anon key) — this means RLS policies keyed on `patient_id` alone are not real protection without `auth.uid()` behind them (there's no Supabase Auth session to key off), so tables added since (e.g. `patient_saved_workouts`) were deliberately left at the same (lack of) protection level rather than faking a policy. **Real Supabase Auth + RLS across all patient-data tables needs to happen as its own dedicated pass before any real patient data goes into this app — not something to patch table-by-table.**
 
 ---
 

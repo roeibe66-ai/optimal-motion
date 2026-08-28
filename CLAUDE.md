@@ -23,6 +23,8 @@ Note: a second, unused copy of the Supabase client exists at the repo-root [lib/
 
 **Auth is custom, not Supabase Auth.** Admin login is a hardcoded `"admin"`/`"admin"` check in `handleLogin`. Patient login queries the `patients` table by email-or-phone plus a plaintext `password` column. The logged-in user is persisted client-side under the `optimalMotionUser` key in `localStorage` (if "remember me") or `sessionStorage`, and the current patient's assigned plan is additionally cached to `localStorage` under `om_offline_plan` for offline access.
 
+**Known gap:** there is no server-side auth boundary — every table is reachable via the public anon key with no Supabase Auth session behind it, so RLS policies keyed on `patient_id` alone would not be real protection (no `auth.uid()` to check against). Real Supabase Auth + RLS across all patient-data tables needs to happen as its own dedicated pass before any real patient data goes into this app — not something to patch table-by-table as new tables are added.
+
 **Domain model**, roughly:
 - Admin builds a **library of exercises** (`exercises`) tagged by category/muscle/equipment (`ADMIN_TAGS`, `AVAILABLE_MUSCLES`, `EQUIPMENT_LIST` constants near the top of page.tsx).
 - Exercises are grouped into **protocols/templates** (`packages` + `package_exercises`) or assigned directly to a patient (`patient_exercises`), organized by week/day/block (`DAYS_OF_WEEK`, blocks `A/B/C…`).
