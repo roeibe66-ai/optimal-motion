@@ -6,7 +6,6 @@ import {
   AlertTriangle,
   BrainCircuit,
   Calendar,
-  ClipboardList,
   Coffee,
   DownloadCloud,
   Dumbbell,
@@ -19,15 +18,12 @@ import {
   History,
   Image as ImageIcon,
   Lock,
-  LogOut,
   Map,
-  Menu,
   Mic,
   PenTool,
   Phone,
   Plus,
   Save,
-  Settings,
   Sparkles,
   Target,
   Trash2,
@@ -39,7 +35,8 @@ import {
 } from "lucide-react";
 import { supabase } from "@/app/lib/supabase";
 import { useAuth } from "@/app/context/AuthContext";
-import { ADMIN_TAGS, AVAILABLE_MUSCLES, DAYS_OF_WEEK } from "@/app/constants/catalog";
+import { ADMIN_CATEGORY_STYLES, ADMIN_TAGS, AVAILABLE_MUSCLES, DAYS_OF_WEEK, DEFAULT_ADMIN_CATEGORY_STYLE } from "@/app/constants/catalog";
+import AdminSidebar from "@/app/components/admin/AdminSidebar";
 import { formatAdminDate } from "@/app/utils/format";
 import { getAIInsight } from "@/app/utils/scoring";
 
@@ -641,97 +638,8 @@ export default function LegacyAdminApp() {
   }
 
   return (
-    <div className="flex flex-col md:flex-row h-screen bg-[#f8fafc] overflow-hidden" dir="rtl">
-      <div className="md:hidden bg-stone-900 text-white p-4 flex justify-between items-center z-30 relative shadow-md">
-        <span className="text-xl font-black tracking-widest uppercase">
-          Clinic<span className="text-teal-500">Pro</span>
-        </span>
-        <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-2 bg-white/10 rounded-lg hover:bg-white/20 transition-colors">
-          {isSidebarOpen ? <X size={24} /> : <Menu size={24} />}
-        </button>
-      </div>
-
-      {isSidebarOpen && <div className="fixed inset-0 bg-black/60 z-40 md:hidden backdrop-blur-sm" onClick={() => setIsSidebarOpen(false)}></div>}
-
-      <aside className={`fixed md:static inset-y-0 w-72 bg-stone-900 text-stone-400 flex flex-col z-50 transition-all duration-300 ease-in-out ${isSidebarOpen ? "right-0" : "-right-80"} md:right-0 shadow-2xl`}>
-        <div className="p-8 hidden md:flex items-center gap-3">
-          <span className="text-2xl font-black text-white tracking-widest uppercase">
-            Clinic<span className="text-teal-500">Pro</span>
-          </span>
-        </div>
-        <nav className="flex-1 overflow-y-auto p-4 space-y-1 font-medium mt-4 md:mt-0">
-          <button
-            onClick={() => {
-              setAdminTab("dashboard");
-              setIsSidebarOpen(false);
-            }}
-            className={`w-full flex items-center gap-4 px-4 py-3.5 rounded-xl transition-all ${adminTab === "dashboard" ? "bg-white/10 text-white" : "hover:bg-white/5 hover:text-white"}`}
-          >
-            <Activity size={18} /> מעקב קליני
-          </button>
-          <button
-            onClick={() => {
-              setAdminTab("video_reviews");
-              setIsSidebarOpen(false);
-            }}
-            className={`w-full flex items-center gap-4 px-4 py-3.5 rounded-xl transition-all ${adminTab === "video_reviews" ? "bg-red-500/10 text-red-400 font-bold" : "hover:bg-white/5 hover:text-white"}`}
-          >
-            <Video size={18} /> ביקורת וידאו <span className="bg-red-500 text-white text-[10px] px-2 py-0.5 rounded-full mr-auto">1</span>
-          </button>
-          <button
-            onClick={() => {
-              setAdminTab("crm");
-              setIsSidebarOpen(false);
-            }}
-            className={`w-full flex items-center gap-4 px-4 py-3.5 rounded-xl transition-all ${adminTab === "crm" ? "bg-white/10 text-white" : "hover:bg-white/5 hover:text-white"}`}
-          >
-            <Users size={18} /> ניהול תיקים (CRM)
-          </button>
-          <button
-            onClick={() => {
-              setAdminTab("exercises");
-              setIsSidebarOpen(false);
-            }}
-            className={`w-full flex items-center gap-4 px-4 py-3.5 rounded-xl transition-all ${adminTab === "exercises" ? "bg-white/10 text-white" : "hover:bg-white/5 hover:text-white"}`}
-          >
-            <ImageIcon size={18} /> ספריית תרגילים
-          </button>
-
-          <button
-            onClick={() => {
-              setAdminTab("builder");
-              setIsSidebarOpen(false);
-            }}
-            className={`w-full flex items-center gap-4 px-4 py-3.5 rounded-xl transition-all ${adminTab === "builder" ? "bg-teal-500/20 text-teal-400 font-black" : "hover:bg-white/5 hover:text-white"}`}
-          >
-            <Wand2 size={18} /> בונה חכם & פרוטוקולים
-          </button>
-
-          <button
-            onClick={() => {
-              setAdminTab("assign");
-              setIsSidebarOpen(false);
-            }}
-            className={`w-full flex items-center gap-4 px-4 py-3.5 rounded-xl transition-all ${adminTab === "assign" ? "bg-white/10 text-white" : "hover:bg-white/5 hover:text-white"}`}
-          >
-            <ClipboardList size={18} /> שיוך ידני
-          </button>
-          <button
-            onClick={() => {
-              setAdminTab("manage_plans");
-              setIsSidebarOpen(false);
-            }}
-            className={`w-full flex items-center gap-4 px-4 py-3.5 rounded-xl transition-all ${adminTab === "manage_plans" ? "bg-white/10 text-white" : "hover:bg-white/5 hover:text-white"}`}
-          >
-            <Settings size={18} /> עריכת תוכניות
-          </button>
-        </nav>
-        <div className="p-4 border-t border-white/10">
-          <button onClick={handleLogout} className="w-full flex items-center gap-4 px-4 py-3.5 rounded-xl hover:bg-white/5 text-stone-500 hover:text-white transition-all font-bold">
-            <LogOut size={18} /> התנתק
-          </button>
-        </div>
-      </aside>
+    <div className="flex flex-col md:flex-row h-screen bg-[#0c0a09] overflow-hidden" dir="rtl">
+      <AdminSidebar adminTab={adminTab} setAdminTab={setAdminTab} isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen} onLogout={handleLogout} />
 
       <main className="flex-1 overflow-y-auto p-4 md:p-12">
         {adminTab === "video_reviews" && (
@@ -1258,21 +1166,29 @@ export default function LegacyAdminApp() {
         {adminTab === "exercises" && (
           <div className="max-w-6xl mx-auto animate-in fade-in">
             <header className="mb-10 hidden md:block">
-              <h1 className="text-3xl md:text-4xl font-black text-stone-900 tracking-tight">ספריית התרגילים</h1>
+              <h1 className="text-3xl md:text-4xl font-black text-white tracking-tight">ספריית התרגילים</h1>
+              <p className="text-[13px] text-stone-500 mt-1.5">ניהול מאגר התרגילים המרכזי — משמש את בונה הפרוטוקולים ואת בונה ה-DIY של המטופלים.</p>
             </header>
-            <div className="bg-white rounded-[2rem] shadow-sm border border-stone-100 p-8 md:p-10 mb-12">
-              <h2 className="text-xl font-bold text-stone-800 mb-8 border-b-2 border-teal-500 pb-3 inline-block">הוספת תרגיל חדש</h2>
+            <div className="bg-[#1c1c1e] rounded-[1.75rem] border border-stone-800 p-8 md:p-10 mb-12">
+              <h2 className="text-lg font-extrabold text-white mb-8 border-b-2 border-teal-500 pb-3 inline-block">הוספת תרגיל חדש</h2>
               <form onSubmit={handleExerciseSubmit} className="flex flex-col gap-6">
                 <div className="flex flex-col md:flex-row gap-6">
                   <div className="flex-1">
-                    <label className="block text-sm font-bold text-stone-500 mb-2 uppercase tracking-wide">שם תרגיל</label>
-                    <input type="text" value={exTitle} onChange={(e) => setExTitle(e.target.value)} className="w-full border-b-2 border-stone-200 p-2 bg-transparent focus:border-teal-500 outline-none" required />
+                    <label className="block text-[10px] font-extrabold text-stone-500 mb-2 uppercase tracking-wider">שם תרגיל</label>
+                    <input
+                      type="text"
+                      value={exTitle}
+                      onChange={(e) => setExTitle(e.target.value)}
+                      placeholder="לדוגמה: פשיטת ברך במכונה"
+                      className="w-full border-b-2 border-stone-800 p-2 bg-transparent text-white placeholder:text-stone-600 focus:border-teal-500 outline-none"
+                      required
+                    />
                   </div>
                   <div className="flex-1">
-                    <label className="block text-sm font-bold text-stone-500 mb-2 uppercase tracking-wide">קטגוריה</label>
-                    <select value={exCategory} onChange={(e) => setExCategory(e.target.value)} className="w-full border-b-2 border-stone-200 p-2 bg-transparent focus:border-teal-500 outline-none">
+                    <label className="block text-[10px] font-extrabold text-stone-500 mb-2 uppercase tracking-wider">קטגוריה</label>
+                    <select value={exCategory} onChange={(e) => setExCategory(e.target.value)} className="w-full border-b-2 border-stone-800 p-2 bg-transparent text-white font-bold focus:border-teal-500 outline-none">
                       {ADMIN_TAGS.map((tag) => (
-                        <option key={tag.id} value={tag.label}>
+                        <option key={tag.id} value={tag.label} className="bg-[#1c1c1e]">
                           {tag.label}
                         </option>
                       ))}
@@ -1280,32 +1196,49 @@ export default function LegacyAdminApp() {
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-bold text-stone-500 mb-2 uppercase tracking-wide">קישור לגיף או תמונה (URL)</label>
-                  <input type="url" value={exGifUrl} onChange={(e) => setExGifUrl(e.target.value)} className="w-full border-b-2 border-stone-200 p-2 bg-transparent focus:border-teal-500 outline-none text-left" dir="ltr" required />
+                  <label className="block text-[10px] font-extrabold text-stone-500 mb-2 uppercase tracking-wider">קישור לגיף או תמונה (URL)</label>
+                  <input
+                    type="url"
+                    value={exGifUrl}
+                    onChange={(e) => setExGifUrl(e.target.value)}
+                    placeholder="https://..."
+                    className="w-full border-b-2 border-stone-800 p-2 bg-transparent text-white placeholder:text-stone-600 focus:border-teal-500 outline-none text-left"
+                    dir="ltr"
+                    required
+                  />
                 </div>
 
-                <div className="bg-blue-50/50 p-5 rounded-2xl border border-blue-100 flex flex-col md:flex-row gap-6">
-                  <div className="flex-1 border-b md:border-b-0 md:border-l border-blue-200 pb-4 md:pb-0 md:pl-6">
-                    <label className="block text-sm font-bold text-blue-800 mb-2 flex items-center gap-2">
+                <div className="bg-teal-500/[0.06] p-5 rounded-2xl border border-teal-500/20 flex flex-col md:flex-row gap-6">
+                  <div className="flex-1 border-b md:border-b-0 md:border-l border-teal-500/20 pb-4 md:pb-0 md:pl-6">
+                    <label className="block text-sm font-bold text-teal-400 mb-2 flex items-center gap-2">
                       <Target size={18} /> שריר מטרה (אגוניסט)
                     </label>
-                    <select value={exPrimaryMuscle} onChange={(e) => setExPrimaryMuscle(e.target.value)} className="w-full border-b-2 border-blue-200 p-2 bg-transparent focus:border-blue-500 outline-none text-stone-800 font-bold" required>
-                      <option value="">-- בחר שריר מרכזי --</option>
+                    <select value={exPrimaryMuscle} onChange={(e) => setExPrimaryMuscle(e.target.value)} className="w-full border-b-2 border-teal-500/30 p-2 bg-transparent focus:border-teal-500 outline-none text-white font-bold" required>
+                      <option value="" className="bg-[#1c1c1e]">
+                        -- בחר שריר מרכזי --
+                      </option>
                       {AVAILABLE_MUSCLES.map((m) => (
-                        <option key={m.id} value={m.id}>
+                        <option key={m.id} value={m.id} className="bg-[#1c1c1e]">
                           {m.label}
                         </option>
                       ))}
                     </select>
-                    <p className="text-[10px] text-blue-600 mt-2 font-medium">* לפיו המערכת תחפש תרגילים חלופיים.</p>
+                    <p className="text-[10px] text-teal-500/80 mt-2 font-medium">* לפיו המערכת תחפש תרגילים חלופיים.</p>
                   </div>
                   <div className="flex-[2]">
-                    <label className="block text-sm font-bold text-blue-800 mb-2">שרירים מייצבים (סינרגיסטים)</label>
+                    <label className="block text-sm font-bold text-teal-400 mb-2">שרירים מייצבים (סינרגיסטים)</label>
                     <div className="flex flex-wrap gap-2">
                       {AVAILABLE_MUSCLES.filter((m) => m.id !== exPrimaryMuscle).map((m) => {
                         const isSelected = exSecondaryMuscles.includes(m.id);
                         return (
-                          <button key={m.id} type="button" onClick={() => toggleSecondaryMuscle(m.id)} className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all border ${isSelected ? "bg-blue-600 text-white border-blue-700 shadow-sm" : "bg-white text-stone-600 border-stone-200 hover:bg-stone-100"}`}>
+                          <button
+                            key={m.id}
+                            type="button"
+                            onClick={() => toggleSecondaryMuscle(m.id)}
+                            className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all border ${
+                              isSelected ? "bg-teal-500 text-stone-950 border-teal-400 shadow-sm" : "bg-stone-950 text-stone-300 border-stone-800 hover:bg-stone-900"
+                            }`}
+                          >
                             {m.label}
                           </button>
                         );
@@ -1314,15 +1247,22 @@ export default function LegacyAdminApp() {
                   </div>
                 </div>
 
-                <div className="bg-stone-50 p-5 rounded-2xl border border-stone-200">
-                  <label className="block text-sm font-bold text-stone-600 mb-3 flex items-center gap-2">
+                <div className="bg-stone-950 p-5 rounded-2xl border border-stone-800">
+                  <label className="block text-sm font-bold text-stone-400 mb-3 flex items-center gap-2">
                     <Lock size={16} /> תגיות סינון פנימיות (לאדמין בלבד)
                   </label>
                   <div className="flex flex-wrap gap-2">
                     {ADMIN_TAGS.map((tag) => {
                       const isSelected = exAdminTags.includes(tag.id);
                       return (
-                        <button key={tag.id} type="button" onClick={() => toggleAdminTag(tag.id)} className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all border ${isSelected ? "bg-stone-800 text-white border-stone-900 shadow-sm" : "bg-white text-stone-600 border-stone-200 hover:bg-stone-100"}`}>
+                        <button
+                          key={tag.id}
+                          type="button"
+                          onClick={() => toggleAdminTag(tag.id)}
+                          className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all border ${
+                            isSelected ? "bg-white text-stone-950 border-white shadow-sm" : "bg-[#1c1c1e] text-stone-400 border-stone-800 hover:bg-stone-800"
+                          }`}
+                        >
                           {tag.label}
                         </button>
                       );
@@ -1330,160 +1270,211 @@ export default function LegacyAdminApp() {
                   </div>
                 </div>
 
-                <div className="bg-red-50/50 p-5 rounded-2xl border border-red-100">
-                  <label className="block text-sm font-bold text-red-800 mb-2 flex items-center gap-2">
+                <div className="bg-red-500/[0.06] p-5 rounded-2xl border border-red-500/20">
+                  <label className="block text-sm font-bold text-red-400 mb-2 flex items-center gap-2">
                     <AlertTriangle size={18} /> אזהרה / טעות נפוצה (אופציונלי)
                   </label>
-                  <input type="text" value={exMistake} onChange={(e) => setExMistake(e.target.value)} placeholder="למשל: אל תיתן לברך לקרוס פנימה" className="w-full border-b-2 border-red-200 p-2 bg-transparent focus:border-red-500 outline-none" />
+                  <input
+                    type="text"
+                    value={exMistake}
+                    onChange={(e) => setExMistake(e.target.value)}
+                    placeholder="למשל: אל תיתן לברך לקרוס פנימה"
+                    className="w-full border-b-2 border-red-500/30 p-2 bg-transparent text-white placeholder:text-stone-600 focus:border-red-400 outline-none"
+                  />
                 </div>
                 <div>
-                  <label className="block text-sm font-bold text-stone-500 mb-2 uppercase tracking-wide">דגשים קליניים (אופציונלי)</label>
-                  <textarea value={exDesc} onChange={(e) => setExDesc(e.target.value)} className="w-full border-b-2 border-stone-200 p-2 bg-transparent focus:border-teal-500 outline-none" rows={2} />
+                  <label className="block text-[10px] font-extrabold text-stone-500 mb-2 uppercase tracking-wider">דגשים קליניים (אופציונלי)</label>
+                  <textarea value={exDesc} onChange={(e) => setExDesc(e.target.value)} className="w-full border-b-2 border-stone-800 p-2 bg-transparent text-white focus:border-teal-500 outline-none" rows={2} />
                 </div>
-                <button type="submit" className="bg-stone-900 text-white px-10 py-3.5 rounded-xl font-bold w-full md:w-fit self-end hover:bg-teal-600">
+                <button type="submit" className="bg-teal-500 text-stone-950 px-10 py-3.5 rounded-2xl font-black w-full md:w-fit self-end hover:bg-teal-400 transition-colors">
                   שמור במאגר
                 </button>
               </form>
             </div>
 
-            <div className="mb-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-t border-stone-200 pt-8 mt-4">
-              <h2 className="text-2xl font-black text-stone-800 flex items-center gap-2">
-                מאגר תרגילים <span className="text-teal-500 text-lg">({filteredLibraryExercises.length})</span>
+            <div className="mb-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-t border-stone-800 pt-8 mt-4">
+              <h2 className="text-xl font-black text-white flex items-center gap-2">
+                מאגר תרגילים <span className="text-teal-400 text-base font-extrabold">({filteredLibraryExercises.length})</span>
               </h2>
-              <div className="flex flex-wrap gap-2 bg-stone-50 p-2 rounded-2xl border border-stone-200">
-                <button onClick={() => setLibExerciseTagFilter("all")} className={`px-4 py-1.5 text-sm font-bold rounded-lg transition-colors ${libExerciseTagFilter === "all" ? "bg-stone-800 text-white shadow-sm" : "bg-transparent text-stone-500 hover:bg-stone-200"}`}>
+              <div className="flex flex-wrap gap-1.5 bg-[#1c1c1e] p-1.5 rounded-2xl border border-stone-800">
+                <button
+                  onClick={() => setLibExerciseTagFilter("all")}
+                  className={`px-4 py-2 text-xs font-extrabold rounded-xl transition-colors ${libExerciseTagFilter === "all" ? "bg-white text-stone-950" : "text-stone-400 hover:bg-stone-800"}`}
+                >
                   הכל
                 </button>
                 {ADMIN_TAGS.map((tag) => (
-                  <button key={tag.id} onClick={() => setLibExerciseTagFilter(tag.id)} className={`px-4 py-1.5 text-sm font-bold rounded-lg transition-colors flex items-center gap-1 ${libExerciseTagFilter === tag.id ? "bg-teal-500 text-white shadow-sm" : "bg-transparent text-stone-500 hover:bg-stone-200"}`}>
-                    <Lock size={12} /> {tag.label}
+                  <button
+                    key={tag.id}
+                    onClick={() => setLibExerciseTagFilter(tag.id)}
+                    className={`px-4 py-2 text-xs font-extrabold rounded-xl transition-colors flex items-center gap-1 ${
+                      libExerciseTagFilter === tag.id ? "bg-teal-500 text-stone-950" : "text-stone-400 hover:bg-stone-800"
+                    }`}
+                  >
+                    <Lock size={11} /> {tag.label}
                   </button>
                 ))}
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredLibraryExercises.length === 0 && (
-                <div className="col-span-full text-center p-12 bg-white/50 rounded-3xl border border-stone-100">
-                  <ImageIcon size={40} className="mx-auto text-stone-300 mb-4" />
-                  <h3 className="text-xl font-bold text-stone-800">אין תרגילים העונים לסינון</h3>
+                <div className="col-span-full text-center p-12 bg-[#1c1c1e]/50 rounded-3xl border border-stone-800">
+                  <ImageIcon size={40} className="mx-auto text-stone-600 mb-4" />
+                  <h3 className="text-xl font-bold text-white">אין תרגילים העונים לסינון</h3>
                   <p className="text-stone-500">נסה לבחור תגית אחרת או להוסיף תרגיל חדש.</p>
                 </div>
               )}
-              {filteredLibraryExercises.map((ex) => (
-                <div key={ex.id} className="bg-white rounded-3xl shadow-sm border border-stone-100 overflow-hidden flex flex-col group relative">
-                  <div className="aspect-video bg-stone-50 relative overflow-hidden flex items-center justify-center p-4">
-                    {ex.gif_url ? (
-                      ex.gif_url.toLowerCase().includes(".mp4") || ex.gif_url.toLowerCase().includes(".webm") ? (
-                        <video src={ex.gif_url} autoPlay muted playsInline loop className="w-full h-full object-contain mix-blend-multiply group-hover:scale-105 transition-transform duration-500" />
+              {filteredLibraryExercises.map((ex) => {
+                const style = ADMIN_CATEGORY_STYLES[ex.category] ?? DEFAULT_ADMIN_CATEGORY_STYLE;
+                return (
+                  <div key={ex.id} className="bg-[#1c1c1e] rounded-3xl border border-stone-800 overflow-hidden flex flex-col group relative">
+                    <div className="h-[150px] relative overflow-hidden" style={{ background: `linear-gradient(150deg, ${style.glow}, #1c1c1e 75%)` }}>
+                      <div className="absolute inset-0" style={{ background: `radial-gradient(circle at 70% 20%, ${style.radial}, transparent 55%)` }}></div>
+                      {ex.gif_url ? (
+                        <div className="absolute inset-0 flex items-center justify-center p-6">
+                          {ex.gif_url.toLowerCase().includes(".mp4") || ex.gif_url.toLowerCase().includes(".webm") ? (
+                            <video src={ex.gif_url} autoPlay muted playsInline loop className="max-w-full max-h-full rounded-xl bg-white/95 object-contain p-1.5 shadow-lg group-hover:scale-105 transition-transform duration-500" />
+                          ) : (
+                            <img src={ex.gif_url} alt={ex.title} className="max-w-full max-h-full rounded-xl bg-white/95 object-contain p-1.5 shadow-lg group-hover:scale-105 transition-transform duration-500" />
+                          )}
+                        </div>
                       ) : (
-                        <img src={ex.gif_url} alt={ex.title} className="w-full h-full object-contain mix-blend-multiply group-hover:scale-105 transition-transform duration-500" />
-                      )
-                    ) : (
-                      <div className="absolute inset-0 flex items-center justify-center text-stone-400 text-sm font-bold">אין מדיה</div>
-                    )}
-                    <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-md text-stone-900 text-xs font-bold px-4 py-1.5 rounded-full shadow-sm">{ex.category}</div>
-                  </div>
-                  <div className="p-6 flex-1 flex flex-col">
-                    {editingExId === ex.id ? (
-                      <div className="flex flex-col gap-3">
-                        <input type="text" value={editExForm.title} onChange={(e) => setEditExForm({ ...editExForm, title: e.target.value })} className="border-b border-stone-300 font-bold outline-none" placeholder="שם תרגיל" />
-                        <input type="url" value={editExForm.gif_url} onChange={(e) => setEditExForm({ ...editExForm, gif_url: e.target.value })} className="border-b border-stone-300 text-sm outline-none text-left" dir="ltr" placeholder="קישור לוידאו" />
+                        <div className="absolute inset-0 flex items-center justify-center text-stone-500 text-xs font-bold">אין מדיה</div>
+                      )}
+                      <div className="absolute top-3.5 right-3.5 bg-white/95 text-stone-950 text-[11px] font-extrabold px-3 py-1.5 rounded-full">{ex.category}</div>
+                    </div>
+                    <div className="p-5 flex-1 flex flex-col">
+                      {editingExId === ex.id ? (
+                        <div className="flex flex-col gap-3">
+                          <input
+                            type="text"
+                            value={editExForm.title}
+                            onChange={(e) => setEditExForm({ ...editExForm, title: e.target.value })}
+                            className="border-b border-stone-700 bg-transparent text-white font-bold outline-none"
+                            placeholder="שם תרגיל"
+                          />
+                          <input
+                            type="url"
+                            value={editExForm.gif_url}
+                            onChange={(e) => setEditExForm({ ...editExForm, gif_url: e.target.value })}
+                            className="border-b border-stone-700 bg-transparent text-white text-sm outline-none text-left"
+                            dir="ltr"
+                            placeholder="קישור לוידאו"
+                          />
 
-                        <div className="mt-2">
-                          <label className="text-xs font-bold text-stone-500">שריר מרכזי</label>
-                          <select value={editExForm.target_muscle} onChange={(e) => setEditExForm({ ...editExForm, target_muscle: e.target.value })} className="w-full border-b border-stone-300 p-1 text-xs outline-none">
-                            <option value="">-- שריר מרכזי --</option>
-                            {AVAILABLE_MUSCLES.map((m) => (
-                              <option key={m.id} value={m.id}>
-                                {m.label}
+                          <div className="mt-2">
+                            <label className="text-xs font-bold text-stone-400">שריר מרכזי</label>
+                            <select
+                              value={editExForm.target_muscle}
+                              onChange={(e) => setEditExForm({ ...editExForm, target_muscle: e.target.value })}
+                              className="w-full border-b border-stone-700 bg-transparent text-white p-1 text-xs outline-none"
+                            >
+                              <option value="" className="bg-[#1c1c1e]">
+                                -- שריר מרכזי --
                               </option>
-                            ))}
-                          </select>
-                        </div>
+                              {AVAILABLE_MUSCLES.map((m) => (
+                                <option key={m.id} value={m.id} className="bg-[#1c1c1e]">
+                                  {m.label}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
 
-                        <div className="flex flex-wrap gap-1 mt-1">
-                          {AVAILABLE_MUSCLES.filter((m) => m.id !== editExForm.target_muscle).map((m) => {
-                            const isSelected = editExForm.secondary_muscles.includes(m.id);
-                            return (
-                              <button key={m.id} onClick={() => toggleSecondaryMuscle(m.id, true)} className={`text-[10px] px-2 py-1 rounded-md border ${isSelected ? "bg-blue-500 text-white" : "bg-stone-100 text-stone-500"}`}>
-                                {m.label}
-                              </button>
-                            );
-                          })}
-                        </div>
-
-                        <div className="mt-2 pt-2 border-t border-stone-100">
-                          <label className="text-[10px] font-bold text-stone-400 mb-1 flex items-center gap-1">
-                            <Lock size={10} /> תגיות פנימיות
-                          </label>
-                          <div className="flex flex-wrap gap-1">
-                            {ADMIN_TAGS.map((tag) => {
-                              const isSelected = editExForm.admin_tags.includes(tag.id);
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {AVAILABLE_MUSCLES.filter((m) => m.id !== editExForm.target_muscle).map((m) => {
+                              const isSelected = editExForm.secondary_muscles.includes(m.id);
                               return (
-                                <button key={tag.id} type="button" onClick={() => toggleAdminTag(tag.id, true)} className={`text-[10px] px-2 py-1 rounded-md border ${isSelected ? "bg-stone-800 text-white" : "bg-stone-100 text-stone-500"}`}>
-                                  {tag.label}
+                                <button key={m.id} onClick={() => toggleSecondaryMuscle(m.id, true)} className={`text-[10px] px-2 py-1 rounded-md border border-stone-700 ${isSelected ? "bg-teal-500 text-stone-950 border-teal-400" : "bg-stone-950 text-stone-400"}`}>
+                                  {m.label}
                                 </button>
                               );
                             })}
                           </div>
-                        </div>
 
-                        <input type="text" value={editExForm.common_mistake} onChange={(e) => setEditExForm({ ...editExForm, common_mistake: e.target.value })} className="border-b border-red-200 text-xs mt-2 outline-none" placeholder="אזהרה קלינית" />
-                        <textarea value={editExForm.description} onChange={(e) => setEditExForm({ ...editExForm, description: e.target.value })} className="border border-stone-200 rounded-lg p-2 text-xs mt-2 outline-none" placeholder="דגשים לביצוע" />
-                        <div className="flex gap-2 mt-2">
-                          <button onClick={() => handleSaveEditEx(ex.id)} className="flex-1 bg-teal-500 text-white py-2 rounded-xl text-xs font-bold">
-                            שמור
-                          </button>
-                          <button onClick={() => setEditingExId(null)} className="flex-1 bg-stone-200 text-stone-700 py-2 rounded-xl text-xs font-bold">
-                            ביטול
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <>
-                        <h3 className="text-xl font-bold text-stone-900 mb-1">{ex.title}</h3>
-
-                        {ex.admin_tags && (
-                          <div className="flex flex-wrap gap-1 mb-3">
-                            {ex.admin_tags.split(",").filter(Boolean).map((tagId: string) => {
-                              const tagLabel = ADMIN_TAGS.find((t) => t.id === tagId)?.label || tagId;
-                              return (
-                                <span key={tagId} className="bg-stone-100 text-stone-500 px-2 py-0.5 rounded-md text-[10px] font-bold border border-stone-200 flex items-center gap-1">
-                                  <Lock size={8} />
-                                  {tagLabel}
-                                </span>
-                              );
-                            })}
+                          <div className="mt-2 pt-2 border-t border-stone-800">
+                            <label className="text-[10px] font-bold text-stone-500 mb-1 flex items-center gap-1">
+                              <Lock size={10} /> תגיות פנימיות
+                            </label>
+                            <div className="flex flex-wrap gap-1">
+                              {ADMIN_TAGS.map((tag) => {
+                                const isSelected = editExForm.admin_tags.includes(tag.id);
+                                return (
+                                  <button key={tag.id} type="button" onClick={() => toggleAdminTag(tag.id, true)} className={`text-[10px] px-2 py-1 rounded-md border border-stone-700 ${isSelected ? "bg-white text-stone-950" : "bg-stone-950 text-stone-400"}`}>
+                                    {tag.label}
+                                  </button>
+                                );
+                              })}
+                            </div>
                           </div>
-                        )}
 
-                        {ex.target_muscle && (
-                          <p className="text-xs font-bold text-blue-600 mb-1 flex items-center gap-1">
-                            <Target size={12} /> מרכזי: {AVAILABLE_MUSCLES.find((m) => m.id === ex.target_muscle)?.label || ex.target_muscle}
-                          </p>
-                        )}
-                        {ex.common_mistake && (
-                          <p className="text-xs font-bold text-red-600 mb-3 flex items-center gap-1">
-                            <AlertTriangle size={12} /> יש אזהרת ביצוע
-                          </p>
-                        )}
-                        <p className="text-sm text-stone-500 font-medium leading-relaxed mt-2 border-t border-stone-100 pt-2 flex-1">{ex.description}</p>
-                        <div className="flex gap-2 mt-4 pt-4 border-t border-stone-50">
-                          <button onClick={() => handleStartEditEx(ex)} className="flex-1 flex items-center justify-center gap-1 text-stone-400 hover:text-teal-500 hover:bg-teal-50 py-2 rounded-lg transition-colors">
-                            <Edit3 size={16} />
-                            <span className="text-xs font-bold">ערוך</span>
-                          </button>
-                          <button onClick={() => handleDeleteEx(ex.id)} className="flex-1 flex items-center justify-center gap-1 text-stone-400 hover:text-red-500 hover:bg-red-50 py-2 rounded-lg transition-colors">
-                            <Trash2 size={16} />
-                            <span className="text-xs font-bold">מחק</span>
-                          </button>
+                          <input
+                            type="text"
+                            value={editExForm.common_mistake}
+                            onChange={(e) => setEditExForm({ ...editExForm, common_mistake: e.target.value })}
+                            className="border-b border-red-500/30 bg-transparent text-white text-xs mt-2 outline-none"
+                            placeholder="אזהרה קלינית"
+                          />
+                          <textarea
+                            value={editExForm.description}
+                            onChange={(e) => setEditExForm({ ...editExForm, description: e.target.value })}
+                            className="border border-stone-700 bg-transparent text-white rounded-lg p-2 text-xs mt-2 outline-none"
+                            placeholder="דגשים לביצוע"
+                          />
+                          <div className="flex gap-2 mt-2">
+                            <button onClick={() => handleSaveEditEx(ex.id)} className="flex-1 bg-teal-500 text-stone-950 py-2 rounded-xl text-xs font-bold">
+                              שמור
+                            </button>
+                            <button onClick={() => setEditingExId(null)} className="flex-1 bg-stone-800 text-stone-300 py-2 rounded-xl text-xs font-bold">
+                              ביטול
+                            </button>
+                          </div>
                         </div>
-                      </>
-                    )}
+                      ) : (
+                        <>
+                          <h3 className="text-[15px] font-extrabold text-white mb-2">{ex.title}</h3>
+
+                          {ex.admin_tags && (
+                            <div className="flex flex-wrap gap-1 mb-2.5">
+                              {ex.admin_tags.split(",").filter(Boolean).map((tagId: string) => {
+                                const tagLabel = ADMIN_TAGS.find((t) => t.id === tagId)?.label || tagId;
+                                return (
+                                  <span key={tagId} className="bg-stone-950 text-stone-400 px-2.5 py-1 rounded-full text-[9px] font-extrabold border border-stone-800 flex items-center gap-1">
+                                    <Lock size={8} />
+                                    {tagLabel}
+                                  </span>
+                                );
+                              })}
+                            </div>
+                          )}
+
+                          {ex.target_muscle && (
+                            <p className="text-[11px] font-bold text-teal-400 mb-1.5 flex items-center gap-1.5">
+                              <Target size={11} /> מרכזי: {AVAILABLE_MUSCLES.find((m) => m.id === ex.target_muscle)?.label || ex.target_muscle}
+                            </p>
+                          )}
+                          {ex.common_mistake && (
+                            <p className="text-[11px] font-bold text-red-400 mb-1.5 flex items-center gap-1.5">
+                              <AlertTriangle size={11} /> יש אזהרת ביצוע
+                            </p>
+                          )}
+                          <p className="text-[13px] text-stone-500 font-medium leading-relaxed mt-1 flex-1">{ex.description}</p>
+                          <div className="flex gap-2 mt-3 pt-3 border-t border-stone-800">
+                            <button onClick={() => handleStartEditEx(ex)} className="flex-1 flex items-center justify-center gap-1 text-stone-400 hover:text-teal-400 hover:bg-teal-500/10 py-2 rounded-lg transition-colors">
+                              <Edit3 size={16} />
+                              <span className="text-xs font-bold">ערוך</span>
+                            </button>
+                            <button onClick={() => handleDeleteEx(ex.id)} className="flex-1 flex items-center justify-center gap-1 text-stone-400 hover:text-red-400 hover:bg-red-500/10 py-2 rounded-lg transition-colors">
+                              <Trash2 size={16} />
+                              <span className="text-xs font-bold">מחק</span>
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}

@@ -75,3 +75,18 @@ export const DIY_CATEGORY_STYLES: Record<string, { text: string; bg: string; bor
   "מוביליטי": { text: "#facc15", bg: "rgba(234,179,8,0.14)", border: "rgba(234,179,8,0.3)" },
 };
 export const DEFAULT_DIY_CATEGORY_STYLE = { text: "#a8a29e", bg: "rgba(168,162,158,0.14)", border: "rgba(168,162,158,0.3)" };
+
+// Admin-facing category tag colors (AdminExerciseLibrary + ProtocolBuilder).
+// A separate 7-value taxonomy from DIY_CATEGORY_STYLES above — keyed by
+// ADMIN_TAGS label (Hebrew text), which is what exercises.category actually
+// stores. `glow` is the darker tone used behind card thumbnails.
+export const ADMIN_CATEGORY_STYLES: Record<string, { text: string; bg: string; border: string; glow: string; radial: string }> = {
+  "קליסטניקס": { text: "#14b8a6", bg: "rgba(20,184,166,0.14)", border: "rgba(20,184,166,0.3)", glow: "#123a34", radial: "rgba(20,184,166,0.32)" },
+  "מכון כושר": { text: "#a78bfa", bg: "rgba(167,139,250,0.14)", border: "rgba(167,139,250,0.3)", glow: "#241a3a", radial: "rgba(167,139,250,0.28)" },
+  "יוגה": { text: "#f87156", bg: "rgba(248,113,86,0.14)", border: "rgba(248,113,86,0.3)", glow: "#3a1e18", radial: "rgba(248,113,86,0.3)" },
+  "מוביליטי": { text: "#facc15", bg: "rgba(234,179,8,0.14)", border: "rgba(234,179,8,0.3)", glow: "#3a3414", radial: "rgba(234,179,8,0.28)" },
+  "קטלבל": { text: "#f59e0b", bg: "rgba(245,158,11,0.14)", border: "rgba(245,158,11,0.3)", glow: "#3a2c14", radial: "rgba(245,158,11,0.3)" },
+  "פליומטרי": { text: "#fb923c", bg: "rgba(251,146,60,0.14)", border: "rgba(251,146,60,0.3)", glow: "#3a2410", radial: "rgba(251,146,60,0.28)" },
+  "שיקום": { text: "#60a5fa", bg: "rgba(96,165,250,0.14)", border: "rgba(96,165,250,0.3)", glow: "#14263a", radial: "rgba(96,165,250,0.28)" },
+};
+export const DEFAULT_ADMIN_CATEGORY_STYLE = { text: "#a8a29e", bg: "rgba(168,162,158,0.14)", border: "rgba(168,162,158,0.3)", glow: "#1c1c1e", radial: "rgba(168,162,158,0.24)" };
