@@ -47,3 +47,18 @@ export const CATEGORY_IMAGES: Record<string, string> = {
 };
 
 export const DEFAULT_COURSE_IMG = "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?auto=format&fit=crop&w=800&q=80";
+
+// Warm-tinted glow per category track (Main's track cards, the Premium
+// store's track cards) — a dark card base plus a category-tinted radial
+// glow, replacing per-category stock photos with a hand-authored look.
+// Generalized rather than hand-coded per category, since the real category
+// list isn't fixed to whichever categories a given mockup happened to show.
+export const TRACK_GLOW_TINTS: Record<string, string> = {
+  "יוגה": "rgba(248,113,86,0.32)",
+  "קטלבל": "rgba(245,158,11,0.3)",
+  "מוביליטי": "rgba(234,179,8,0.3)",
+  "קליסטניקס": "rgba(20,184,166,0.3)",
+  "מכון כושר": "rgba(234,88,12,0.3)",
+  "שיקום": "rgba(16,185,129,0.25)",
+};
+export const DEFAULT_TRACK_GLOW = "rgba(245,158,11,0.22)";

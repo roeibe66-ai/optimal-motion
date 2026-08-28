@@ -20,10 +20,17 @@ export default function RegisterPage() {
 
   return (
     <div
-      className="relative min-h-screen flex items-center justify-center p-4 bg-[url('https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?ixlib=rb-4.0.3&auto=format&fit=crop&w=2000&q=80')] bg-cover bg-center"
+      className="relative min-h-screen flex items-center justify-center p-4"
+      style={{ background: "radial-gradient(120% 70% at 50% 0%, #3d2a14 0%, #0c0a09 62%), linear-gradient(180deg, #2a1c0e, #0c0a09 55%)" }}
       dir={lang === "he" ? "rtl" : "ltr"}
     >
-      <div className="absolute inset-0 bg-stone-900/60 backdrop-blur-md"></div>
+      <div
+        className="absolute inset-0"
+        style={{
+          background:
+            "radial-gradient(circle at 20% 20%, rgba(245,158,11,0.28), transparent 45%), radial-gradient(circle at 85% 10%, rgba(20,184,166,0.10), transparent 40%)",
+        }}
+      ></div>
       <div className="bg-white/95 backdrop-blur-xl p-8 md:p-12 rounded-[2rem] shadow-2xl w-full max-w-md relative z-10 border border-white/20 animate-in zoom-in duration-300">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-3xl font-black text-stone-900 flex items-center gap-2">
@@ -79,7 +86,7 @@ export default function RegisterPage() {
         <div className="mt-6 text-center">
           <button
             onClick={() => setCurrentView("login")}
-            className="text-sm font-bold text-stone-400 hover:text-stone-800 transition-colors"
+            className="text-sm font-bold text-stone-600 hover:text-stone-800 transition-colors"
           >
             כבר יש לך משתמש? לחץ להתחברות
           </button>

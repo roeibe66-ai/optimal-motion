@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/app/context/AuthContext";
 import { getTrackAccess } from "@/app/utils/premium";
-import { AVAILABLE_MUSCLES } from "@/app/constants/catalog";
+import { AVAILABLE_MUSCLES, DEFAULT_TRACK_GLOW, TRACK_GLOW_TINTS } from "@/app/constants/catalog";
 import type { Exercise, WorkoutLog } from "@/app/types";
 import type { HydratedPatientExercise, SessionExercise } from "@/app/hooks/useWorkoutSession";
 
@@ -37,19 +37,6 @@ interface PlanTabProps {
   onStartWorkout: () => void;
 }
 
-// Warm-tinted glow per category track, matching the approved mockup's
-// per-card gradients — generalized (dark card base + a category-tinted
-// radial glow) rather than hand-authored per category, since the real
-// patient category list isn't fixed to the 3 categories shown in the mockup.
-const TRACK_GLOW_TINTS: Record<string, string> = {
-  "יוגה": "rgba(248,113,86,0.32)",
-  "קטלבל": "rgba(245,158,11,0.3)",
-  "מוביליטי": "rgba(234,179,8,0.3)",
-  "קליסטניקס": "rgba(20,184,166,0.3)",
-  "מכון כושר": "rgba(234,88,12,0.3)",
-  "שיקום": "rgba(16,185,129,0.25)",
-};
-const DEFAULT_TRACK_GLOW = "rgba(245,158,11,0.22)";
 
 const DAYS_OF_WEEK_SHORT = [
   { id: "0", short: "א׳" },

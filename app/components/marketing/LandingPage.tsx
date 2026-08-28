@@ -8,8 +8,18 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen flex flex-col font-sans relative" dir={lang === "he" ? "rtl" : "ltr"}>
-      <div className="absolute inset-0 z-0 bg-[url('https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?ixlib=rb-4.0.3&auto=format&fit=crop&w=2000&q=80')] bg-cover bg-center">
-        <div className="absolute inset-0 bg-stone-900/60 backdrop-blur-sm"></div>
+      {/* Warm hand-drawn gradient, replacing the generic stock photo that used to repeat across landing/login/register */}
+      <div
+        className="absolute inset-0 z-0"
+        style={{ background: "radial-gradient(120% 70% at 50% 0%, #3d2a14 0%, #0c0a09 62%), linear-gradient(180deg, #2a1c0e, #0c0a09 55%)" }}
+      >
+        <div
+          className="absolute inset-0"
+          style={{
+            background:
+              "radial-gradient(circle at 20% 20%, rgba(245,158,11,0.28), transparent 45%), radial-gradient(circle at 85% 10%, rgba(20,184,166,0.10), transparent 40%)",
+          }}
+        ></div>
       </div>
       <header className="relative z-10 bg-transparent px-4 md:px-12 py-6 flex justify-between items-center">
         <span className="text-xl md:text-2xl font-black text-white tracking-widest uppercase">OptimalMotion</span>

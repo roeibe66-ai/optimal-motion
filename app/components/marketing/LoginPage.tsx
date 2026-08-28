@@ -18,10 +18,17 @@ export default function LoginPage() {
 
   return (
     <div
-      className="relative min-h-screen flex items-center justify-center p-4 bg-[url('https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?ixlib=rb-4.0.3&auto=format&fit=crop&w=2000&q=80')] bg-cover bg-center"
+      className="relative min-h-screen flex items-center justify-center p-4"
+      style={{ background: "radial-gradient(120% 70% at 50% 0%, #3d2a14 0%, #0c0a09 62%), linear-gradient(180deg, #2a1c0e, #0c0a09 55%)" }}
       dir={lang === "he" ? "rtl" : "ltr"}
     >
-      <div className="absolute inset-0 bg-stone-900/60 backdrop-blur-md"></div>
+      <div
+        className="absolute inset-0"
+        style={{
+          background:
+            "radial-gradient(circle at 20% 20%, rgba(245,158,11,0.28), transparent 45%), radial-gradient(circle at 85% 10%, rgba(20,184,166,0.10), transparent 40%)",
+        }}
+      ></div>
       <div className="bg-white/95 backdrop-blur-xl p-8 md:p-12 rounded-[2rem] shadow-2xl w-full max-w-md relative z-10 border border-white/20">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-3xl font-black text-stone-900">{t.login}</h2>
@@ -68,12 +75,12 @@ export default function LoginPage() {
         <div className="mt-6 flex flex-col gap-3">
           <div className="flex items-center gap-3">
             <div className="h-px bg-stone-200 flex-1"></div>
-            <span className="text-xs text-stone-400 font-bold uppercase">או כניסה מהירה</span>
+            <span className="text-xs text-stone-600 font-bold uppercase">או כניסה מהירה</span>
             <div className="h-px bg-stone-200 flex-1"></div>
           </div>
           <button
             onClick={() => alert("להפעלת התחברות ביומטרית, יש לאשר בהגדרות החשבון לאחר הכניסה הראשונית.")}
-            className="w-full bg-stone-50 border border-stone-200 text-stone-700 py-3.5 rounded-xl font-bold hover:bg-stone-100 transition-colors flex items-center justify-center gap-2"
+            className="w-full bg-stone-50 border border-stone-200 text-stone-800 py-3.5 rounded-xl font-bold hover:bg-stone-100 transition-colors flex items-center justify-center gap-2"
           >
             <ScanFace size={20} className="text-teal-500" />
             <Fingerprint size={20} className="text-teal-500" />
@@ -93,7 +100,7 @@ export default function LoginPage() {
           {t.forgot_pass}
         </button>
         <div className="flex justify-between items-center mt-4 pt-4 border-t border-stone-100">
-          <button onClick={() => setCurrentView("landing")} className="text-sm font-bold text-stone-400 hover:text-stone-800 transition-colors">
+          <button onClick={() => setCurrentView("landing")} className="text-sm font-bold text-stone-600 hover:text-stone-800 transition-colors">
             חזור
           </button>
           <button onClick={() => setCurrentView("register")} className="text-sm font-black text-teal-600 hover:text-teal-800 transition-colors">
