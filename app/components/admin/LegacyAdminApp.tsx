@@ -645,24 +645,24 @@ export default function LegacyAdminApp() {
         {adminTab === "video_reviews" && (
           <div className="max-w-6xl mx-auto animate-in fade-in">
             <header className="mb-10 hidden md:block">
-              <h1 className="text-3xl md:text-4xl font-black text-stone-900 tracking-tight flex items-center gap-3">
-                <Video className="text-red-500" size={32} /> ביקורות וידאו ממטופלים
+              <h1 className="text-3xl md:text-4xl font-black text-white tracking-tight flex items-center gap-3">
+                <Video className="text-red-400" size={32} /> ביקורות וידאו ממטופלים
               </h1>
             </header>
-            <div className="bg-white rounded-[2rem] shadow-sm border border-stone-100 p-8 h-full">
-              <div className="border border-stone-200 p-5 rounded-2xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-stone-50 hover:bg-white transition-colors group">
+            <div className="bg-[#1c1c1e] rounded-[1.75rem] border border-stone-800 p-8 h-full">
+              <div className="border border-stone-800 p-5 rounded-2xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-stone-950 hover:bg-stone-900 transition-colors group">
                 <div className="flex items-center gap-4">
-                  <div className="w-14 h-14 bg-red-100 text-red-600 rounded-xl flex items-center justify-center">
+                  <div className="w-14 h-14 bg-red-500/10 text-red-400 rounded-xl flex items-center justify-center">
                     <Video size={24} />
                   </div>
                   <div>
-                    <h3 className="font-bold text-stone-800 text-lg">דוגמה למטופל (מוקאפ)</h3>
+                    <h3 className="font-bold text-white text-lg">דוגמה למטופל (מוקאפ)</h3>
                     <p className="text-sm text-stone-500">העלה סרטון ביצוע ל: &quot;Squat&quot;</p>
                   </div>
                 </div>
                 <button
                   onClick={() => setTacticalReviewMode({ patientName: "דוגמה למטופל", exerciseTitle: "Squat", gifUrl: "https://wger.de/media/exercise-images/88/Squats-1.png" })}
-                  className="bg-stone-900 text-white px-6 py-2.5 rounded-xl font-bold hover:bg-red-500 transition-colors shadow-sm flex items-center gap-2"
+                  className="bg-white text-stone-950 px-6 py-2.5 rounded-xl font-bold hover:bg-red-500 hover:text-white transition-colors flex items-center gap-2"
                 >
                   <PenTool size={16} /> פתח חדר ניתוח
                 </button>
@@ -674,38 +674,38 @@ export default function LegacyAdminApp() {
         {adminTab === "dashboard" && (
           <div className="max-w-6xl mx-auto animate-in fade-in">
             <header className="mb-10 hidden md:block">
-              <h1 className="text-3xl md:text-4xl font-black text-stone-900 tracking-tight">קליניקה לייב</h1>
+              <h1 className="text-3xl md:text-4xl font-black text-white tracking-tight">קליניקה לייב</h1>
             </header>
-            <div className="bg-white rounded-[2rem] shadow-sm border border-stone-100 p-8 h-full">
+            <div className="bg-[#1c1c1e] rounded-[1.75rem] border border-stone-800 p-8 h-full">
               <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-bold text-stone-800 flex items-center gap-2">
-                  <Activity size={20} className="text-teal-500" /> עדכונים קליניים מהשטח
+                <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                  <Activity size={20} className="text-teal-400" /> עדכונים קליניים מהשטח
                 </h2>
-                <span className="text-sm font-bold text-stone-400 bg-stone-50 px-3 py-1 rounded-full">{workoutLogs.length} דיווחים</span>
+                <span className="text-sm font-bold text-stone-400 bg-stone-950 px-3 py-1 rounded-full border border-stone-800">{workoutLogs.length} דיווחים</span>
               </div>
               {workoutLogs.length === 0 ? (
                 <div className="text-center p-12 flex flex-col items-center">
-                  <div className="w-20 h-20 bg-stone-50 rounded-full flex items-center justify-center text-stone-300 mb-4">
+                  <div className="w-20 h-20 bg-stone-950 rounded-full flex items-center justify-center text-stone-600 mb-4">
                     <Coffee size={32} />
                   </div>
-                  <p className="text-stone-500 font-bold text-lg">שקט בקליניקה כרגע</p>
-                  <p className="text-stone-400 text-sm">הדיווחים של המטופלים יופיעו כאן בזמן אמת.</p>
+                  <p className="text-stone-400 font-bold text-lg">שקט בקליניקה כרגע</p>
+                  <p className="text-stone-500 text-sm">הדיווחים של המטופלים יופיעו כאן בזמן אמת.</p>
                 </div>
               ) : (
                 <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2">
                   {workoutLogs.map((log, idx) => {
                     const patientName = patients.find((p) => p.id === log.patient_id)?.full_name || "מטופל לא ידוע";
-                    const rpeColor = log.rpe >= 8 ? "bg-red-100 text-red-700 border-red-200" : log.rpe >= 5 ? "bg-amber-100 text-amber-700 border-amber-200" : "bg-teal-100 text-teal-700 border-teal-200";
+                    const rpeColor = log.rpe >= 8 ? "bg-red-500/10 text-red-400 border-red-500/25" : log.rpe >= 5 ? "bg-amber-500/10 text-amber-400 border-amber-500/25" : "bg-teal-500/10 text-teal-400 border-teal-500/25";
                     return (
-                      <div key={idx} className="flex flex-col md:flex-row justify-between items-start md:items-center p-5 rounded-2xl border border-stone-100 bg-white hover:shadow-md transition-shadow gap-4">
+                      <div key={idx} className="flex flex-col md:flex-row justify-between items-start md:items-center p-5 rounded-2xl border border-stone-800 bg-stone-950 hover:border-stone-700 transition-colors gap-4">
                         <div>
-                          <h4 className="font-black text-stone-800 text-lg">{patientName}</h4>
-                          <p className="text-sm text-stone-500 font-medium">{log.category}</p>
-                          <span className="text-xs text-stone-400 mt-1 block">{formatAdminDate(log.created_at)}</span>
+                          <h4 className="font-black text-white text-lg">{patientName}</h4>
+                          <p className="text-sm text-stone-400 font-medium">{log.category}</p>
+                          <span className="text-xs text-stone-500 mt-1 block">{formatAdminDate(log.created_at)}</span>
                           {log.pain_areas && (
                             <div className="flex flex-wrap gap-1 mt-2">
                               {log.pain_areas.split(",").map((area: string) => (
-                                <span key={area} className="bg-red-50 text-red-600 px-2 py-0.5 rounded-md text-[10px] font-bold border border-red-100">
+                                <span key={area} className="bg-red-500/10 text-red-400 px-2 py-0.5 rounded-md text-[10px] font-bold border border-red-500/20">
                                   {AVAILABLE_MUSCLES.find((m) => m.id === area)?.label || area}
                                 </span>
                               ))}
@@ -713,13 +713,13 @@ export default function LegacyAdminApp() {
                           )}
                         </div>
                         <div className="flex gap-2 w-full md:w-auto">
-                          <div className="flex flex-col items-center justify-center w-full md:w-16 h-16 rounded-xl border border-stone-200 bg-stone-50">
-                            <span className="text-[10px] font-bold text-stone-400 uppercase">כאב לפני</span>
-                            <span className="text-xl font-black text-stone-700">{log.pain_before ?? "-"}</span>
+                          <div className="flex flex-col items-center justify-center w-full md:w-16 h-16 rounded-xl border border-stone-800 bg-[#1c1c1e]">
+                            <span className="text-[10px] font-bold text-stone-500 uppercase">כאב לפני</span>
+                            <span className="text-xl font-black text-stone-200">{log.pain_before ?? "-"}</span>
                           </div>
-                          <div className="flex flex-col items-center justify-center w-full md:w-16 h-16 rounded-xl border border-stone-200 bg-stone-50">
-                            <span className="text-[10px] font-bold text-stone-400 uppercase">כאב אחרי</span>
-                            <span className="text-xl font-black text-stone-700">{log.pain_after ?? "-"}</span>
+                          <div className="flex flex-col items-center justify-center w-full md:w-16 h-16 rounded-xl border border-stone-800 bg-[#1c1c1e]">
+                            <span className="text-[10px] font-bold text-stone-500 uppercase">כאב אחרי</span>
+                            <span className="text-xl font-black text-stone-200">{log.pain_after ?? "-"}</span>
                           </div>
                           <div className={`flex flex-col items-center justify-center w-full md:w-16 h-16 rounded-xl border-2 ${rpeColor}`}>
                             <span className="text-[10px] font-bold uppercase mb-0.5">RPE</span>
@@ -738,55 +738,55 @@ export default function LegacyAdminApp() {
         {adminTab === "crm" && (
           <div className="max-w-6xl mx-auto animate-in fade-in">
             <header className="mb-10 hidden md:block">
-              <h1 className="text-3xl md:text-4xl font-black text-stone-900 tracking-tight">ניהול תיקים ולקוחות</h1>
+              <h1 className="text-3xl md:text-4xl font-black text-white tracking-tight">ניהול תיקים ולקוחות</h1>
             </header>
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
-              <div className="bg-white rounded-3xl p-6 border border-stone-100 shadow-sm flex items-center gap-4">
-                <div className="w-14 h-14 rounded-2xl bg-stone-50 flex items-center justify-center text-stone-600">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+              <div className="bg-[#1c1c1e] rounded-3xl p-6 border border-stone-800 flex items-center gap-4">
+                <div className="w-14 h-14 rounded-2xl bg-stone-950 flex items-center justify-center text-stone-300">
                   <Users size={24} />
                 </div>
                 <div>
-                  <p className="text-sm font-bold text-stone-400 uppercase">סה&quot;כ לקוחות</p>
-                  <p className="text-2xl font-black text-stone-800">{patients.length}</p>
+                  <p className="text-sm font-bold text-stone-500 uppercase">סה&quot;כ לקוחות</p>
+                  <p className="text-2xl font-black text-white">{patients.length}</p>
                 </div>
               </div>
-              <div className="bg-white rounded-3xl p-6 border border-stone-100 shadow-sm flex items-center gap-4">
-                <div className="w-14 h-14 rounded-2xl bg-blue-50 flex items-center justify-center text-blue-600">
+              <div className="bg-[#1c1c1e] rounded-3xl p-6 border border-stone-800 flex items-center gap-4">
+                <div className="w-14 h-14 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-400">
                   <HeartPulse size={24} />
                 </div>
                 <div>
-                  <p className="text-sm font-bold text-blue-400 uppercase">שיקום קליני</p>
-                  <p className="text-2xl font-black text-stone-800">{clinicalCount}</p>
+                  <p className="text-sm font-bold text-blue-400/80 uppercase">שיקום קליני</p>
+                  <p className="text-2xl font-black text-white">{clinicalCount}</p>
                 </div>
               </div>
-              <div className="bg-white rounded-3xl p-6 border border-stone-100 shadow-sm flex items-center gap-4">
-                <div className="w-14 h-14 rounded-2xl bg-amber-50 flex items-center justify-center text-amber-600">
+              <div className="bg-[#1c1c1e] rounded-3xl p-6 border border-stone-800 flex items-center gap-4">
+                <div className="w-14 h-14 rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-400">
                   <Dumbbell size={24} />
                 </div>
                 <div>
-                  <p className="text-sm font-bold text-amber-400 uppercase">מתאמני כושר ויוגה</p>
-                  <p className="text-2xl font-black text-stone-800">{fitnessCount}</p>
+                  <p className="text-sm font-bold text-amber-400/80 uppercase">מתאמני כושר ויוגה</p>
+                  <p className="text-2xl font-black text-white">{fitnessCount}</p>
                 </div>
               </div>
             </div>
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <div className="lg:col-span-1">
-                <div className="bg-white rounded-[2rem] shadow-sm border border-stone-100 p-8">
-                  <h2 className="text-xl font-bold text-stone-800 mb-6 flex items-center gap-2">
-                    <User size={20} className="text-teal-500" /> פתיחת תיק חדש
+                <div className="bg-[#1c1c1e] rounded-[1.75rem] border border-stone-800 p-8">
+                  <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
+                    <User size={20} className="text-teal-400" /> פתיחת תיק חדש
                   </h2>
                   <form onSubmit={handlePatientSubmit} className="flex flex-col gap-5">
                     <div>
                       <label className="block text-sm font-bold text-stone-500 mb-2 uppercase">שם מלא</label>
-                      <input type="text" value={newPatName} onChange={(e) => setNewPatName(e.target.value)} className="w-full border-b-2 border-stone-200 p-2 bg-transparent focus:border-teal-500 outline-none" required />
+                      <input type="text" value={newPatName} onChange={(e) => setNewPatName(e.target.value)} className="w-full border-b-2 border-stone-800 p-2 bg-transparent text-white focus:border-teal-500 outline-none" required />
                     </div>
                     <div>
                       <label className="block text-sm font-bold text-stone-500 mb-2 uppercase">טלפון</label>
-                      <input type="tel" value={newPatPhone} onChange={(e) => setNewPatPhone(e.target.value)} className="w-full border-b-2 border-stone-200 p-2 bg-transparent focus:border-teal-500 outline-none" required />
+                      <input type="tel" value={newPatPhone} onChange={(e) => setNewPatPhone(e.target.value)} className="w-full border-b-2 border-stone-800 p-2 bg-transparent text-white focus:border-teal-500 outline-none" required />
                     </div>
                     <div>
                       <label className="block text-sm font-bold text-stone-500 mb-2 uppercase">סיסמה</label>
-                      <input type="text" value={newPatPass} onChange={(e) => setNewPatPass(e.target.value)} className="w-full border-b-2 border-stone-200 p-2 bg-transparent focus:border-teal-500 outline-none" required />
+                      <input type="text" value={newPatPass} onChange={(e) => setNewPatPass(e.target.value)} className="w-full border-b-2 border-stone-800 p-2 bg-transparent text-white focus:border-teal-500 outline-none" required />
                     </div>
                     <div className="mt-2">
                       <label className="block text-sm font-bold text-stone-500 mb-3 uppercase">מסלול הלקוח</label>
@@ -794,39 +794,43 @@ export default function LegacyAdminApp() {
                         <button
                           type="button"
                           onClick={() => setNewPatType("clinical")}
-                          className={`flex-1 py-3 rounded-xl text-sm font-bold flex flex-col items-center gap-2 border-2 transition-all ${newPatType === "clinical" ? "border-blue-500 bg-blue-50 text-blue-700" : "border-stone-100 bg-white text-stone-400 hover:border-stone-200"}`}
+                          className={`flex-1 py-3 rounded-xl text-sm font-bold flex flex-col items-center gap-2 border-2 transition-all ${
+                            newPatType === "clinical" ? "border-blue-500 bg-blue-500/10 text-blue-300" : "border-stone-800 bg-stone-950 text-stone-500 hover:border-stone-700"
+                          }`}
                         >
                           <HeartPulse size={20} /> שיקום
                         </button>
                         <button
                           type="button"
                           onClick={() => setNewPatType("fitness")}
-                          className={`flex-1 py-3 rounded-xl text-sm font-bold flex flex-col items-center gap-2 border-2 transition-all ${newPatType === "fitness" ? "border-amber-500 bg-amber-50 text-amber-700" : "border-stone-100 bg-white text-stone-400 hover:border-stone-200"}`}
+                          className={`flex-1 py-3 rounded-xl text-sm font-bold flex flex-col items-center gap-2 border-2 transition-all ${
+                            newPatType === "fitness" ? "border-amber-500 bg-amber-500/10 text-amber-300" : "border-stone-800 bg-stone-950 text-stone-500 hover:border-stone-700"
+                          }`}
                         >
                           <Dumbbell size={20} /> כושר
                         </button>
                       </div>
                     </div>
-                    <button type="submit" className="w-full bg-stone-900 text-white py-4 rounded-xl font-bold hover:bg-teal-600 transition-colors mt-4 text-lg">
+                    <button type="submit" className="w-full bg-teal-500 text-stone-950 py-4 rounded-xl font-black hover:bg-teal-400 transition-colors mt-4 text-lg">
                       צור פרופיל
                     </button>
                   </form>
                 </div>
               </div>
               <div className="lg:col-span-2">
-                <div className="bg-white rounded-[2rem] shadow-sm border border-stone-100 p-8 h-full">
+                <div className="bg-[#1c1c1e] rounded-[1.75rem] border border-stone-800 p-8 h-full">
                   <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
-                    <h2 className="text-xl font-bold text-stone-800 flex items-center gap-2">
-                      <Filter size={20} className="text-teal-500" /> רשימת לקוחות
+                    <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                      <Filter size={20} className="text-teal-400" /> רשימת לקוחות
                     </h2>
-                    <div className="flex bg-stone-50 p-1 rounded-xl border border-stone-200">
-                      <button onClick={() => setCrmFilter("all")} className={`px-4 py-1.5 text-sm font-bold rounded-lg transition-colors ${crmFilter === "all" ? "bg-white text-stone-800 shadow-sm" : "text-stone-400 hover:text-stone-600"}`}>
+                    <div className="flex bg-stone-950 p-1 rounded-xl border border-stone-800">
+                      <button onClick={() => setCrmFilter("all")} className={`px-4 py-1.5 text-sm font-bold rounded-lg transition-colors ${crmFilter === "all" ? "bg-white text-stone-950" : "text-stone-500 hover:text-stone-300"}`}>
                         הכל
                       </button>
-                      <button onClick={() => setCrmFilter("clinical")} className={`px-4 py-1.5 text-sm font-bold rounded-lg transition-colors ${crmFilter === "clinical" ? "bg-white text-blue-600 shadow-sm" : "text-stone-400 hover:text-stone-600"}`}>
+                      <button onClick={() => setCrmFilter("clinical")} className={`px-4 py-1.5 text-sm font-bold rounded-lg transition-colors ${crmFilter === "clinical" ? "bg-white text-blue-600" : "text-stone-500 hover:text-stone-300"}`}>
                         שיקום
                       </button>
-                      <button onClick={() => setCrmFilter("fitness")} className={`px-4 py-1.5 text-sm font-bold rounded-lg transition-colors ${crmFilter === "fitness" ? "bg-white text-amber-600 shadow-sm" : "text-stone-400 hover:text-stone-600"}`}>
+                      <button onClick={() => setCrmFilter("fitness")} className={`px-4 py-1.5 text-sm font-bold rounded-lg transition-colors ${crmFilter === "fitness" ? "bg-white text-amber-600" : "text-stone-500 hover:text-stone-300"}`}>
                         כושר
                       </button>
                     </div>
@@ -835,20 +839,20 @@ export default function LegacyAdminApp() {
                     {displayedPatients.map((p) => {
                       const aiInsight = getAIInsight(workoutLogs, p.id);
                       return (
-                        <div key={p.id} className="flex flex-col p-4 rounded-2xl border border-stone-100 hover:bg-stone-50 transition-colors group">
+                        <div key={p.id} className="flex flex-col p-4 rounded-2xl border border-stone-800 hover:bg-stone-950 transition-colors group">
                           <div className="flex items-center justify-between mb-3">
                             <div className="flex items-center gap-4">
-                              <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-bold text-lg ${p.patient_type === "fitness" ? "bg-amber-100 text-amber-700" : "bg-blue-100 text-blue-700"}`}>
+                              <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-bold text-lg ${p.patient_type === "fitness" ? "bg-amber-500/15 text-amber-400" : "bg-blue-500/15 text-blue-400"}`}>
                                 {p.full_name.charAt(0)}
                               </div>
                               <div>
-                                <h4 className="font-bold text-stone-800">{p.full_name}</h4>
-                                <p className="text-sm text-stone-400 flex items-center gap-2">
+                                <h4 className="font-bold text-white">{p.full_name}</h4>
+                                <p className="text-sm text-stone-500 flex items-center gap-2">
                                   <Phone size={12} /> {p.phone}
                                 </p>
                               </div>
                             </div>
-                            <span className={`text-xs font-bold px-3 py-1 rounded-full ${p.patient_type === "fitness" ? "bg-amber-50 text-amber-600 border border-amber-100" : "bg-blue-50 text-blue-600 border border-blue-100"}`}>
+                            <span className={`text-xs font-bold px-3 py-1 rounded-full border ${p.patient_type === "fitness" ? "bg-amber-500/10 text-amber-400 border-amber-500/20" : "bg-blue-500/10 text-blue-400 border-blue-500/20"}`}>
                               {p.patient_type === "fitness" ? "כושר ויציבה" : "שיקום קליני"}
                             </span>
                           </div>
@@ -859,7 +863,7 @@ export default function LegacyAdminApp() {
                         </div>
                       );
                     })}
-                    {displayedPatients.length === 0 && <div className="text-center p-10 text-stone-400">לא נמצאו לקוחות תחת סינון זה.</div>}
+                    {displayedPatients.length === 0 && <div className="text-center p-10 text-stone-500">לא נמצאו לקוחות תחת סינון זה.</div>}
                   </div>
                 </div>
               </div>
@@ -1498,23 +1502,25 @@ export default function LegacyAdminApp() {
         {adminTab === "assign" && (
           <div className="max-w-5xl mx-auto animate-in fade-in">
             <header className="mb-10 hidden md:block">
-              <h1 className="text-3xl md:text-4xl font-black text-stone-900 tracking-tight">שיוך מהיר (ידני)</h1>
+              <h1 className="text-3xl md:text-4xl font-black text-white tracking-tight">שיוך מהיר (ידני)</h1>
             </header>
-            <div className="bg-white rounded-[2rem] shadow-sm border border-stone-100 p-8 md:p-10 mb-8">
+            <div className="bg-[#1c1c1e] rounded-[1.75rem] border border-stone-800 p-8 md:p-10 mb-8">
               <div className="mb-8">
                 <label className="block text-sm font-bold text-stone-500 mb-2 uppercase">מטופל יעד</label>
-                <select value={assignPatientId} onChange={(e) => setAssignPatientId(e.target.value)} className="w-full md:w-1/2 border-b-2 border-stone-200 p-3 outline-none" required>
-                  <option value="">-- בחר מטופל --</option>
+                <select value={assignPatientId} onChange={(e) => setAssignPatientId(e.target.value)} className="w-full md:w-1/2 border-b-2 border-stone-800 p-3 bg-transparent text-white outline-none focus:border-teal-500" required>
+                  <option value="" className="bg-stone-950">
+                    -- בחר מטופל --
+                  </option>
                   {patients.map((p) => (
-                    <option key={p.id} value={p.id}>
+                    <option key={p.id} value={p.id} className="bg-stone-950">
                       {p.full_name}
                     </option>
                   ))}
                 </select>
               </div>
 
-              <div className="mt-6 mb-8 bg-stone-50 p-6 rounded-2xl border border-stone-100">
-                <label className="block text-sm font-bold text-stone-500 mb-3 uppercase flex items-center gap-2">
+              <div className="mt-6 mb-8 bg-stone-950 p-6 rounded-2xl border border-stone-800">
+                <label className="block text-sm font-bold text-stone-400 mb-3 uppercase flex items-center gap-2">
                   <Calendar size={16} /> ימי אימון בשבוע (אופציונלי)
                 </label>
                 <div className="flex flex-wrap gap-2">
@@ -1525,7 +1531,7 @@ export default function LegacyAdminApp() {
                         key={day.id}
                         type="button"
                         onClick={() => setAssignDays((prev) => (isSelected ? prev.filter((d) => d !== day.id) : [...prev, day.id]))}
-                        className={`w-12 h-12 rounded-xl font-bold text-sm transition-colors ${isSelected ? "bg-teal-500 text-white shadow-md" : "bg-white text-stone-500 hover:bg-stone-200 border border-stone-200"}`}
+                        className={`w-12 h-12 rounded-xl font-bold text-sm transition-colors ${isSelected ? "bg-teal-500 text-stone-950" : "bg-[#1c1c1e] text-stone-400 hover:bg-stone-800 border border-stone-800"}`}
                       >
                         {day.label}
                       </button>
@@ -1539,7 +1545,7 @@ export default function LegacyAdminApp() {
                   <div className="flex-1">
                     <div className="flex items-center justify-between mb-2">
                       <label className="block text-sm font-bold text-stone-500 uppercase">בחר תרגיל</label>
-                      <select value={assignExerciseTagFilter} onChange={(e) => setAssignExerciseTagFilter(e.target.value)} className="text-[10px] font-bold bg-stone-100 text-stone-500 px-2 py-1 rounded-md outline-none border-none cursor-pointer">
+                      <select value={assignExerciseTagFilter} onChange={(e) => setAssignExerciseTagFilter(e.target.value)} className="text-[10px] font-bold bg-stone-950 text-stone-400 px-2 py-1 rounded-md outline-none border border-stone-800 cursor-pointer">
                         <option value="all">כל התגיות (ללא סינון)</option>
                         {ADMIN_TAGS.map((tag) => (
                           <option key={tag.id} value={tag.id}>
@@ -1548,10 +1554,12 @@ export default function LegacyAdminApp() {
                         ))}
                       </select>
                     </div>
-                    <select value={assignExerciseId} onChange={(e) => setAssignExerciseId(e.target.value)} className="w-full border-b-2 border-stone-200 p-3 bg-transparent outline-none" required>
-                      <option value="">-- בחר תרגיל --</option>
+                    <select value={assignExerciseId} onChange={(e) => setAssignExerciseId(e.target.value)} className="w-full border-b-2 border-stone-800 p-3 bg-transparent text-white outline-none focus:border-teal-500" required>
+                      <option value="" className="bg-stone-950">
+                        -- בחר תרגיל --
+                      </option>
                       {filteredExercisesForAssign.map((e) => (
-                        <option key={e.id} value={e.id}>
+                        <option key={e.id} value={e.id} className="bg-stone-950">
                           {e.title}
                         </option>
                       ))}
@@ -1559,47 +1567,74 @@ export default function LegacyAdminApp() {
                   </div>
                   <div className="w-full md:w-32">
                     <label className="block text-sm font-bold text-stone-500 mb-2 uppercase">שבוע</label>
-                    <input type="number" value={assignWeek} onChange={(e) => setAssignWeek(parseInt(e.target.value))} className="w-full border-b-2 border-stone-200 p-3 outline-none text-center font-bold" required min="1" />
+                    <input
+                      type="number"
+                      value={assignWeek}
+                      onChange={(e) => setAssignWeek(parseInt(e.target.value))}
+                      className="w-full border-b-2 border-stone-800 p-3 bg-transparent text-white outline-none text-center font-bold focus:border-teal-500"
+                      required
+                      min="1"
+                    />
                   </div>
                   <div className="w-full md:w-32">
                     <label className="block text-sm font-bold text-stone-500 mb-2 uppercase">בלוק</label>
-                    <input type="text" value={assignBlock} onChange={(e) => setAssignBlock(e.target.value)} className="w-full border-b-2 border-stone-200 p-3 outline-none text-center uppercase font-bold" required placeholder="A" />
+                    <input
+                      type="text"
+                      value={assignBlock}
+                      onChange={(e) => setAssignBlock(e.target.value)}
+                      className="w-full border-b-2 border-stone-800 p-3 bg-transparent text-white outline-none text-center uppercase font-bold focus:border-teal-500"
+                      required
+                      placeholder="A"
+                    />
                   </div>
                 </div>
 
                 <div className="flex flex-col md:flex-row gap-6">
                   <div className="w-full md:w-1/4">
                     <label className="block text-sm font-bold text-stone-500 mb-2 uppercase">סטים</label>
-                    <input type="number" value={assignSets} onChange={(e) => setAssignSets(e.target.value)} className="w-full border-b-2 border-stone-200 p-3 outline-none text-center" required />
+                    <input type="number" value={assignSets} onChange={(e) => setAssignSets(e.target.value)} className="w-full border-b-2 border-stone-800 p-3 bg-transparent text-white outline-none text-center focus:border-teal-500" required />
                   </div>
 
                   <div className="w-full md:w-1/4">
                     <div className="flex items-center justify-between mb-2">
                       <label className="block text-sm font-bold text-stone-500 uppercase">יעד</label>
-                      <button type="button" onClick={() => setAssignIsTime(!assignIsTime)} className="text-[10px] font-bold bg-stone-100 text-stone-500 px-2 py-1 rounded-md hover:bg-stone-200 transition-colors">
+                      <button type="button" onClick={() => setAssignIsTime(!assignIsTime)} className="text-[10px] font-bold bg-stone-950 text-stone-400 px-2 py-1 rounded-md hover:bg-stone-800 transition-colors border border-stone-800">
                         {assignIsTime ? "שנה לחזרות" : "שנה לזמן"}
                       </button>
                     </div>
-                    <input type="number" value={assignReps} onChange={(e) => setAssignReps(e.target.value)} placeholder={assignIsTime ? "שניות" : "חזרות"} className="w-full border-b-2 border-stone-200 p-3 outline-none text-center" required />
+                    <input
+                      type="number"
+                      value={assignReps}
+                      onChange={(e) => setAssignReps(e.target.value)}
+                      placeholder={assignIsTime ? "שניות" : "חזרות"}
+                      className="w-full border-b-2 border-stone-800 p-3 bg-transparent text-white placeholder:text-stone-600 outline-none text-center focus:border-teal-500"
+                      required
+                    />
                   </div>
 
                   <div className="w-full md:w-1/4">
                     <div className="flex items-center gap-1 mb-2">
                       <label className="block text-sm font-bold text-stone-500 uppercase">RIR (רשות)</label>
-                      <button type="button" onClick={showRirInfo} className="text-stone-400 hover:text-teal-500">
+                      <button type="button" onClick={showRirInfo} className="text-stone-600 hover:text-teal-400">
                         <HelpCircle size={14} />
                       </button>
                     </div>
-                    <input type="number" value={assignRir} onChange={(e) => setAssignRir(e.target.value)} placeholder="-" className="w-full border-b-2 border-stone-200 p-3 outline-none text-center" />
+                    <input
+                      type="number"
+                      value={assignRir}
+                      onChange={(e) => setAssignRir(e.target.value)}
+                      placeholder="-"
+                      className="w-full border-b-2 border-stone-800 p-3 bg-transparent text-white placeholder:text-stone-600 outline-none text-center focus:border-teal-500"
+                    />
                   </div>
 
                   <div className="flex-1">
                     <label className="block text-sm font-bold text-stone-500 mb-2 uppercase">הערות (רשות)</label>
-                    <input type="text" value={assignNotes} onChange={(e) => setAssignNotes(e.target.value)} className="w-full border-b-2 border-stone-200 p-3 outline-none" />
+                    <input type="text" value={assignNotes} onChange={(e) => setAssignNotes(e.target.value)} className="w-full border-b-2 border-stone-800 p-3 bg-transparent text-white outline-none focus:border-teal-500" />
                   </div>
                 </div>
 
-                <button type="submit" className="bg-teal-600 text-white px-10 py-4 rounded-xl font-bold w-full md:w-fit self-end">
+                <button type="submit" className="bg-teal-500 text-stone-950 px-10 py-4 rounded-2xl font-black w-full md:w-fit self-end hover:bg-teal-400 transition-colors">
                   שגר למטופל
                 </button>
               </form>
@@ -1610,15 +1645,17 @@ export default function LegacyAdminApp() {
         {adminTab === "manage_plans" && (
           <div className="max-w-6xl mx-auto animate-in fade-in">
             <header className="mb-10 hidden md:block">
-              <h1 className="text-3xl md:text-4xl font-black text-stone-900 tracking-tight">עריכת תוכניות פעילות</h1>
+              <h1 className="text-3xl md:text-4xl font-black text-white tracking-tight">עריכת תוכניות פעילות</h1>
             </header>
-            <div className="bg-white rounded-[2rem] shadow-sm border border-stone-100 p-8 md:p-10">
+            <div className="bg-[#1c1c1e] rounded-[1.75rem] border border-stone-800 p-8 md:p-10">
               <div className="mb-8">
                 <label className="block text-sm font-bold text-stone-500 mb-2 uppercase">בחר מטופל לעריכת התוכנית שלו</label>
-                <select value={managePatientId} onChange={(e) => setManagePatientId(e.target.value)} className="w-full md:w-1/2 border-b-2 border-stone-200 p-3 bg-transparent outline-none">
-                  <option value="">-- בחר מטופל --</option>
+                <select value={managePatientId} onChange={(e) => setManagePatientId(e.target.value)} className="w-full md:w-1/2 border-b-2 border-stone-800 p-3 bg-transparent text-white outline-none focus:border-teal-500">
+                  <option value="" className="bg-stone-950">
+                    -- בחר מטופל --
+                  </option>
                   {patients.map((p) => (
-                    <option key={p.id} value={p.id}>
+                    <option key={p.id} value={p.id} className="bg-stone-950">
                       {p.full_name}
                     </option>
                   ))}
@@ -1626,36 +1663,52 @@ export default function LegacyAdminApp() {
               </div>
 
               {!managePatientId ? (
-                <div className="text-center p-10 text-stone-400 bg-stone-50 rounded-3xl">בחר מטופל מהרשימה כדי לצפות ולערוך את התוכנית הפעילה שלו.</div>
+                <div className="text-center p-10 text-stone-500 bg-stone-950 rounded-3xl border border-stone-800">בחר מטופל מהרשימה כדי לצפות ולערוך את התוכנית הפעילה שלו.</div>
               ) : managePatientExercises.length === 0 ? (
-                <div className="text-center p-10 text-stone-400 bg-stone-50 rounded-3xl">למטופל זה אין תרגילים משויכים כרגע.</div>
+                <div className="text-center p-10 text-stone-500 bg-stone-950 rounded-3xl border border-stone-800">למטופל זה אין תרגילים משויכים כרגע.</div>
               ) : (
                 <div className="space-y-4">
                   {managePatientExercises.map((assign) => (
-                    <div key={assign.id} className="border border-stone-100 p-5 rounded-2xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4 hover:shadow-md transition-shadow bg-stone-50/50">
+                    <div key={assign.id} className="border border-stone-800 p-5 rounded-2xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4 hover:border-stone-700 transition-colors bg-stone-950/50">
                       <div className="flex-1 w-full">
-                        <h4 className="text-lg font-black text-stone-800">{assign.exercise?.title}</h4>
-                        <p className="text-sm font-bold text-teal-600 mb-2">{assign.exercise?.category}</p>
+                        <h4 className="text-lg font-black text-white">{assign.exercise?.title}</h4>
+                        <p className="text-sm font-bold text-teal-400 mb-2">{assign.exercise?.category}</p>
 
                         {editingAssignId === assign.id ? (
-                          <div className="flex flex-col gap-3 mt-4 bg-white p-4 rounded-xl border border-stone-200 shadow-sm">
+                          <div className="flex flex-col gap-3 mt-4 bg-[#1c1c1e] p-4 rounded-xl border border-stone-800">
                             <div className="flex flex-wrap gap-3">
                               <div>
-                                <label className="block text-xs font-bold text-stone-400 uppercase">שבוע</label>
-                                <input type="number" value={editAssignForm.week} onChange={(e) => setEditAssignForm({ ...editAssignForm, week: parseInt(e.target.value) })} className="w-16 border-b border-stone-300 p-1 text-center font-bold" min="1" />
+                                <label className="block text-xs font-bold text-stone-500 uppercase">שבוע</label>
+                                <input
+                                  type="number"
+                                  value={editAssignForm.week}
+                                  onChange={(e) => setEditAssignForm({ ...editAssignForm, week: parseInt(e.target.value) })}
+                                  className="w-16 border-b border-stone-700 bg-transparent text-white p-1 text-center font-bold"
+                                  min="1"
+                                />
                               </div>
                               <div>
-                                <label className="block text-xs font-bold text-stone-400 uppercase">בלוק</label>
-                                <input type="text" value={editAssignForm.block} onChange={(e) => setEditAssignForm({ ...editAssignForm, block: e.target.value })} className="w-16 border-b border-stone-300 p-1 text-center font-bold" />
+                                <label className="block text-xs font-bold text-stone-500 uppercase">בלוק</label>
+                                <input
+                                  type="text"
+                                  value={editAssignForm.block}
+                                  onChange={(e) => setEditAssignForm({ ...editAssignForm, block: e.target.value })}
+                                  className="w-16 border-b border-stone-700 bg-transparent text-white p-1 text-center font-bold"
+                                />
                               </div>
                               <div>
-                                <label className="block text-xs font-bold text-stone-400 uppercase">סטים</label>
-                                <input type="number" value={editAssignForm.sets} onChange={(e) => setEditAssignForm({ ...editAssignForm, sets: String(e.target.value) })} className="w-16 border-b border-stone-300 p-1 text-center" />
+                                <label className="block text-xs font-bold text-stone-500 uppercase">סטים</label>
+                                <input
+                                  type="number"
+                                  value={editAssignForm.sets}
+                                  onChange={(e) => setEditAssignForm({ ...editAssignForm, sets: String(e.target.value) })}
+                                  className="w-16 border-b border-stone-700 bg-transparent text-white p-1 text-center"
+                                />
                               </div>
                               <div>
-                                <label className="block text-xs font-bold text-stone-400 uppercase flex items-center justify-between">
+                                <label className="block text-xs font-bold text-stone-500 uppercase flex items-center justify-between">
                                   יעד{" "}
-                                  <button onClick={() => setEditAssignForm({ ...editAssignForm, is_time: !editAssignForm.is_time })} className="text-[8px] text-blue-500 ml-1">
+                                  <button onClick={() => setEditAssignForm({ ...editAssignForm, is_time: !editAssignForm.is_time })} className="text-[8px] text-blue-400 ml-1">
                                     {editAssignForm.is_time ? "שנה לחזרות" : "שנה לזמן"}
                                   </button>
                                 </label>
@@ -1664,20 +1717,31 @@ export default function LegacyAdminApp() {
                                   value={editAssignForm.reps}
                                   onChange={(e) => setEditAssignForm({ ...editAssignForm, reps: String(e.target.value) })}
                                   placeholder={editAssignForm.is_time ? "שניות" : "חזרות"}
-                                  className="w-16 border-b border-stone-300 p-1 text-center"
+                                  className="w-16 border-b border-stone-700 bg-transparent text-white placeholder:text-stone-600 p-1 text-center"
                                 />
                               </div>
                               <div>
-                                <label className="block text-xs font-bold text-stone-400 uppercase">RIR</label>
-                                <input type="number" value={editAssignForm.rir} onChange={(e) => setEditAssignForm({ ...editAssignForm, rir: String(e.target.value) })} placeholder="-" className="w-16 border-b border-stone-300 p-1 text-center" />
+                                <label className="block text-xs font-bold text-stone-500 uppercase">RIR</label>
+                                <input
+                                  type="number"
+                                  value={editAssignForm.rir}
+                                  onChange={(e) => setEditAssignForm({ ...editAssignForm, rir: String(e.target.value) })}
+                                  placeholder="-"
+                                  className="w-16 border-b border-stone-700 bg-transparent text-white placeholder:text-stone-600 p-1 text-center"
+                                />
                               </div>
                               <div className="flex-1 min-w-[150px]">
-                                <label className="block text-xs font-bold text-stone-400 uppercase">הערה</label>
-                                <input type="text" value={editAssignForm.notes} onChange={(e) => setEditAssignForm({ ...editAssignForm, notes: e.target.value })} className="w-full border-b border-stone-300 p-1" />
+                                <label className="block text-xs font-bold text-stone-500 uppercase">הערה</label>
+                                <input
+                                  type="text"
+                                  value={editAssignForm.notes}
+                                  onChange={(e) => setEditAssignForm({ ...editAssignForm, notes: e.target.value })}
+                                  className="w-full border-b border-stone-700 bg-transparent text-white p-1"
+                                />
                               </div>
                             </div>
                             <div className="w-full mt-2">
-                              <label className="block text-xs font-bold text-stone-400 uppercase mb-2">ימי אימון מתוכננים</label>
+                              <label className="block text-xs font-bold text-stone-500 uppercase mb-2">ימי אימון מתוכננים</label>
                               <div className="flex flex-wrap gap-1">
                                 {DAYS_OF_WEEK.map((day) => {
                                   const isSelected = editAssignForm.scheduled_days.includes(day.id);
@@ -1686,7 +1750,7 @@ export default function LegacyAdminApp() {
                                       key={day.id}
                                       type="button"
                                       onClick={() => setEditAssignForm((prev) => ({ ...prev, scheduled_days: isSelected ? prev.scheduled_days.filter((d) => d !== day.id) : [...prev.scheduled_days, day.id] }))}
-                                      className={`px-3 py-1.5 rounded-lg font-bold text-xs transition-colors ${isSelected ? "bg-teal-500 text-white" : "bg-stone-100 text-stone-500"}`}
+                                      className={`px-3 py-1.5 rounded-lg font-bold text-xs transition-colors ${isSelected ? "bg-teal-500 text-stone-950" : "bg-stone-950 text-stone-400 border border-stone-800"}`}
                                     >
                                       {day.label}
                                     </button>
@@ -1697,32 +1761,32 @@ export default function LegacyAdminApp() {
                           </div>
                         ) : (
                           <div className="flex flex-col gap-2">
-                            <div className="flex flex-wrap gap-2 text-sm font-medium text-stone-600">
-                              <span className="bg-white px-3 py-1 rounded-lg border border-stone-200">
-                                שבוע: <strong>{assign.week || 1}</strong>
+                            <div className="flex flex-wrap gap-2 text-sm font-medium text-stone-400">
+                              <span className="bg-stone-950 px-3 py-1 rounded-lg border border-stone-800">
+                                שבוע: <strong className="text-stone-200">{assign.week || 1}</strong>
                               </span>
-                              <span className="bg-white px-3 py-1 rounded-lg border border-stone-200">
-                                בלוק: <strong>{assign.block || "A"}</strong>
+                              <span className="bg-stone-950 px-3 py-1 rounded-lg border border-stone-800">
+                                בלוק: <strong className="text-stone-200">{assign.block || "A"}</strong>
                               </span>
-                              <span className="bg-white px-3 py-1 rounded-lg border border-stone-200">
-                                סטים: <strong>{assign.sets}</strong>
+                              <span className="bg-stone-950 px-3 py-1 rounded-lg border border-stone-800">
+                                סטים: <strong className="text-stone-200">{assign.sets}</strong>
                               </span>
-                              <span className="bg-white px-3 py-1 rounded-lg border border-stone-200">
-                                {assign.is_time ? "⏱️ שניות:" : "🔄 חזרות:"} <strong>{assign.reps}</strong>
+                              <span className="bg-stone-950 px-3 py-1 rounded-lg border border-stone-800">
+                                {assign.is_time ? "⏱️ שניות:" : "🔄 חזרות:"} <strong className="text-stone-200">{assign.reps}</strong>
                               </span>
                               {assign.rir && (
-                                <span className="bg-white px-3 py-1 rounded-lg border border-stone-200">
-                                  RIR: <strong>{assign.rir}</strong>
+                                <span className="bg-stone-950 px-3 py-1 rounded-lg border border-stone-800">
+                                  RIR: <strong className="text-stone-200">{assign.rir}</strong>
                                 </span>
                               )}
-                              {assign.notes && <span className="bg-white px-3 py-1 rounded-lg border border-stone-200 max-w-[200px] truncate">הערה: {assign.notes}</span>}
+                              {assign.notes && <span className="bg-stone-950 px-3 py-1 rounded-lg border border-stone-800 max-w-[200px] truncate">הערה: {assign.notes}</span>}
                             </div>
                             {assign.scheduled_days && (
                               <div className="flex flex-wrap gap-1 mt-1">
                                 {assign.scheduled_days.split(",").map((dayId: string) => {
                                   const dayLabel = DAYS_OF_WEEK.find((d) => d.id === dayId)?.label;
                                   return (
-                                    <span key={dayId} className="bg-teal-50 text-teal-700 px-2 py-0.5 rounded-md text-xs font-bold border border-teal-100">
+                                    <span key={dayId} className="bg-teal-500/10 text-teal-400 px-2 py-0.5 rounded-md text-xs font-bold border border-teal-500/20">
                                       {dayLabel}
                                     </span>
                                   );
@@ -1735,19 +1799,19 @@ export default function LegacyAdminApp() {
                       <div className="flex gap-2 w-full md:w-auto mt-4 md:mt-0">
                         {editingAssignId === assign.id ? (
                           <>
-                            <button onClick={() => handleSaveEditAssign(assign.id)} className="flex-1 md:flex-none bg-teal-500 text-white px-4 py-2 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-teal-400">
+                            <button onClick={() => handleSaveEditAssign(assign.id)} className="flex-1 md:flex-none bg-teal-500 text-stone-950 px-4 py-2 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-teal-400">
                               <Save size={16} /> שמור
                             </button>
-                            <button onClick={() => setEditingAssignId(null)} className="flex-1 md:flex-none bg-stone-200 text-stone-700 px-4 py-2 rounded-xl font-bold hover:bg-stone-300">
+                            <button onClick={() => setEditingAssignId(null)} className="flex-1 md:flex-none bg-stone-800 text-stone-300 px-4 py-2 rounded-xl font-bold hover:bg-stone-700">
                               ביטול
                             </button>
                           </>
                         ) : (
                           <>
-                            <button onClick={() => handleStartEditAssign(assign)} className="flex-1 md:flex-none bg-white border border-stone-200 text-stone-700 px-4 py-2 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-stone-50">
+                            <button onClick={() => handleStartEditAssign(assign)} className="flex-1 md:flex-none bg-stone-950 border border-stone-800 text-stone-300 px-4 py-2 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-stone-800">
                               <Edit3 size={16} /> ערוך
                             </button>
-                            <button onClick={() => handleDeleteAssignment(assign.id)} className="flex-1 md:flex-none bg-red-50 text-red-600 px-4 py-2 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-red-100">
+                            <button onClick={() => handleDeleteAssignment(assign.id)} className="flex-1 md:flex-none bg-red-500/10 text-red-400 px-4 py-2 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-red-500/20">
                               <Trash2 size={16} /> מחק
                             </button>
                           </>
