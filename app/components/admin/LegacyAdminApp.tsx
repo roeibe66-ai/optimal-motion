@@ -871,77 +871,79 @@ export default function LegacyAdminApp() {
         {adminTab === "builder" && (
           <div className="max-w-7xl mx-auto animate-in fade-in h-full flex flex-col">
             <header className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <h1 className="text-3xl md:text-4xl font-black text-stone-900 tracking-tight flex items-center gap-3">
-                <Wand2 className="text-teal-500" size={32} /> בונה חכם & תבניות
+              <h1 className="text-2xl md:text-3xl font-black text-white tracking-tight flex items-center gap-3">
+                <Wand2 className="text-teal-400" size={28} /> בונה חכם & תבניות
               </h1>
 
-              <div className="flex bg-stone-200/60 p-1.5 rounded-full border border-stone-200">
-                <button onClick={() => setBuilderMode("patient")} className={`px-6 py-2 rounded-full font-bold text-sm transition-all ${builderMode === "patient" ? "bg-teal-500 text-white shadow-md" : "text-stone-500 hover:text-stone-700"}`}>
+              <div className="flex bg-[#1c1c1e] p-1.5 rounded-full border border-stone-800">
+                <button onClick={() => setBuilderMode("patient")} className={`px-6 py-2.5 rounded-full font-extrabold text-[13px] transition-all ${builderMode === "patient" ? "bg-teal-500 text-stone-950" : "text-stone-400 hover:text-stone-200"}`}>
                   שיוך למטופל
                 </button>
-                <button onClick={() => setBuilderMode("protocol")} className={`px-6 py-2 rounded-full font-bold text-sm transition-all ${builderMode === "protocol" ? "bg-stone-900 text-white shadow-md" : "text-stone-500 hover:text-stone-700"}`}>
+                <button onClick={() => setBuilderMode("protocol")} className={`px-6 py-2.5 rounded-full font-bold text-[13px] transition-all ${builderMode === "protocol" ? "bg-white text-stone-950" : "text-stone-400 hover:text-stone-200"}`}>
                   יצירת תבנית עבודה
                 </button>
               </div>
             </header>
 
-            <div className="bg-stone-900 text-white rounded-[2rem] p-6 md:p-8 mb-6 shadow-lg flex flex-col md:flex-row items-center gap-6 relative overflow-hidden">
-              <div className="absolute top-0 right-0 p-10 opacity-10">
-                <Sparkles size={100} />
+            <div className="bg-[#161311] border border-teal-500/25 rounded-[1.75rem] p-6 md:p-7 mb-5 flex flex-col md:flex-row items-center gap-5 relative overflow-hidden">
+              <div className="absolute -top-8 -left-2.5 opacity-[0.08] text-teal-400 pointer-events-none">
+                <Sparkles size={140} />
               </div>
               <div className="flex-1 w-full z-10">
-                <label className="block text-sm font-bold text-stone-400 mb-2 uppercase tracking-wide">עוזר קליני AI</label>
+                <label className="block text-[11px] font-extrabold text-teal-400 mb-2.5 uppercase tracking-widest">עוזר קליני AI</label>
                 <input
                   type="text"
                   value={aiPrompt}
                   onChange={(e) => setAiPrompt(e.target.value)}
                   placeholder="למשל: בנה לי תוכנית שיקום וכוח עם דגש על מוביליטי..."
-                  className="w-full bg-white/10 border border-white/20 p-4 rounded-xl text-white placeholder-stone-500 focus:border-teal-500 outline-none"
+                  className="w-full bg-white/[0.06] border border-white/10 p-3.5 rounded-2xl text-white placeholder-stone-500 focus:border-teal-500 outline-none"
                 />
               </div>
               <button
                 onClick={handleAiGenerate}
                 disabled={isAiLoading}
-                className="w-full md:w-auto bg-teal-500 hover:bg-teal-400 text-stone-900 px-8 py-4 rounded-xl font-black transition-all shadow-[0_0_20px_rgba(20,184,166,0.4)] disabled:opacity-50 z-10 flex items-center justify-center gap-2"
+                className="w-full md:w-auto bg-teal-500 hover:bg-teal-400 text-stone-950 px-7 py-4 rounded-2xl font-black transition-all shadow-[0_12px_28px_-10px_rgba(20,184,166,0.5)] disabled:opacity-50 z-10 flex items-center justify-center gap-2 whitespace-nowrap"
               >
                 {isAiLoading ? (
                   "מייצר קסם..."
                 ) : (
                   <>
-                    <Sparkles size={18} /> ייצר פרומפט תרגילים
+                    <Sparkles size={16} /> ייצר פרומפט תרגילים
                   </>
                 )}
               </button>
             </div>
 
-            {/* UI Mockup for Automated Periodization (הכנה לשדרוג הבא) */}
-            <div className="mb-6 bg-blue-50/50 border border-blue-100 p-4 rounded-2xl flex items-center justify-between">
+            {/* UI Mockup for Automated Periodization (הכנה לשדרוג הבא) — stays collapsed by default, don't auto-expand */}
+            <div className="mb-5 bg-blue-500/[0.06] border border-blue-500/20 p-4 md:p-5 rounded-2xl flex items-center justify-between gap-4">
               <div className="flex items-center gap-3">
-                <History className="text-blue-500" size={24} />
+                <History className="text-blue-400 shrink-0" size={20} />
                 <div>
-                  <h4 className="font-bold text-blue-900">פריודיזציה אוטומטית (Automated Periodization)</h4>
-                  <p className="text-xs text-blue-700">הגדר חוקי התקדמות והמערכת תייצר עבורך 12 שבועות קדימה אוטומטית.</p>
+                  <h4 className="font-extrabold text-blue-300 text-[13px] flex items-center gap-2">
+                    פריודיזציה אוטומטית <span className="text-blue-300 font-bold text-[10px] bg-blue-400/15 px-2 py-0.5 rounded-full">בטא</span>
+                  </h4>
+                  <p className="text-[11px] text-stone-400 mt-0.5">הגדר חוקי התקדמות והמערכת תייצר עבורך 12 שבועות קדימה אוטומטית.</p>
                 </div>
               </div>
-              <button onClick={() => setEnablePeriodizationUI(!enablePeriodizationUI)} className="bg-white border border-blue-200 text-blue-700 px-4 py-2 rounded-xl text-sm font-bold shadow-sm hover:bg-blue-100 transition-colors">
+              <button onClick={() => setEnablePeriodizationUI(!enablePeriodizationUI)} className="bg-stone-950 border border-blue-400/30 text-blue-300 px-4 py-2.5 rounded-xl text-xs font-bold hover:bg-blue-500/10 transition-colors whitespace-nowrap">
                 {enablePeriodizationUI ? "סגור הגדרות" : "הגדר חוקים"}
               </button>
             </div>
 
             {enablePeriodizationUI && (
-              <div className="mb-6 bg-white border border-stone-200 p-6 rounded-2xl shadow-sm animate-in zoom-in duration-300">
-                <h4 className="font-black text-stone-800 mb-4">הגדרת חוקי התקדמות לפרוטוקול</h4>
+              <div className="mb-5 bg-[#1c1c1e] border border-stone-800 p-6 rounded-2xl animate-in zoom-in duration-300">
+                <h4 className="font-black text-white mb-4">הגדרת חוקי התקדמות לפרוטוקול</h4>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
                     <label className="block text-xs font-bold text-stone-500 uppercase mb-1">מחזור התקדמות</label>
-                    <select className="w-full bg-stone-50 p-2.5 rounded-xl border border-stone-200 outline-none text-sm font-bold">
+                    <select className="w-full bg-stone-950 p-2.5 rounded-xl border border-stone-800 outline-none text-sm font-bold text-white">
                       <option>כל שבוע</option>
                       <option>כל שבועיים</option>
                     </select>
                   </div>
                   <div>
                     <label className="block text-xs font-bold text-stone-500 uppercase mb-1">פקודת עומס (Progressive Overload)</label>
-                    <select className="w-full bg-stone-50 p-2.5 rounded-xl border border-stone-200 outline-none text-sm font-bold">
+                    <select className="w-full bg-stone-950 p-2.5 rounded-xl border border-stone-800 outline-none text-sm font-bold text-white">
                       <option>הוסף 1 חזרה לכל הסטים</option>
                       <option>הוסף 2.5 ק&quot;ג למשקל</option>
                       <option>הוסף סט 1 לכל תרגיל</option>
@@ -949,24 +951,24 @@ export default function LegacyAdminApp() {
                   </div>
                   <div>
                     <label className="block text-xs font-bold text-stone-500 uppercase mb-1">דילואוד (Deload)</label>
-                    <select className="w-full bg-stone-50 p-2.5 rounded-xl border border-stone-200 outline-none text-sm font-bold">
+                    <select className="w-full bg-stone-950 p-2.5 rounded-xl border border-stone-800 outline-none text-sm font-bold text-white">
                       <option>שבוע 4: חתוך סטים ב-50%</option>
                       <option>שבוע 8: הורד משקל ב-20%</option>
                       <option>ללא דילואוד מובנה</option>
                     </select>
                   </div>
                 </div>
-                <p className="text-[10px] text-stone-400 mt-4">* מנגנון הפריודיזציה נמצא כרגע בגרסת בטא (UI Mockup) ויופעל בעדכון הקרוב.</p>
+                <p className="text-[10px] text-stone-600 mt-4">* מנגנון הפריודיזציה נמצא כרגע בגרסת בטא (UI Mockup) ויופעל בעדכון הקרוב.</p>
               </div>
             )}
 
-            <div className="flex flex-col lg:flex-row gap-6 flex-1 min-h-[500px]">
-              <div className="w-full lg:w-1/3 bg-white rounded-[2rem] shadow-sm border border-stone-100 flex flex-col overflow-hidden">
-                <div className="p-5 border-b border-stone-100 bg-stone-50">
-                  <h3 className="font-black text-stone-800 mb-3 flex items-center gap-2">
-                    <ImageIcon size={18} /> ספריית תרגילים
+            <div className="flex flex-col lg:flex-row gap-5 flex-1 min-h-[500px]">
+              <div className="w-full lg:w-[340px] lg:shrink-0 bg-[#1c1c1e] rounded-3xl border border-stone-800 flex flex-col overflow-hidden">
+                <div className="p-5 border-b border-stone-800">
+                  <h3 className="font-extrabold text-white mb-3 flex items-center gap-2 text-sm">
+                    <ImageIcon size={16} className="text-teal-400" /> ספריית תרגילים
                   </h3>
-                  <select value={builderSearchFilter} onChange={(e) => setBuilderSearchFilter(e.target.value)} className="w-full bg-white border border-stone-200 p-2.5 rounded-xl text-sm font-bold text-stone-600 outline-none">
+                  <select value={builderSearchFilter} onChange={(e) => setBuilderSearchFilter(e.target.value)} className="w-full bg-stone-950 border border-stone-800 p-2.5 rounded-xl text-xs font-bold text-stone-300 outline-none">
                     <option value="all">-- כל התגיות --</option>
                     {ADMIN_TAGS.map((t) => (
                       <option key={t.id} value={t.id}>
@@ -975,50 +977,52 @@ export default function LegacyAdminApp() {
                     ))}
                   </select>
                 </div>
-                <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-stone-50/50">
-                  {filteredExercisesForBuilder.map((ex) => (
-                    <div key={ex.id} draggable onDragStart={(e) => handleDragStart(e, ex)} className="bg-white p-3 rounded-2xl border border-stone-200 shadow-sm cursor-grab hover:border-teal-500 transition-colors flex items-center gap-3 group active:cursor-grabbing">
-                      <div className="text-stone-300 group-hover:text-teal-500">
-                        <GripVertical size={20} />
-                      </div>
-                      {ex.gif_url ? (
-                        <div className="w-12 h-12 rounded-lg bg-stone-100 overflow-hidden shrink-0">
-                          {ex.gif_url.toLowerCase().includes(".mp4") || ex.gif_url.toLowerCase().includes(".webm") ? (
-                            <video src={ex.gif_url} className="w-full h-full object-cover mix-blend-multiply" />
-                          ) : (
-                            <img src={ex.gif_url} alt={ex.title} className="w-full h-full object-cover mix-blend-multiply" />
-                          )}
+                <div className="flex-1 overflow-y-auto p-3.5 space-y-2.5">
+                  {filteredExercisesForBuilder.map((ex) => {
+                    const style = ADMIN_CATEGORY_STYLES[ex.category] ?? DEFAULT_ADMIN_CATEGORY_STYLE;
+                    return (
+                      <div
+                        key={ex.id}
+                        draggable
+                        onDragStart={(e) => handleDragStart(e, ex)}
+                        className="bg-stone-950 p-2.5 rounded-2xl border border-stone-800 cursor-grab hover:border-teal-500/50 transition-colors flex items-center gap-2.5 group active:cursor-grabbing"
+                      >
+                        <div className="text-stone-600 group-hover:text-teal-400 shrink-0">
+                          <GripVertical size={18} />
                         </div>
-                      ) : (
-                        <div className="w-12 h-12 rounded-lg bg-stone-100 shrink-0 flex items-center justify-center text-[10px] text-stone-400 font-bold">No img</div>
-                      )}
-                      <div>
-                        <h4 className="font-bold text-stone-800 text-sm leading-tight line-clamp-1">{ex.title}</h4>
-                        <span className="text-[10px] text-teal-600 font-bold bg-teal-50 px-2 py-0.5 rounded-md mt-1 inline-block">{ex.category}</span>
+                        <div className="w-[38px] h-[38px] rounded-[10px] shrink-0" style={{ background: `linear-gradient(150deg, ${style.glow}, #1c1c1e)` }}></div>
+                        <div className="min-w-0">
+                          <h4 className="font-extrabold text-white text-xs leading-tight truncate">{ex.title}</h4>
+                          <span className="text-[9px] font-extrabold px-2 py-0.5 rounded-full mt-1 inline-block" style={{ color: style.text, background: style.bg }}>
+                            {ex.category}
+                          </span>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
 
-              <div className="w-full lg:w-2/3 bg-white rounded-[2rem] shadow-sm border border-stone-100 p-6 flex flex-col">
-                <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-stone-100 pb-4">
-                  <h3 className="font-black text-stone-800 text-xl flex items-center gap-2">
-                    <Map size={20} className="text-teal-500" /> ציר זמן התוכנית
+              <div className="w-full lg:flex-1 bg-[#1c1c1e] rounded-3xl border border-stone-800 p-7 flex flex-col min-w-0">
+                <div className="mb-5 flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-stone-800 pb-4.5">
+                  <h3 className="font-extrabold text-white text-base flex items-center gap-2">
+                    <Map size={17} className="text-teal-400" /> ציר זמן התוכנית
                   </h3>
-                  <div className="flex items-center gap-2 overflow-x-auto pb-2 no-scrollbar">
+                  <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
                     {Object.keys(builderPlan).map((weekNum) => (
                       <button
                         key={weekNum}
                         onClick={() => handleBuilderWeekChange(parseInt(weekNum))}
-                        className={`px-4 py-1.5 rounded-xl font-bold text-sm transition-colors border ${builderSelectedWeek === parseInt(weekNum) ? "bg-stone-800 text-white border-stone-800" : "bg-white text-stone-500 border-stone-200 hover:bg-stone-50"}`}
+                        className={`px-4 py-2 rounded-xl font-extrabold text-xs transition-colors border ${
+                          builderSelectedWeek === parseInt(weekNum) ? "bg-stone-950 text-white border-stone-800" : "bg-transparent text-stone-400 border-transparent hover:bg-stone-800/50"
+                        }`}
                       >
                         שבוע {weekNum}
                       </button>
                     ))}
                     <button
                       onClick={() => handleBuilderWeekChange(Math.max(...Object.keys(builderPlan).map(Number)) + 1)}
-                      className="w-8 h-8 rounded-full bg-teal-50 text-teal-600 hover:bg-teal-100 flex items-center justify-center font-bold transition-colors border border-teal-200"
+                      className="w-[30px] h-[30px] rounded-full bg-teal-500/10 text-teal-400 hover:bg-teal-500/20 flex items-center justify-center font-bold transition-colors border border-teal-500/30"
                       title="הוסף שבוע חדש לתוכנית"
                     >
                       <Plus size={16} />
@@ -1026,15 +1030,17 @@ export default function LegacyAdminApp() {
                   </div>
                 </div>
 
-                <div className="mb-6 bg-stone-50 p-5 rounded-2xl border border-stone-100 flex flex-col gap-4">
+                <div className="mb-5 bg-stone-950 p-5 rounded-2xl border border-stone-800 flex flex-col gap-4">
                   {builderMode === "patient" ? (
-                    <div className="flex flex-col md:flex-row gap-4">
+                    <div className="flex flex-col md:flex-row gap-6">
                       <div className="flex-1">
-                        <label className="block text-xs font-bold text-stone-500 mb-1 uppercase">שיוך למטופל</label>
-                        <select value={builderPatientId} onChange={(e) => setBuilderPatientId(e.target.value)} className="w-full border-b-2 border-teal-500 p-2 outline-none font-bold text-stone-700 bg-transparent">
-                          <option value="">-- בחר מטופל יעד --</option>
+                        <label className="block text-[10px] font-extrabold text-stone-400 mb-2 uppercase tracking-wider">שיוך למטופל</label>
+                        <select value={builderPatientId} onChange={(e) => setBuilderPatientId(e.target.value)} className="w-full border-b-2 border-teal-500 p-1.5 outline-none font-bold text-white bg-transparent">
+                          <option value="" className="bg-stone-950">
+                            -- בחר מטופל יעד --
+                          </option>
                           {patients.map((p) => (
-                            <option key={p.id} value={p.id}>
+                            <option key={p.id} value={p.id} className="bg-stone-950">
                               {p.full_name}
                             </option>
                           ))}
@@ -1042,13 +1048,15 @@ export default function LegacyAdminApp() {
                       </div>
 
                       <div className="flex-1">
-                        <label className="block text-xs font-bold text-stone-500 mb-1 uppercase text-blue-600 flex items-center gap-1">
-                          <DownloadCloud size={12} /> טען תבנית פרוטוקול ללוח
+                        <label className="block text-[10px] font-extrabold text-blue-400 mb-2 uppercase tracking-wider flex items-center gap-1.5">
+                          <DownloadCloud size={11} /> טען תבנית פרוטוקול ללוח
                         </label>
-                        <select onChange={loadProtocolToBuilder} className="w-full border-b-2 border-blue-300 p-2 outline-none font-bold text-blue-700 bg-blue-50/50 rounded-t-lg">
-                          <option value="">-- בחר פרוטוקול --</option>
+                        <select onChange={loadProtocolToBuilder} className="w-full border-b-2 border-blue-400/40 p-1.5 outline-none font-bold text-blue-300 bg-transparent">
+                          <option value="" className="bg-stone-950">
+                            -- בחר פרוטוקול --
+                          </option>
                           {packages.map((p) => (
-                            <option key={p.id} value={p.id}>
+                            <option key={p.id} value={p.id} className="bg-stone-950">
                               {p.title}
                             </option>
                           ))}
@@ -1056,92 +1064,95 @@ export default function LegacyAdminApp() {
                       </div>
                     </div>
                   ) : (
-                    <div className="flex flex-col md:flex-row gap-4">
+                    <div className="flex flex-col md:flex-row gap-6">
                       <div className="flex-1">
-                        <label className="block text-xs font-bold text-stone-500 mb-1 uppercase">שם התבנית (פרוטוקול)</label>
+                        <label className="block text-[10px] font-extrabold text-stone-400 mb-2 uppercase tracking-wider">שם התבנית (פרוטוקול)</label>
                         <input
                           type="text"
                           value={builderProtocolName}
                           onChange={(e) => setBuilderProtocolName(e.target.value)}
                           placeholder="למשל: קליסטניקס רמה 1 (12 שבועות)"
-                          className="w-full border-b-2 border-stone-900 p-2 outline-none font-bold text-stone-800 bg-transparent"
+                          className="w-full border-b-2 border-stone-700 p-1.5 outline-none font-bold text-white placeholder:text-stone-600 bg-transparent"
                         />
                       </div>
                       <div className="flex-1">
-                        <label className="block text-xs font-bold text-stone-500 mb-1 uppercase">תיאור קצר (אופציונלי)</label>
+                        <label className="block text-[10px] font-extrabold text-stone-400 mb-2 uppercase tracking-wider">תיאור קצר (אופציונלי)</label>
                         <input
                           type="text"
                           value={builderProtocolDesc}
                           onChange={(e) => setBuilderProtocolDesc(e.target.value)}
                           placeholder="כוח ומתיחות למתחילים..."
-                          className="w-full border-b-2 border-stone-300 p-2 outline-none text-stone-600 bg-transparent"
+                          className="w-full border-b-2 border-stone-800 p-1.5 outline-none text-stone-300 placeholder:text-stone-600 bg-transparent"
                         />
                       </div>
                     </div>
                   )}
                 </div>
 
-                {/* אזורי הגרירה - ימות השבוע */}
-                <div className="flex-1 overflow-y-auto space-y-4 pr-2">
+                {/* אזורי הגרירה - ימות השבוע (DAYS_OF_WEEK is already ordered ראשון→שבת — keep it that way) */}
+                <div className="flex-1 overflow-y-auto space-y-3.5 pr-2">
                   {DAYS_OF_WEEK.map((day) => {
                     const currentWeekBlocks = builderPlan[builderSelectedWeek] || getInitialDays();
                     const currentDayItems = currentWeekBlocks[day.id] || [];
+                    const hasItems = currentDayItems.length > 0;
 
                     return (
                       <div
                         key={day.id}
                         onDragOver={handleDragOver}
                         onDrop={(e) => handleDrop(e, day.id)}
-                        className={`border-2 border-dashed rounded-3xl p-5 transition-colors flex flex-col ${currentDayItems.length > 0 ? "border-teal-200 bg-teal-50/30" : "border-stone-200 bg-stone-50"}`}
+                        className={`border-2 border-dashed rounded-[1.375rem] p-4.5 transition-colors flex flex-col ${hasItems ? "border-teal-500/30 bg-teal-500/[0.04]" : "border-stone-800 bg-[#161311]"}`}
                       >
-                        <h4 className="font-black text-stone-400 mb-4 flex items-center gap-2">
-                          <div className={`px-4 py-1.5 border border-stone-200 rounded-lg flex items-center justify-center font-bold text-sm ${currentDayItems.length > 0 ? "bg-teal-500 text-white" : "bg-white text-stone-800"}`}>יום {day.label}</div>
-                          {currentDayItems.length === 0 && <span className="text-sm font-medium">גרור תרגילים לכאן</span>}
+                        <h4 className="font-black mb-3.5 flex items-center gap-3">
+                          <div className={`px-4 py-1.5 rounded-[10px] flex items-center justify-center font-extrabold text-[13px] border ${hasItems ? "bg-teal-500 text-stone-950 border-teal-400" : "bg-stone-950 text-stone-300 border-stone-800"}`}>
+                            יום {day.label}
+                          </div>
+                          {!hasItems && <span className="text-xs font-semibold text-stone-500">גרור תרגילים לכאן</span>}
                         </h4>
 
-                        {currentDayItems.length > 0 && (
-                          <div className="space-y-3">
+                        {hasItems && (
+                          <div className="space-y-2">
                             {currentDayItems.map((ex: any) => (
-                              <div key={ex.temp_id} className="bg-white p-3 rounded-2xl shadow-sm border border-stone-100 flex flex-wrap items-center gap-3">
-                                <h5 className="font-bold text-stone-800 flex-1 min-w-[120px] line-clamp-1">{ex.title}</h5>
+                              <div key={ex.temp_id} className="bg-[#161311] p-2.5 rounded-2xl border border-stone-800 flex flex-wrap items-center gap-2.5">
+                                <h5 className="font-extrabold text-white text-[13px] flex-1 min-w-[120px] line-clamp-1">{ex.title}</h5>
 
-                                <div className="flex items-center gap-2 bg-stone-50 p-1.5 rounded-xl border border-stone-100">
-                                  <span className="text-stone-400 text-[10px] font-bold uppercase ml-1">בלוק</span>
+                                <div className="flex items-center gap-1.5 bg-stone-950 p-1.5 rounded-xl border border-stone-800">
+                                  <span className="text-stone-500 text-[10px] font-bold uppercase ml-1">בלוק</span>
                                   <input
                                     type="text"
                                     value={ex.block || "A"}
                                     onChange={(e) => updateBuilderExercise(day.id, ex.temp_id, "block", e.target.value.toUpperCase())}
-                                    className="w-8 text-center bg-transparent outline-none font-black text-stone-700"
+                                    className="w-8 text-center bg-transparent outline-none font-black text-white"
                                     placeholder="A"
                                   />
                                 </div>
 
-                                <div className="flex items-center gap-2 bg-stone-50 p-1.5 rounded-xl border border-stone-100">
-                                  <input type="number" value={ex.sets} onChange={(e) => updateBuilderExercise(day.id, ex.temp_id, "sets", parseInt(e.target.value))} className="w-12 text-center bg-transparent outline-none font-bold text-sm" />
-                                  <span className="text-stone-400 text-xs font-bold">סטים</span>
+                                <div className="flex items-center gap-1.5 bg-stone-950 p-1.5 rounded-xl border border-stone-800">
+                                  <input type="number" value={ex.sets} onChange={(e) => updateBuilderExercise(day.id, ex.temp_id, "sets", parseInt(e.target.value))} className="w-12 text-center bg-transparent outline-none font-bold text-sm text-white" />
+                                  <span className="text-stone-500 text-xs font-bold">סטים</span>
                                 </div>
-                                <div className="flex items-center gap-2 bg-stone-50 p-1.5 rounded-xl border border-stone-100">
-                                  <input type="number" value={ex.reps} onChange={(e) => updateBuilderExercise(day.id, ex.temp_id, "reps", parseInt(e.target.value))} className="w-12 text-center bg-transparent outline-none font-bold text-sm" />
-                                  <button onClick={() => updateBuilderExercise(day.id, ex.temp_id, "is_time", !ex.is_time)} className="text-stone-400 text-xs font-bold hover:text-teal-600 w-10">
+                                <div className="flex items-center gap-1.5 bg-stone-950 p-1.5 rounded-xl border border-stone-800">
+                                  <input type="number" value={ex.reps} onChange={(e) => updateBuilderExercise(day.id, ex.temp_id, "reps", parseInt(e.target.value))} className="w-12 text-center bg-transparent outline-none font-bold text-sm text-white" />
+                                  <button onClick={() => updateBuilderExercise(day.id, ex.temp_id, "is_time", !ex.is_time)} className="text-stone-500 text-xs font-bold hover:text-teal-400 w-10">
                                     {ex.is_time ? "שניות" : "חזרות"}
                                   </button>
                                 </div>
-                                <div className="flex items-center gap-1 bg-stone-50 p-1.5 rounded-xl border border-stone-100">
+                                <div className="flex items-center gap-1 bg-stone-950 p-1.5 rounded-xl border border-stone-800">
                                   <input
                                     type="number"
                                     value={ex.rir || ""}
                                     onChange={(e) => updateBuilderExercise(day.id, ex.temp_id, "rir", e.target.value ? parseInt(e.target.value) : null)}
                                     placeholder="-"
-                                    className="w-10 text-center bg-transparent outline-none font-bold text-sm"
+                                    className="w-10 text-center bg-transparent outline-none font-bold text-sm text-white placeholder:text-stone-600"
                                   />
-                                  <span className="text-stone-400 text-xs font-bold flex items-center gap-1">
+                                  <span className="text-stone-500 text-xs font-bold flex items-center gap-1">
                                     RIR{" "}
-                                    <button onClick={showRirInfo} className="text-stone-300 hover:text-teal-500">
+                                    <button onClick={showRirInfo} className="text-stone-600 hover:text-teal-400">
                                       <HelpCircle size={12} />
                                     </button>
                                   </span>
                                 </div>
-                                <button onClick={() => removeBuilderExercise(day.id, ex.temp_id)} className="p-2 text-red-400 hover:bg-red-50 rounded-xl transition-colors">
+                                <button onClick={() => removeBuilderExercise(day.id, ex.temp_id)} className="p-2 text-red-400 hover:bg-red-500/10 rounded-xl transition-colors">
                                   <Trash2 size={16} />
                                 </button>
                               </div>
@@ -1153,9 +1164,14 @@ export default function LegacyAdminApp() {
                   })}
                 </div>
 
-                <div className="mt-6 pt-6 border-t border-stone-100 flex justify-end">
-                  <button onClick={saveBuilderPlan} className={`text-white px-10 py-4 rounded-xl font-black text-lg transition-colors shadow-lg flex items-center gap-2 ${builderMode === "patient" ? "bg-teal-600 hover:bg-teal-700" : "bg-stone-900 hover:bg-stone-800"}`}>
-                    <Save size={20} /> {builderMode === "patient" ? "שגר למטופל" : "שמור תבנית למאגר"}
+                <div className="mt-5 pt-5 border-t border-stone-800 flex justify-end">
+                  <button
+                    onClick={saveBuilderPlan}
+                    className={`px-9 py-3.5 rounded-2xl font-black text-[15px] transition-colors shadow-lg flex items-center gap-2 ${
+                      builderMode === "patient" ? "bg-teal-500 text-stone-950 hover:bg-teal-400 shadow-[0_14px_32px_-10px_rgba(20,184,166,0.5)]" : "bg-white text-stone-950 hover:bg-stone-200"
+                    }`}
+                  >
+                    <Save size={18} /> {builderMode === "patient" ? "שגר למטופל" : "שמור תבנית למאגר"}
                   </button>
                 </div>
               </div>
