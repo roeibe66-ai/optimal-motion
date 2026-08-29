@@ -25,6 +25,7 @@ export function useAuthSession() {
   const [regLastName, setRegLastName] = useState("");
   const [regEmail, setRegEmail] = useState("");
   const [regPass, setRegPass] = useState("");
+  const [regConfirmPass, setRegConfirmPass] = useState("");
   const [regPatientType, setRegPatientType] = useState<"clinical" | "fitness">("fitness");
 
   const handleLogin = async (e: FormEvent) => {
@@ -45,8 +46,11 @@ export function useAuthSession() {
     e.preventDefault();
     const fullName = `${regFirstName} ${regLastName}`.trim();
 
-    if (!isStrongPassword(regPass)) {
-      alert("הסיסמה חלשה מדי. אנא בחר סיסמה באורך 8 תווים לפחות, הכוללת גם אותיות וגם מספרים.");
+    // The form already shows live strength/match feedback and disables
+    // submit until both are satisfied — this is a silent defense-in-depth
+    // guard (e.g. against an Enter-key submit bypassing the disabled
+    // button), not the primary way a user finds out their password is weak.
+    if (!isStrongPassword(regPass) || regPass !== regConfirmPass) {
       return;
     }
 
@@ -89,6 +93,7 @@ export function useAuthSession() {
     setRegLastName("");
     setRegEmail("");
     setRegPass("");
+    setRegConfirmPass("");
     setRegPatientType("fitness");
   };
 
@@ -106,6 +111,8 @@ export function useAuthSession() {
     setRegEmail,
     regPass,
     setRegPass,
+    regConfirmPass,
+    setRegConfirmPass,
     regPatientType,
     setRegPatientType,
     handleRegister,

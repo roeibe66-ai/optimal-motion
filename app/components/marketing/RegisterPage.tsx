@@ -1,8 +1,9 @@
 "use client";
 
-import { Dumbbell, HeartPulse, UserPlus } from "lucide-react";
+import { Check, Dumbbell, HeartPulse, UserPlus, X } from "lucide-react";
 import { useAuth } from "@/app/context/AuthContext";
 import { useAuthSession } from "@/app/hooks/useAuthSession";
+import { passwordCriteria } from "@/app/utils/validation";
 
 export default function RegisterPage() {
   const { lang, t, setCurrentView } = useAuth();
@@ -15,10 +16,19 @@ export default function RegisterPage() {
     setRegEmail,
     regPass,
     setRegPass,
+    regConfirmPass,
+    setRegConfirmPass,
     regPatientType,
     setRegPatientType,
     handleRegister,
   } = useAuthSession();
+
+  const meetsMinLength = passwordCriteria.minLength(regPass);
+  const hasLetter = passwordCriteria.hasLetter(regPass);
+  const hasNumber = passwordCriteria.hasNumber(regPass);
+  const isPasswordStrong = meetsMinLength && hasLetter && hasNumber;
+  const passwordsMatch = regConfirmPass.length > 0 && regPass === regConfirmPass;
+  const canSubmit = isPasswordStrong && passwordsMatch;
 
   return (
     <div
@@ -70,12 +80,32 @@ export default function RegisterPage() {
           />
           <input
             type="password"
-            placeholder="בחר סיסמה (8 תווים, אותיות ומספרים)"
+            placeholder="בחר סיסמה"
             value={regPass}
             onChange={(e) => setRegPass(e.target.value)}
             className="w-full border-b-2 border-stone-200 p-3 bg-transparent focus:border-teal-500 outline-none transition-colors"
             required
           />
+
+          {regPass.length > 0 && (
+            <div className="flex flex-wrap gap-x-4 gap-y-1 -mt-2 mb-1">
+              <PasswordCriterionRow met={meetsMinLength} label="8 תווים לפחות" />
+              <PasswordCriterionRow met={hasLetter} label="אות אחת לפחות" />
+              <PasswordCriterionRow met={hasNumber} label="מספר אחד לפחות" />
+            </div>
+          )}
+
+          <input
+            type="password"
+            placeholder="אימות סיסמה"
+            value={regConfirmPass}
+            onChange={(e) => setRegConfirmPass(e.target.value)}
+            className={`w-full border-b-2 p-3 bg-transparent outline-none transition-colors ${
+              regConfirmPass.length > 0 ? (passwordsMatch ? "border-teal-500" : "border-red-400") : "border-stone-200 focus:border-teal-500"
+            }`}
+            required
+          />
+          {regConfirmPass.length > 0 && !passwordsMatch && <p className="text-xs text-red-500 font-medium -mt-2">הסיסמאות אינן תואמות</p>}
 
           <div>
             <label className="block text-xs font-bold text-stone-500 mb-2 uppercase">מסלול</label>
@@ -103,7 +133,8 @@ export default function RegisterPage() {
 
           <button
             type="submit"
-            className="w-full bg-teal-500 text-white py-4 rounded-xl font-bold hover:bg-teal-600 transition-colors mt-6 shadow-md text-lg"
+            disabled={!canSubmit}
+            className="w-full bg-teal-500 text-white py-4 rounded-xl font-bold hover:bg-teal-600 transition-colors mt-6 shadow-md text-lg disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-teal-500"
           >
             צור משתמש
           </button>
@@ -119,5 +150,14 @@ export default function RegisterPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+function PasswordCriterionRow({ met, label }: { met: boolean; label: string }) {
+  return (
+    <span className={`flex items-center gap-1 text-xs font-medium ${met ? "text-teal-600" : "text-stone-400"}`}>
+      {met ? <Check size={13} /> : <X size={13} />}
+      {label}
+    </span>
   );
 }

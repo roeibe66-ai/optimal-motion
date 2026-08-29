@@ -1,6 +1,6 @@
 "use client";
 
-import { Fingerprint, Globe, ScanFace } from "lucide-react";
+import { Globe } from "lucide-react";
 import { useAuth } from "@/app/context/AuthContext";
 import { useAuthSession } from "@/app/hooks/useAuthSession";
 
@@ -53,22 +53,6 @@ export default function LoginPage() {
             התחבר
           </button>
         </form>
-
-        <div className="mt-6 flex flex-col gap-3">
-          <div className="flex items-center gap-3">
-            <div className="h-px bg-stone-200 flex-1"></div>
-            <span className="text-xs text-stone-600 font-bold uppercase">או כניסה מהירה</span>
-            <div className="h-px bg-stone-200 flex-1"></div>
-          </div>
-          <button
-            onClick={() => alert("להפעלת התחברות ביומטרית, יש לאשר בהגדרות החשבון לאחר הכניסה הראשונית.")}
-            className="w-full bg-stone-50 border border-stone-200 text-stone-800 py-3.5 rounded-xl font-bold hover:bg-stone-100 transition-colors flex items-center justify-center gap-2"
-          >
-            <ScanFace size={20} className="text-teal-500" />
-            <Fingerprint size={20} className="text-teal-500" />
-            התחבר עם Face ID
-          </button>
-        </div>
 
         <button
           onClick={() =>
