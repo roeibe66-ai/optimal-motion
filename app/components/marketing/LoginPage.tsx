@@ -6,15 +6,7 @@ import { useAuthSession } from "@/app/hooks/useAuthSession";
 
 export default function LoginPage() {
   const { lang, setLang, t, setCurrentView } = useAuth();
-  const {
-    loginIdentifier,
-    setLoginIdentifier,
-    loginPassword,
-    setLoginPassword,
-    rememberMe,
-    setRememberMe,
-    handleLogin,
-  } = useAuthSession();
+  const { loginIdentifier, setLoginIdentifier, loginPassword, setLoginPassword, handleLogin } = useAuthSession();
 
   return (
     <div
@@ -41,8 +33,8 @@ export default function LoginPage() {
         </div>
         <form onSubmit={handleLogin} className="space-y-5">
           <input
-            type="text"
-            placeholder="אימייל (למתאמנים) או טלפון (למטופלים)"
+            type="email"
+            placeholder="אימייל"
             value={loginIdentifier}
             onChange={(e) => setLoginIdentifier(e.target.value)}
             className="w-full border-b-2 border-stone-200 p-3 bg-transparent focus:border-teal-500 outline-none transition-colors"
@@ -56,16 +48,6 @@ export default function LoginPage() {
             className="w-full border-b-2 border-stone-200 p-3 bg-transparent focus:border-teal-500 outline-none transition-colors"
             required
           />
-
-          <label className="flex items-center gap-2 cursor-pointer mt-2 text-stone-600 text-sm font-medium">
-            <input
-              type="checkbox"
-              checked={rememberMe}
-              onChange={(e) => setRememberMe(e.target.checked)}
-              className="w-4 h-4 accent-teal-500"
-            />
-            זכור אותי במכשיר זה
-          </label>
 
           <button type="submit" className="w-full bg-stone-900 text-white py-4 rounded-xl font-bold hover:bg-teal-600 transition-colors mt-2">
             התחבר

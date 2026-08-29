@@ -5,57 +5,38 @@ import { supabase } from "@/app/lib/supabase";
 import { useAuth } from "@/app/context/AuthContext";
 import { isStrongPassword } from "@/app/utils/validation";
 
-// Login + registration business logic. Kept separate from AuthContext so the
-// context stays pure identity state — this hook is what actually talks to
-// Supabase and localStorage/sessionStorage to produce that state.
+// Login + registration business logic, now backed by real Supabase Auth
+// instead of a plaintext password column. This hook only triggers the auth
+// call and reports errors — AuthContext's onAuthStateChange listener is what
+// actually hydrates `loggedInPatient` and routes to the right view once a
+// session exists, for both login and (after email confirmation) register.
 //
-// Note: the original also seeded `reminder_time`/`reminder_days` into local
-// component state on login. That's dropped here — the future `useReminders`
-// hook will derive those directly from `loggedInPatient` whenever it changes,
-// so nothing is lost, just relocated to where it's actually used.
+// Everyone — clinical and fitness patients alike — now self-registers
+// through this same form (Option A from the auth migration decision): the
+// admin CRM no longer creates accounts, so there's no separate "admin
+// pre-provisions, patient claims later" path to handle here.
 export function useAuthSession() {
-  const { setLoggedInPatient, setCurrentView, setJustRegistered } = useAuth();
+  const { setCurrentView, setJustRegistered } = useAuth();
 
   const [loginIdentifier, setLoginIdentifier] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
-  const [rememberMe, setRememberMe] = useState(true);
 
   const [regFirstName, setRegFirstName] = useState("");
   const [regLastName, setRegLastName] = useState("");
   const [regEmail, setRegEmail] = useState("");
   const [regPass, setRegPass] = useState("");
+  const [regPatientType, setRegPatientType] = useState<"clinical" | "fitness">("fitness");
 
   const handleLogin = async (e: FormEvent) => {
     e.preventDefault();
 
-    if (loginIdentifier === "admin" && loginPassword === "admin") {
-      if (rememberMe) localStorage.setItem("optimalMotionUser", "admin");
-      else sessionStorage.setItem("optimalMotionUser", "admin");
-      setCurrentView("admin");
-      setLoginIdentifier("");
-      setLoginPassword("");
+    const { error } = await supabase.auth.signInWithPassword({ email: loginIdentifier, password: loginPassword });
+
+    if (error) {
+      alert("פרטי התחברות שגויים, או שהחשבון עדיין לא אומת במייל.");
       return;
     }
 
-    const loginField = loginIdentifier.includes("@") ? "email" : "phone";
-
-    const { data, error } = await supabase
-      .from("patients")
-      .select("*")
-      .eq(loginField, loginIdentifier)
-      .eq("password", loginPassword)
-      .single();
-
-    if (error || !data) {
-      alert("פרטי התחברות שגויים. ודא שהזנת אימייל או טלפון נכונים.");
-      return;
-    }
-
-    if (rememberMe) localStorage.setItem("optimalMotionUser", JSON.stringify(data));
-    else sessionStorage.setItem("optimalMotionUser", JSON.stringify(data));
-
-    setLoggedInPatient(data);
-    setCurrentView("patient");
     setLoginIdentifier("");
     setLoginPassword("");
   };
@@ -69,28 +50,46 @@ export function useAuthSession() {
       return;
     }
 
-    const { data: existingUser } = await supabase.from("patients").select("id").eq("email", regEmail).single();
-    if (existingUser) {
-      alert("כתובת האימייל הזו כבר רשומה במערכת. אנא התחבר לחשבונך.");
-      return;
-    }
-
-    const { data, error } = await supabase
-      .from("patients")
-      .insert([{ full_name: fullName, email: regEmail, password: regPass, patient_type: "fitness", premium_tracks: "", email_verified: false }])
-      .select()
-      .single();
+    const { data, error } = await supabase.auth.signUp({ email: regEmail, password: regPass });
 
     if (error) {
       alert("שגיאה בהרשמה: " + error.message);
       return;
     }
-    if (!data) return;
+    if (!data.user) return;
 
-    localStorage.setItem("optimalMotionUser", JSON.stringify(data));
-    setLoggedInPatient(data);
+    // Supabase doesn't error signUp() for an already-registered, confirmed
+    // email (to avoid leaking which emails exist in the system) — an empty
+    // identities array is the documented signal that this is a repeat
+    // signup, not a genuinely new auth user.
+    if (data.user.identities && data.user.identities.length === 0) {
+      alert("כתובת האימייל הזו כבר רשומה במערכת. אנא התחבר לחשבונך.");
+      return;
+    }
+
+    const { error: insertError } = await supabase
+      .from("patients")
+      .insert([{ user_id: data.user.id, full_name: fullName, email: regEmail, patient_type: regPatientType, premium_tracks: "" }]);
+
+    if (insertError) {
+      alert("שגיאה ביצירת הפרופיל: " + insertError.message);
+      return;
+    }
+
+    // No active session yet — email confirmation is required, so there's
+    // nothing to route into until the patient confirms and logs in for
+    // real. justRegistered is set anyway as a best-effort signal for the
+    // same-tab case where they confirm and log back in within this same
+    // browser session (in-memory state, so it's a no-op if the tab reloads
+    // in between — not reliable across devices/tabs, just harmless either way).
     setJustRegistered(true);
-    setCurrentView("patient");
+    alert("נרשמת בהצלחה! שלחנו לך מייל אימות — יש ללחוץ על הקישור במייל ואז להתחבר.");
+    setCurrentView("login");
+    setRegFirstName("");
+    setRegLastName("");
+    setRegEmail("");
+    setRegPass("");
+    setRegPatientType("fitness");
   };
 
   return {
@@ -98,8 +97,6 @@ export function useAuthSession() {
     setLoginIdentifier,
     loginPassword,
     setLoginPassword,
-    rememberMe,
-    setRememberMe,
     handleLogin,
     regFirstName,
     setRegFirstName,
@@ -109,6 +106,8 @@ export function useAuthSession() {
     setRegEmail,
     regPass,
     setRegPass,
+    regPatientType,
+    setRegPatientType,
     handleRegister,
   };
 }

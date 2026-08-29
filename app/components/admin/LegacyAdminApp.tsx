@@ -27,7 +27,6 @@ import {
   Sparkles,
   Target,
   Trash2,
-  User,
   Users,
   Video,
   Wand2,
@@ -62,10 +61,6 @@ export default function LegacyAdminApp() {
   const [packages, setPackages] = useState<any[]>([]);
   const [workoutLogs, setWorkoutLogs] = useState<any[]>([]);
 
-  const [newPatName, setNewPatName] = useState("");
-  const [newPatPhone, setNewPatPhone] = useState("");
-  const [newPatPass, setNewPatPass] = useState("");
-  const [newPatType, setNewPatType] = useState("clinical");
   const [crmFilter, setCrmFilter] = useState("all");
 
   const [exTitle, setExTitle] = useState("");
@@ -198,17 +193,17 @@ export default function LegacyAdminApp() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [managePatientId, exercises]);
 
-  const handlePatientSubmit = async (e: any) => {
-    e.preventDefault();
-    const { error } = await supabase.from("patients").insert([{ full_name: newPatName, phone: newPatPhone, password: newPatPass, patient_type: newPatType }]);
+  // Account creation moved to self-registration (RegisterPage) — clinical
+  // patients are now onboarded in person on Roei's own device, same flow as
+  // fitness patients, so the CRM no longer creates accounts (it also can't:
+  // creating another user's real auth identity needs the service-role key,
+  // which this app doesn't have access to anywhere). This is view/manage-
+  // only now — patient_type is the one field still adjustable after the fact.
+  const handleTogglePatientType = async (patientId: string, currentType: string) => {
+    const nextType = currentType === "fitness" ? "clinical" : "fitness";
+    const { error } = await supabase.from("patients").update({ patient_type: nextType }).eq("id", patientId);
     if (error) alert("שגיאה: " + error.message);
-    else {
-      alert("התיק נוצר בהצלחה!");
-      setNewPatName("");
-      setNewPatPhone("");
-      setNewPatPass("");
-      fetchAdminData();
-    }
+    else fetchAdminData();
   };
 
   const handleExerciseSubmit = async (e: any) => {
@@ -769,103 +764,69 @@ export default function LegacyAdminApp() {
                 </div>
               </div>
             </div>
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div className="lg:col-span-1">
-                <div className="bg-[#1c1c1e] rounded-[1.75rem] border border-stone-800 p-8">
-                  <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
-                    <User size={20} className="text-teal-400" /> פתיחת תיק חדש
-                  </h2>
-                  <form onSubmit={handlePatientSubmit} className="flex flex-col gap-5">
-                    <div>
-                      <label className="block text-sm font-bold text-stone-500 mb-2 uppercase">שם מלא</label>
-                      <input type="text" value={newPatName} onChange={(e) => setNewPatName(e.target.value)} className="w-full border-b-2 border-stone-800 p-2 bg-transparent text-white focus:border-teal-500 outline-none" required />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-bold text-stone-500 mb-2 uppercase">טלפון</label>
-                      <input type="tel" value={newPatPhone} onChange={(e) => setNewPatPhone(e.target.value)} className="w-full border-b-2 border-stone-800 p-2 bg-transparent text-white focus:border-teal-500 outline-none" required />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-bold text-stone-500 mb-2 uppercase">סיסמה</label>
-                      <input type="text" value={newPatPass} onChange={(e) => setNewPatPass(e.target.value)} className="w-full border-b-2 border-stone-800 p-2 bg-transparent text-white focus:border-teal-500 outline-none" required />
-                    </div>
-                    <div className="mt-2">
-                      <label className="block text-sm font-bold text-stone-500 mb-3 uppercase">מסלול הלקוח</label>
-                      <div className="flex gap-3">
-                        <button
-                          type="button"
-                          onClick={() => setNewPatType("clinical")}
-                          className={`flex-1 py-3 rounded-xl text-sm font-bold flex flex-col items-center gap-2 border-2 transition-all ${
-                            newPatType === "clinical" ? "border-blue-500 bg-blue-500/10 text-blue-300" : "border-stone-800 bg-stone-950 text-stone-500 hover:border-stone-700"
-                          }`}
-                        >
-                          <HeartPulse size={20} /> שיקום
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setNewPatType("fitness")}
-                          className={`flex-1 py-3 rounded-xl text-sm font-bold flex flex-col items-center gap-2 border-2 transition-all ${
-                            newPatType === "fitness" ? "border-amber-500 bg-amber-500/10 text-amber-300" : "border-stone-800 bg-stone-950 text-stone-500 hover:border-stone-700"
-                          }`}
-                        >
-                          <Dumbbell size={20} /> כושר
-                        </button>
-                      </div>
-                    </div>
-                    <button type="submit" className="w-full bg-teal-500 text-stone-950 py-4 rounded-xl font-black hover:bg-teal-400 transition-colors mt-4 text-lg">
-                      צור פרופיל
-                    </button>
-                  </form>
+            <div className="bg-[#1c1c1e] rounded-[1.75rem] border border-stone-800 p-8">
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+                <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                  <Filter size={20} className="text-teal-400" /> רשימת לקוחות
+                </h2>
+                <div className="flex bg-stone-950 p-1 rounded-xl border border-stone-800">
+                  <button onClick={() => setCrmFilter("all")} className={`px-4 py-1.5 text-sm font-bold rounded-lg transition-colors ${crmFilter === "all" ? "bg-white text-stone-950" : "text-stone-500 hover:text-stone-300"}`}>
+                    הכל
+                  </button>
+                  <button onClick={() => setCrmFilter("clinical")} className={`px-4 py-1.5 text-sm font-bold rounded-lg transition-colors ${crmFilter === "clinical" ? "bg-white text-blue-600" : "text-stone-500 hover:text-stone-300"}`}>
+                    שיקום
+                  </button>
+                  <button onClick={() => setCrmFilter("fitness")} className={`px-4 py-1.5 text-sm font-bold rounded-lg transition-colors ${crmFilter === "fitness" ? "bg-white text-amber-600" : "text-stone-500 hover:text-stone-300"}`}>
+                    כושר
+                  </button>
                 </div>
               </div>
-              <div className="lg:col-span-2">
-                <div className="bg-[#1c1c1e] rounded-[1.75rem] border border-stone-800 p-8 h-full">
-                  <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
-                    <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                      <Filter size={20} className="text-teal-400" /> רשימת לקוחות
-                    </h2>
-                    <div className="flex bg-stone-950 p-1 rounded-xl border border-stone-800">
-                      <button onClick={() => setCrmFilter("all")} className={`px-4 py-1.5 text-sm font-bold rounded-lg transition-colors ${crmFilter === "all" ? "bg-white text-stone-950" : "text-stone-500 hover:text-stone-300"}`}>
-                        הכל
-                      </button>
-                      <button onClick={() => setCrmFilter("clinical")} className={`px-4 py-1.5 text-sm font-bold rounded-lg transition-colors ${crmFilter === "clinical" ? "bg-white text-blue-600" : "text-stone-500 hover:text-stone-300"}`}>
-                        שיקום
-                      </button>
-                      <button onClick={() => setCrmFilter("fitness")} className={`px-4 py-1.5 text-sm font-bold rounded-lg transition-colors ${crmFilter === "fitness" ? "bg-white text-amber-600" : "text-stone-500 hover:text-stone-300"}`}>
-                        כושר
-                      </button>
-                    </div>
-                  </div>
-                  <div className="space-y-4">
-                    {displayedPatients.map((p) => {
-                      const aiInsight = getAIInsight(workoutLogs, p.id);
-                      return (
-                        <div key={p.id} className="flex flex-col p-4 rounded-2xl border border-stone-800 hover:bg-stone-950 transition-colors group">
-                          <div className="flex items-center justify-between mb-3">
-                            <div className="flex items-center gap-4">
-                              <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-bold text-lg ${p.patient_type === "fitness" ? "bg-amber-500/15 text-amber-400" : "bg-blue-500/15 text-blue-400"}`}>
-                                {p.full_name.charAt(0)}
-                              </div>
-                              <div>
-                                <h4 className="font-bold text-white">{p.full_name}</h4>
-                                <p className="text-sm text-stone-500 flex items-center gap-2">
-                                  <Phone size={12} /> {p.phone}
-                                </p>
-                              </div>
-                            </div>
-                            <span className={`text-xs font-bold px-3 py-1 rounded-full border ${p.patient_type === "fitness" ? "bg-amber-500/10 text-amber-400 border-amber-500/20" : "bg-blue-500/10 text-blue-400 border-blue-500/20"}`}>
-                              {p.patient_type === "fitness" ? "כושר ויציבה" : "שיקום קליני"}
-                            </span>
+              <p className="text-xs text-stone-500 -mt-5 mb-6">
+                חשבונות נוצרים כעת רק דרך מסך ההרשמה העצמית — כאן אפשר לצפות ברשימת הלקוחות ולעדכן מסלול.
+              </p>
+              <div className="space-y-4">
+                {displayedPatients.map((p) => {
+                  const aiInsight = getAIInsight(workoutLogs, p.id);
+                  return (
+                    <div key={p.id} className="flex flex-col p-4 rounded-2xl border border-stone-800 hover:bg-stone-950 transition-colors group">
+                      <div className="flex items-center justify-between mb-3 gap-3">
+                        <div className="flex items-center gap-4 min-w-0">
+                          <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-bold text-lg shrink-0 ${p.patient_type === "fitness" ? "bg-amber-500/15 text-amber-400" : "bg-blue-500/15 text-blue-400"}`}>
+                            {p.full_name.charAt(0)}
                           </div>
-                          <div className={`flex items-center gap-2 p-2.5 rounded-xl text-xs font-bold border ${aiInsight.color}`}>
-                            <BrainCircuit size={14} />
-                            <span>{aiInsight.text}</span>
+                          <div className="min-w-0">
+                            <h4 className="font-bold text-white truncate">{p.full_name}</h4>
+                            {(p.phone || p.email) && (
+                              <p className="text-sm text-stone-500 flex items-center gap-2 truncate">
+                                {p.phone ? (
+                                  <>
+                                    <Phone size={12} className="shrink-0" /> {p.phone}
+                                  </>
+                                ) : (
+                                  p.email
+                                )}
+                              </p>
+                            )}
                           </div>
                         </div>
-                      );
-                    })}
-                    {displayedPatients.length === 0 && <div className="text-center p-10 text-stone-500">לא נמצאו לקוחות תחת סינון זה.</div>}
-                  </div>
-                </div>
+                        <button
+                          onClick={() => handleTogglePatientType(p.id, p.patient_type)}
+                          title="לחץ כדי לשנות מסלול"
+                          className={`shrink-0 text-xs font-bold px-3 py-1 rounded-full border transition-colors ${
+                            p.patient_type === "fitness" ? "bg-amber-500/10 text-amber-400 border-amber-500/20 hover:bg-amber-500/20" : "bg-blue-500/10 text-blue-400 border-blue-500/20 hover:bg-blue-500/20"
+                          }`}
+                        >
+                          {p.patient_type === "fitness" ? "כושר ויציבה" : "שיקום קליני"}
+                        </button>
+                      </div>
+                      <div className={`flex items-center gap-2 p-2.5 rounded-xl text-xs font-bold border ${aiInsight.color}`}>
+                        <BrainCircuit size={14} />
+                        <span>{aiInsight.text}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+                {displayedPatients.length === 0 && <div className="text-center p-10 text-stone-500">לא נמצאו לקוחות תחת סינון זה.</div>}
               </div>
             </div>
           </div>

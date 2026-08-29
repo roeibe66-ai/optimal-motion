@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { supabase } from "@/app/lib/supabase";
 import { TRANSLATIONS } from "@/app/constants/translations";
 import type { Lang, Patient, ViewName } from "@/app/types";
 
@@ -27,41 +28,60 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 // need prop-drilling into nearly every component (marketing, patient, admin).
 // Everything else (admin data, patient data, workout session, builder state)
 // lives in feature-scoped hooks instead.
+//
+// Session restore/live updates are driven entirely by Supabase Auth's own
+// event stream now, not by manually reading a JSON-serialized patient row
+// (password included!) out of localStorage/sessionStorage. onAuthStateChange
+// fires once immediately with whatever session Supabase already resolved
+// from its own storage (event "INITIAL_SESSION" — this is what covers
+// page-reload restore) and again on every future sign-in/out, so one
+// subscription covers both initial restore and live updates.
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [lang, setLang] = useState<Lang>("he");
   const [currentView, setCurrentView] = useState<ViewName>("landing");
   const [loggedInPatient, setLoggedInPatient] = useState<Patient | null>(null);
   const [justRegistered, setJustRegistered] = useState(false);
 
-  // Restore session on first load. Only identity is restored here — patient
-  // data (offline plan cache) and reminder/haptics prefs are re-derived by
-  // their own hooks once `loggedInPatient` is set.
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "SIGNED_OUT") {
+        setLoggedInPatient(null);
+        setCurrentView("landing");
+        return;
+      }
+      // No session yet (e.g. initial load with nobody logged in) — leave
+      // currentView alone rather than forcing "landing", since the user
+      // could legitimately already be sitting on "login"/"register".
+      if (!session) return;
 
-    const savedUserLocal = localStorage.getItem("optimalMotionUser");
-    const savedUserSession = sessionStorage.getItem("optimalMotionUser");
-    const savedUser = savedUserLocal || savedUserSession;
-    if (!savedUser) return;
+      // Deferred via setTimeout: calling another Supabase API method
+      // synchronously inside this callback is a documented supabase-js bug
+      // that deadlocks every subsequent call on this client — see
+      // "Why is my supabase API call not returning?" in Supabase's own
+      // troubleshooting docs. The setTimeout escapes the callback's
+      // synchronous execution context, which is the standard workaround.
+      setTimeout(() => {
+        supabase
+          .from("patients")
+          .select("*")
+          .eq("user_id", session.user.id)
+          .single()
+          .then(({ data }) => {
+            if (!data) return;
+            setLoggedInPatient(data);
+            setCurrentView(data.role === "admin" ? "admin" : "patient");
+          });
+      }, 0);
+    });
 
-    if (savedUser === "admin") {
-      // Deliberately deferred to the client: reading storage during render
-      // would mismatch the server-rendered "landing" view.
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setCurrentView("admin");
-    } else {
-      const parsed = JSON.parse(savedUser);
-      setLoggedInPatient(parsed);
-      setCurrentView("patient");
-    }
+    return () => subscription.unsubscribe();
   }, []);
 
   const handleLogout = () => {
-    localStorage.removeItem("optimalMotionUser");
-    sessionStorage.removeItem("optimalMotionUser");
+    supabase.auth.signOut();
     localStorage.removeItem("om_offline_plan");
-    setLoggedInPatient(null);
-    setCurrentView("landing");
   };
 
   const value: AuthContextValue = {

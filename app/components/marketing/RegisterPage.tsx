@@ -1,6 +1,6 @@
 "use client";
 
-import { UserPlus } from "lucide-react";
+import { Dumbbell, HeartPulse, UserPlus } from "lucide-react";
 import { useAuth } from "@/app/context/AuthContext";
 import { useAuthSession } from "@/app/hooks/useAuthSession";
 
@@ -15,6 +15,8 @@ export default function RegisterPage() {
     setRegEmail,
     regPass,
     setRegPass,
+    regPatientType,
+    setRegPatientType,
     handleRegister,
   } = useAuthSession();
 
@@ -74,6 +76,30 @@ export default function RegisterPage() {
             className="w-full border-b-2 border-stone-200 p-3 bg-transparent focus:border-teal-500 outline-none transition-colors"
             required
           />
+
+          <div>
+            <label className="block text-xs font-bold text-stone-500 mb-2 uppercase">מסלול</label>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setRegPatientType("clinical")}
+                className={`flex-1 py-3 rounded-xl text-sm font-bold flex flex-col items-center gap-2 border-2 transition-all ${
+                  regPatientType === "clinical" ? "border-blue-500 bg-blue-50 text-blue-700" : "border-stone-100 bg-white text-stone-400 hover:border-stone-200"
+                }`}
+              >
+                <HeartPulse size={20} /> שיקום
+              </button>
+              <button
+                type="button"
+                onClick={() => setRegPatientType("fitness")}
+                className={`flex-1 py-3 rounded-xl text-sm font-bold flex flex-col items-center gap-2 border-2 transition-all ${
+                  regPatientType === "fitness" ? "border-amber-500 bg-amber-50 text-amber-700" : "border-stone-100 bg-white text-stone-400 hover:border-stone-200"
+                }`}
+              >
+                <Dumbbell size={20} /> כושר
+              </button>
+            </div>
+          </div>
 
           <button
             type="submit"

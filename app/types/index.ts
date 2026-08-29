@@ -3,15 +3,22 @@ export type Lang = "he" | "en";
 export type ViewName = "landing" | "register" | "login" | "patient" | "admin";
 
 export type PatientType = "clinical" | "fitness";
+export type UserRole = "patient" | "admin";
 
 export interface Patient {
   id: string;
+  user_id: string; // 1:1 link to auth.users.id — real Supabase Auth identity, not a local password column
+  role: UserRole;
   full_name: string;
   email?: string;
   phone?: string;
-  password: string;
   patient_type: PatientType;
   premium_tracks?: string; // comma-separated ADMIN_TAGS ids the patient has purchased access to
+  // NOTE: does not correspond to a real column right now (verified against
+  // the live schema during the auth migration) — superseded by Supabase
+  // Auth's own email_confirmed_at, but the 3 call sites that read this
+  // (PatientShell.tsx, PremiumStoreTab.tsx, PlanTab.tsx) are out of scope
+  // for this pass and still reference it, so it's left in place for now.
   email_verified?: boolean;
   reminder_time?: string; // "HH:MM"
   reminder_days?: string; // comma-separated DAYS_OF_WEEK ids
