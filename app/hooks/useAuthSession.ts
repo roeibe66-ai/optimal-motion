@@ -50,7 +50,11 @@ export function useAuthSession() {
       return;
     }
 
-    const { data, error } = await supabase.auth.signUp({ email: regEmail, password: regPass });
+    const { data, error } = await supabase.auth.signUp({
+      email: regEmail,
+      password: regPass,
+      options: { data: { full_name: fullName, patient_type: regPatientType } },
+    });
 
     if (error) {
       alert("שגיאה בהרשמה: " + error.message);
@@ -67,14 +71,10 @@ export function useAuthSession() {
       return;
     }
 
-    const { error: insertError } = await supabase
-      .from("patients")
-      .insert([{ user_id: data.user.id, full_name: fullName, email: regEmail, patient_type: regPatientType, premium_tracks: "" }]);
-
-    if (insertError) {
-      alert("שגיאה ביצירת הפרופיל: " + insertError.message);
-      return;
-    }
+    // The patients row is created automatically by the on_auth_user_created
+    // trigger (security definer — bypasses RLS, since there's no auth.uid()
+    // yet at this point). No client-side insert needed, and none is possible
+    // now that patients has RLS scoped to user_id = auth.uid().
 
     // No active session yet — email confirmation is required, so there's
     // nothing to route into until the patient confirms and logs in for
