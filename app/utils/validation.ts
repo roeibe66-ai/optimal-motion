@@ -9,3 +9,5 @@ export const passwordCriteria = {
 
 export const isStrongPassword = (password: string) =>
   passwordCriteria.minLength(password) && passwordCriteria.hasLetter(password) && passwordCriteria.hasNumber(password);
+
+export const isPasswordConfirmed = (password: string, confirmPassword: string) => confirmPassword.length > 0 && password === confirmPassword;

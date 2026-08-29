@@ -51,6 +51,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setCurrentView("landing");
         return;
       }
+      // A recovery-link click establishes a temporary session and fires
+      // this event — route to the "set new password" screen instead of
+      // treating it like a normal login. Once updateUser() succeeds there,
+      // Supabase fires USER_UPDATED with a normal session, which falls
+      // through to the standard hydrate-and-route path below.
+      if (event === "PASSWORD_RECOVERY") {
+        setCurrentView("reset_password");
+        return;
+      }
       // No session yet (e.g. initial load with nobody logged in) — leave
       // currentView alone rather than forcing "landing", since the user
       // could legitimately already be sitting on "login"/"register".

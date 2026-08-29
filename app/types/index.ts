@@ -1,6 +1,6 @@
 export type Lang = "he" | "en";
 
-export type ViewName = "landing" | "register" | "login" | "patient" | "admin";
+export type ViewName = "landing" | "register" | "login" | "reset_password" | "patient" | "admin";
 
 export type PatientType = "clinical" | "fitness";
 export type UserRole = "patient" | "admin";

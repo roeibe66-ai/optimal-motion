@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from "@/app/context/AuthContext";
 import LandingPage from "@/app/components/marketing/LandingPage";
 import LoginPage from "@/app/components/marketing/LoginPage";
 import RegisterPage from "@/app/components/marketing/RegisterPage";
+import ResetPasswordPage from "@/app/components/marketing/ResetPasswordPage";
 import PatientShell from "@/app/components/patient/PatientShell";
 import LegacyAdminApp from "@/app/components/admin/LegacyAdminApp";
 
@@ -17,6 +18,8 @@ function AppRouter() {
       return <LoginPage />;
     case "register":
       return <RegisterPage />;
+    case "reset_password":
+      return <ResetPasswordPage />;
     case "patient":
       return <PatientShell />;
     case "admin":

@@ -1,12 +1,24 @@
 "use client";
 
-import { Globe } from "lucide-react";
+import { useState } from "react";
+import { Globe, Mail } from "lucide-react";
 import { useAuth } from "@/app/context/AuthContext";
 import { useAuthSession } from "@/app/hooks/useAuthSession";
 
 export default function LoginPage() {
   const { lang, setLang, t, setCurrentView } = useAuth();
-  const { loginIdentifier, setLoginIdentifier, loginPassword, setLoginPassword, handleLogin } = useAuthSession();
+  const {
+    loginIdentifier,
+    setLoginIdentifier,
+    loginPassword,
+    setLoginPassword,
+    handleLogin,
+    forgotEmail,
+    setForgotEmail,
+    forgotSent,
+    handleForgotPassword,
+  } = useAuthSession();
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
 
   return (
     <div
@@ -31,48 +43,80 @@ export default function LoginPage() {
             <Globe size={14} /> {lang === "he" ? "English" : "עברית"}
           </button>
         </div>
-        <form onSubmit={handleLogin} className="space-y-5">
-          <input
-            type="email"
-            placeholder="אימייל"
-            value={loginIdentifier}
-            onChange={(e) => setLoginIdentifier(e.target.value)}
-            className="w-full border-b-2 border-stone-200 p-3 bg-transparent focus:border-teal-500 outline-none transition-colors"
-            required
-          />
-          <input
-            type="password"
-            placeholder="סיסמה"
-            value={loginPassword}
-            onChange={(e) => setLoginPassword(e.target.value)}
-            className="w-full border-b-2 border-stone-200 p-3 bg-transparent focus:border-teal-500 outline-none transition-colors"
-            required
-          />
+        {showForgotPassword ? (
+          forgotSent ? (
+            <div className="text-center py-4">
+              <Mail className="mx-auto text-teal-500 mb-3" size={40} />
+              <h3 className="text-lg font-bold text-stone-900 mb-2">בדוק את תיבת הדואר שלך</h3>
+              <p className="text-sm text-stone-500 mb-6">אם הכתובת {forgotEmail} רשומה במערכת, שלחנו אליה קישור לאיפוס הסיסמה.</p>
+              <button onClick={() => setShowForgotPassword(false)} className="text-sm font-bold text-teal-600 hover:text-teal-700 transition-colors">
+                חזור להתחברות
+              </button>
+            </div>
+          ) : (
+            <form onSubmit={handleForgotPassword} className="space-y-5">
+              <p className="text-sm text-stone-500">הזן את כתובת המייל שלך ונשלח אליה קישור לאיפוס הסיסמה.</p>
+              <input
+                type="email"
+                placeholder="אימייל"
+                value={forgotEmail}
+                onChange={(e) => setForgotEmail(e.target.value)}
+                className="w-full border-b-2 border-stone-200 p-3 bg-transparent focus:border-teal-500 outline-none transition-colors"
+                required
+              />
+              <button type="submit" className="w-full bg-stone-900 text-white py-4 rounded-xl font-bold hover:bg-teal-600 transition-colors mt-2">
+                שלח קישור לאיפוס
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowForgotPassword(false)}
+                className="w-full text-center text-sm font-bold text-stone-600 hover:text-stone-800 transition-colors"
+              >
+                חזור להתחברות
+              </button>
+            </form>
+          )
+        ) : (
+          <>
+            <form onSubmit={handleLogin} className="space-y-5">
+              <input
+                type="email"
+                placeholder="אימייל"
+                value={loginIdentifier}
+                onChange={(e) => setLoginIdentifier(e.target.value)}
+                className="w-full border-b-2 border-stone-200 p-3 bg-transparent focus:border-teal-500 outline-none transition-colors"
+                required
+              />
+              <input
+                type="password"
+                placeholder="סיסמה"
+                value={loginPassword}
+                onChange={(e) => setLoginPassword(e.target.value)}
+                className="w-full border-b-2 border-stone-200 p-3 bg-transparent focus:border-teal-500 outline-none transition-colors"
+                required
+              />
 
-          <button type="submit" className="w-full bg-stone-900 text-white py-4 rounded-xl font-bold hover:bg-teal-600 transition-colors mt-2">
-            התחבר
-          </button>
-        </form>
+              <button type="submit" className="w-full bg-stone-900 text-white py-4 rounded-xl font-bold hover:bg-teal-600 transition-colors mt-2">
+                התחבר
+              </button>
+            </form>
 
-        <button
-          onClick={() =>
-            window.open(
-              "https://wa.me/972504441094?text=היי, שכחתי את הסיסמה לאפליקציה של הקליניקה. אשמח לעזרה בשחזור!",
-              "_blank"
-            )
-          }
-          className="w-full text-center mt-6 text-teal-600 hover:text-teal-700 font-bold transition-colors"
-        >
-          {t.forgot_pass}
-        </button>
-        <div className="flex justify-between items-center mt-4 pt-4 border-t border-stone-100">
-          <button onClick={() => setCurrentView("landing")} className="text-sm font-bold text-stone-600 hover:text-stone-800 transition-colors">
-            חזור
-          </button>
-          <button onClick={() => setCurrentView("register")} className="text-sm font-black text-teal-600 hover:text-teal-800 transition-colors">
-            משתמש חדש? הירשם כאן
-          </button>
-        </div>
+            <button
+              onClick={() => setShowForgotPassword(true)}
+              className="w-full text-center mt-6 text-teal-600 hover:text-teal-700 font-bold transition-colors"
+            >
+              {t.forgot_pass}
+            </button>
+            <div className="flex justify-between items-center mt-4 pt-4 border-t border-stone-100">
+              <button onClick={() => setCurrentView("landing")} className="text-sm font-bold text-stone-600 hover:text-stone-800 transition-colors">
+                חזור
+              </button>
+              <button onClick={() => setCurrentView("register")} className="text-sm font-black text-teal-600 hover:text-teal-800 transition-colors">
+                משתמש חדש? הירשם כאן
+              </button>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
