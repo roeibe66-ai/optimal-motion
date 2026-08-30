@@ -204,6 +204,7 @@ export default function PatientShell() {
               onBack={() => setShowMyWorkouts(false)}
               onStartWorkout={handleStartSavedWorkout}
               onEditWorkout={handleEditSavedWorkout}
+              onDeleteWorkout={savedWorkoutsData.deleteWorkout}
             />
           )}
 

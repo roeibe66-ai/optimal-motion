@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronRight, Plus } from "lucide-react";
+import { ChevronRight, Plus, Trash2 } from "lucide-react";
 import { DAYS_OF_WEEK, DEFAULT_DIY_CATEGORY_STYLE, DIY_CATEGORY_STYLES } from "@/app/constants/catalog";
 import type { Exercise, SavedWorkout } from "@/app/types";
 
@@ -10,6 +10,7 @@ interface MyWorkoutsScreenProps {
   onBack: () => void;
   onStartWorkout: (workout: SavedWorkout) => void;
   onEditWorkout: (workout: SavedWorkout) => void;
+  onDeleteWorkout: (id: string) => void;
 }
 
 // Relative-time label matching the mockup's "נוצר לפני X" copy — this app has
@@ -27,7 +28,13 @@ function relativeCreatedLabel(createdAt: string): string {
   return months === 1 ? "נוצר לפני חודש" : `נוצר לפני ${months} חודשים`;
 }
 
-export default function MyWorkoutsScreen({ savedWorkouts, exerciseCatalog, onBack, onStartWorkout, onEditWorkout }: MyWorkoutsScreenProps) {
+export default function MyWorkoutsScreen({ savedWorkouts, exerciseCatalog, onBack, onStartWorkout, onEditWorkout, onDeleteWorkout }: MyWorkoutsScreenProps) {
+  const handleDelete = (workout: SavedWorkout) => {
+    if (confirm(`למחוק את "${workout.name}"? לא ניתן לשחזר את הפעולה.`)) {
+      onDeleteWorkout(workout.id);
+    }
+  };
+
   return (
     <div className="animate-in fade-in duration-500">
       <div className="flex items-center gap-3 mb-6">
@@ -63,11 +70,20 @@ export default function MyWorkoutsScreen({ savedWorkouts, exerciseCatalog, onBac
                     {hydrated.length} תרגילים · {relativeCreatedLabel(workout.created_at)}
                   </div>
                 </div>
-                {dayLabel && (
-                  <span className="shrink-0 bg-stone-950 border border-stone-800 text-stone-300 text-[11px] font-extrabold px-3 py-1.5 rounded-full whitespace-nowrap">
-                    {dayLabel}
-                  </span>
-                )}
+                <div className="flex items-center gap-2 shrink-0">
+                  {dayLabel && (
+                    <span className="bg-stone-950 border border-stone-800 text-stone-300 text-[11px] font-extrabold px-3 py-1.5 rounded-full whitespace-nowrap">
+                      {dayLabel}
+                    </span>
+                  )}
+                  <button
+                    onClick={() => handleDelete(workout)}
+                    aria-label="מחק אימון"
+                    className="w-8 h-8 rounded-full bg-stone-950 border border-stone-800 flex items-center justify-center text-stone-500 hover:text-red-400 hover:border-red-500/30 transition-colors"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
               </div>
 
               <div className="flex flex-wrap gap-1.5">

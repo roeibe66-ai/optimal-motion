@@ -46,5 +46,13 @@ export function useSavedWorkouts() {
     [loggedInPatient, fetchSavedWorkouts]
   );
 
-  return { savedWorkouts, saveWorkout, refetchSavedWorkouts: fetchSavedWorkouts };
+  const deleteWorkout = useCallback(
+    async (id: string) => {
+      await supabase.from("patient_saved_workouts").delete().eq("id", id);
+      await fetchSavedWorkouts();
+    },
+    [fetchSavedWorkouts]
+  );
+
+  return { savedWorkouts, saveWorkout, deleteWorkout, refetchSavedWorkouts: fetchSavedWorkouts };
 }
