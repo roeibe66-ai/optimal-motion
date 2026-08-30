@@ -61,6 +61,33 @@ export default function LegacyAdminApp() {
   const [packages, setPackages] = useState<any[]>([]);
   const [workoutLogs, setWorkoutLogs] = useState<any[]>([]);
 
+  // "עדכונים קליניים מהשטח" dismiss state. Each card IS a real workout_logs
+  // row (patient-reported pain/RPE), also read independently by the
+  // patient's own progress view — so dismissing here must never touch the
+  // row itself. Kept in localStorage (per-browser, not a DB column) rather
+  // than adding schema for what's currently a single-admin console.
+  const [dismissedLogIds, setDismissedLogIds] = useState<string[]>(() => {
+    try {
+      const stored = localStorage.getItem("om_dismissed_clinic_logs");
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return []; // malformed/missing storage — falls back to showing everything
+    }
+  });
+  const dismissLog = (id: string) => {
+    setDismissedLogIds((prev) => {
+      const next = [...prev, id];
+      localStorage.setItem("om_dismissed_clinic_logs", JSON.stringify(next));
+      return next;
+    });
+  };
+  const visibleWorkoutLogs = workoutLogs.filter((log) => !dismissedLogIds.includes(String(log.id)));
+  // Single ref, not per-card state: only one card can be mid-touch at a
+  // time, and there's no drag-follow animation to render mid-gesture — the
+  // distance is only read once, at touchend, same pattern as the workout
+  // player's existing swipe-to-advance gesture.
+  const swipeStartXRef = useRef<number | null>(null);
+
   const [crmFilter, setCrmFilter] = useState("all");
 
   const [exTitle, setExTitle] = useState("");
@@ -676,9 +703,9 @@ export default function LegacyAdminApp() {
                 <h2 className="text-xl font-bold text-white flex items-center gap-2">
                   <Activity size={20} className="text-teal-400" /> עדכונים קליניים מהשטח
                 </h2>
-                <span className="text-sm font-bold text-stone-400 bg-stone-950 px-3 py-1 rounded-full border border-stone-800">{workoutLogs.length} דיווחים</span>
+                <span className="text-sm font-bold text-stone-400 bg-stone-950 px-3 py-1 rounded-full border border-stone-800">{visibleWorkoutLogs.length} דיווחים</span>
               </div>
-              {workoutLogs.length === 0 ? (
+              {visibleWorkoutLogs.length === 0 ? (
                 <div className="text-center p-12 flex flex-col items-center">
                   <div className="w-20 h-20 bg-stone-950 rounded-full flex items-center justify-center text-stone-600 mb-4">
                     <Coffee size={32} />
@@ -688,11 +715,25 @@ export default function LegacyAdminApp() {
                 </div>
               ) : (
                 <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2">
-                  {workoutLogs.map((log, idx) => {
+                  {visibleWorkoutLogs.map((log) => {
                     const patientName = patients.find((p) => p.id === log.patient_id)?.full_name || "מטופל לא ידוע";
                     const rpeColor = log.rpe >= 8 ? "bg-red-500/10 text-red-400 border-red-500/25" : log.rpe >= 5 ? "bg-amber-500/10 text-amber-400 border-amber-500/25" : "bg-teal-500/10 text-teal-400 border-teal-500/25";
                     return (
-                      <div key={idx} className="flex flex-col md:flex-row justify-between items-start md:items-center p-5 rounded-2xl border border-stone-800 bg-stone-950 hover:border-stone-700 transition-colors gap-4">
+                      <div
+                        key={log.id}
+                        onTouchStart={(e) => { swipeStartXRef.current = e.targetTouches[0].clientX; }}
+                        onTouchEnd={(e) => {
+                          if (swipeStartXRef.current === null) return;
+                          const distance = swipeStartXRef.current - e.changedTouches[0].clientX;
+                          swipeStartXRef.current = null;
+                          if (Math.abs(distance) > 50) dismissLog(String(log.id));
+                        }}
+                        className="flex flex-col md:flex-row justify-between items-start md:items-center p-5 rounded-2xl border border-stone-800 bg-stone-950 hover:border-stone-700 transition-colors gap-4"
+                      >
+                        {/* Swipe (either direction) dismisses this card from the admin's own view only —
+                            it's a real workout_logs row read independently by the patient's progress view,
+                            so this never touches the row; dismissed ids are per-browser localStorage, see
+                            dismissLog above. */}
                         <div>
                           <h4 className="font-black text-white text-lg">{patientName}</h4>
                           <p className="text-sm text-stone-400 font-medium">{log.category}</p>
