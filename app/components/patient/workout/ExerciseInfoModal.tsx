@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, CheckCircle, Info, TrendingUp } from "lucide-react";
+import { AlertTriangle, CheckCircle, Info, TrendingUp, Target } from "lucide-react";
 import {
   CartesianGrid,
   Line,
@@ -11,6 +11,7 @@ import {
   YAxis,
 } from "recharts";
 import { useAuth } from "@/app/context/AuthContext";
+import { AVAILABLE_MUSCLES } from "@/app/constants/catalog";
 import type { Exercise } from "@/app/types";
 import Modal from "@/app/components/ui/Modal";
 
@@ -35,10 +36,20 @@ export default function ExerciseInfoModal({ exercise, historyData, onClose }: Ex
   const hasMistake = !!exercise.common_mistake;
   const hasDescription = !!exercise.description && exercise.description.trim() !== "" && exercise.description.trim() !== ".";
   const hasHistory = historyData.length > 0;
+  const muscleLabel = exercise.target_muscle
+    ? AVAILABLE_MUSCLES.find((m) => m.id === exercise.target_muscle)?.label ?? exercise.target_muscle
+    : null;
 
   return (
     <Modal onClose={onClose} title="מידע לתרגיל" icon={<Info size={20} className="text-teal-500" />}>
-      <h4 className="font-black text-lg mb-4">{exercise.title}</h4>
+      <div className="flex items-center justify-between gap-3 mb-4">
+        <h4 className="font-black text-lg">{exercise.title}</h4>
+        {muscleLabel && (
+          <span className="shrink-0 flex items-center gap-1.5 bg-teal-500/10 text-teal-400 border border-teal-500/25 text-[11px] font-extrabold px-3 py-1.5 rounded-full">
+            <Target size={12} /> {muscleLabel}
+          </span>
+        )}
+      </div>
 
       {hasMistake && (
         <div className="p-4 rounded-2xl border mb-4 bg-red-900/20 border-red-900/50">
