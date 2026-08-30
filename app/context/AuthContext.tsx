@@ -43,23 +43,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [justRegistered, setJustRegistered] = useState(false);
 
   useEffect(() => {
+    // Survives across events on this same subscription (plain closure
+    // variable, not React state — there's nothing here that needs a
+    // re-render on its own). Guards against a real race: INITIAL_SESSION
+    // fires first, doesn't recognize the session as recovery (yet), and
+    // schedules the normal hydrate-and-route fetch below — a genuine
+    // network request. PASSWORD_RECOVERY then fires moments later and sets
+    // reset_password immediately (synchronous). But the earlier, slower
+    // fetch is still in flight, and when *it* finally resolves, its .then()
+    // used to unconditionally overwrite currentView right back to
+    // patient/admin — the slow call winning just because it finished last.
+    let isRecoveryFlow = false;
+
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "SIGNED_OUT") {
+        isRecoveryFlow = false;
         setLoggedInPatient(null);
         setCurrentView("landing");
         return;
       }
-      // A recovery-link click establishes a temporary session and fires
-      // this event — route to the "set new password" screen instead of
-      // treating it like a normal login. Once updateUser() succeeds there,
-      // Supabase fires USER_UPDATED with a normal session, which falls
-      // through to the standard hydrate-and-route path below.
-      if (event === "PASSWORD_RECOVERY") {
+
+      if (event === "USER_UPDATED") {
+        // updateUser() on the reset_password screen succeeded — the
+        // recovery flow is done. Clear the flag so the hydrate-and-route
+        // path below (which this same event also carries a session for)
+        // is allowed to run normally instead of being treated as stale.
+        isRecoveryFlow = false;
+      } else if (event === "PASSWORD_RECOVERY") {
+        // A recovery-link click routes to the "set new password" screen
+        // instead of a normal login.
+        isRecoveryFlow = true;
         setCurrentView("reset_password");
         return;
       }
+
       // No session yet (e.g. initial load with nobody logged in) — leave
       // currentView alone rather than forcing "landing", since the user
       // could legitimately already be sitting on "login"/"register".
@@ -72,13 +91,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // troubleshooting docs. The setTimeout escapes the callback's
       // synchronous execution context, which is the standard workaround.
       setTimeout(() => {
+        if (isRecoveryFlow) return; // superseded by a PASSWORD_RECOVERY/USER_UPDATED event since this was scheduled
         supabase
           .from("patients")
           .select("*")
           .eq("user_id", session.user.id)
           .single()
           .then(({ data }) => {
-            if (!data) return;
+            if (!data || isRecoveryFlow) return; // re-check: the race described above resolves here
             setLoggedInPatient(data);
             setCurrentView(data.role === "admin" ? "admin" : "patient");
           });
