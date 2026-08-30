@@ -103,7 +103,11 @@ export default function PlanTab({
       });
       todayExerciseCount = todayCategoryExercises.length;
       todayBlockCount = new Set(todayCategoryExercises.map((pe) => pe.block || "A")).size;
-      const todayTotalSets = todayCategoryExercises.reduce((acc, pe) => acc + (pe.sets || 0), 0);
+      // Number(...): pe.sets is patient_exercises.sets, a text column (the
+      // TS type says number, but the live DB column is text) — summing the
+      // raw strings with + string-concatenates instead of adding (e.g.
+      // "3" + "4" === "34"), producing wildly wrong duration estimates.
+      const todayTotalSets = todayCategoryExercises.reduce((acc, pe) => acc + (Number(pe.sets) || 0), 0);
       todayEstimatedMinutes = Math.max(10, Math.round(todayTotalSets * 1.5));
     }
 
@@ -329,7 +333,8 @@ export default function PlanTab({
         </div>
       ) : (
         (() => {
-          const totalSets = displayedExercises.reduce((acc, curr) => acc + (curr.sets || 0), 0);
+          // Number(...): same text-column issue as todayTotalSets above.
+          const totalSets = displayedExercises.reduce((acc, curr) => acc + (Number(curr.sets) || 0), 0);
           const estimatedTime = Math.max(10, Math.round(totalSets * 1.5));
           const uniqueMuscles = Array.from(new Set(displayedExercises.map((a) => a.exercise?.target_muscle).filter(Boolean)));
           const muscleLabels = uniqueMuscles.map((m) => AVAILABLE_MUSCLES.find((am) => am.id === m)?.label).filter(Boolean).join(", ");

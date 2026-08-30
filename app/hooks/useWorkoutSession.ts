@@ -398,7 +398,11 @@ export function useWorkoutSession({
   const makeHarder = () => {
     triggerHaptic("light");
     if (!activeAssign) return;
-    const baseReps = effectiveTargetReps ?? activeAssign.reps;
+    // Number(...): activeAssign.reps comes from patient_exercises.reps,
+    // which is a text column — the first "make it harder" tap on a given
+    // exercise (before any adjustment exists) would otherwise string-
+    // concatenate here (e.g. "10" + 2 === "102") instead of adding.
+    const baseReps = Number(effectiveTargetReps ?? activeAssign.reps);
     const baseRir = effectiveTargetRir;
     setRepAdjustments((prev) => ({
       ...prev,
@@ -409,7 +413,10 @@ export function useWorkoutSession({
   const makeEasier = () => {
     triggerHaptic("light");
     if (!activeAssign) return;
-    const baseReps = effectiveTargetReps ?? activeAssign.reps;
+    // Number(...) here too, for consistency with makeHarder above — "-"
+    // already numeric-coerces on its own, so this wasn't actually broken,
+    // but normalizing both keeps them from silently diverging later.
+    const baseReps = Number(effectiveTargetReps ?? activeAssign.reps);
     const baseRir = effectiveTargetRir;
     setRepAdjustments((prev) => ({
       ...prev,

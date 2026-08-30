@@ -89,13 +89,13 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
                 muted
                 playsInline
                 loop
-                className="w-full h-full object-contain md:object-cover opacity-30 mix-blend-screen blur-sm"
+                className="w-full h-full object-contain object-center md:object-cover opacity-30 mix-blend-screen"
               />
             ) : (
               <img
                 src={session.nextExercise.exercise.gif_url}
                 alt={session.nextExercise.exercise.title || "Exercise media"}
-                className="w-full h-full object-contain md:object-cover opacity-30 mix-blend-screen blur-sm"
+                className="w-full h-full object-contain object-center md:object-cover opacity-30 mix-blend-screen"
               />
             )
           ) : (
@@ -201,56 +201,65 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
             </button>
           )
         ) : (
-          <div className="flex flex-col items-center justify-center text-center animate-in zoom-in duration-500 h-full w-full gap-5">
-            {/* Reps + RIR — reported here, after the set, not typed live during it */}
-            <div className="w-full max-w-sm bg-black/40 border border-white/10 backdrop-blur-md rounded-3xl p-5 flex flex-col gap-4">
-              <div className="flex items-center justify-between">
-                <span className="text-[12px] font-extrabold text-stone-400">כמה חזרות עשית?</span>
-                <div className="flex items-center gap-3.5">
-                  <button
-                    onClick={() => session.adjustRestReps(-1)}
-                    className="w-[30px] h-[30px] rounded-full bg-white/10 border border-white/15 flex items-center justify-center text-white"
-                  >
-                    <Minus size={13} />
-                  </button>
-                  <span className="text-2xl font-black text-white min-w-[28px] text-center" dir="ltr">
-                    {session.actualRepsLogged}
-                  </span>
-                  <button
-                    onClick={() => session.adjustRestReps(1)}
-                    className="w-[30px] h-[30px] rounded-full bg-emerald-400/20 border border-emerald-400/40 flex items-center justify-center text-emerald-400"
-                  >
-                    <Plus size={13} />
-                  </button>
+          <div className="flex flex-col items-center justify-start pt-8 md:pt-12 text-center animate-in zoom-in duration-500 h-full w-full gap-5">
+            {/* Reps + RIR — reported here, after the set, not typed live during
+                it. Hidden for timed exercises: there's no "reps you did" or
+                RIR to report for a time-held set. */}
+            {!session.activeAssign?.is_time && (
+              <div className="w-full max-w-sm bg-black/40 border border-white/10 backdrop-blur-md rounded-3xl p-5 flex flex-col gap-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-[12px] font-extrabold text-stone-400">כמה חזרות עשית?</span>
+                  <div className="flex items-center gap-3.5">
+                    <button
+                      onClick={() => session.adjustRestReps(-1)}
+                      className="w-[30px] h-[30px] rounded-full bg-white/10 border border-white/15 flex items-center justify-center text-white"
+                    >
+                      <Minus size={13} />
+                    </button>
+                    <span className="text-2xl font-black text-white min-w-[28px] text-center" dir="ltr">
+                      {session.actualRepsLogged}
+                    </span>
+                    <button
+                      onClick={() => session.adjustRestReps(1)}
+                      className="w-[30px] h-[30px] rounded-full bg-emerald-400/20 border border-emerald-400/40 flex items-center justify-center text-emerald-400"
+                    >
+                      <Plus size={13} />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="h-px bg-white/10"></div>
+
+                <div className="flex items-center justify-between">
+                  <span className="text-[12px] font-extrabold text-stone-400">RIR — חזרות בהספק</span>
+                  <div className="flex gap-1.5">
+                    {RIR_OPTIONS.map((val) => {
+                      const isSelected = session.pendingSetRir === val;
+                      return (
+                        <button
+                          key={val}
+                          onClick={() => session.selectRestRir(val)}
+                          className={`w-[26px] h-[26px] rounded-full flex items-center justify-center text-[11px] font-bold transition-colors ${
+                            isSelected ? "bg-emerald-400 text-stone-900" : "text-stone-400 border border-white/15"
+                          }`}
+                        >
+                          {val === 4 ? "4+" : val}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
+            )}
 
-              <div className="h-px bg-white/10"></div>
-
-              <div className="flex items-center justify-between">
-                <span className="text-[12px] font-extrabold text-stone-400">RIR — חזרות בהספק</span>
-                <div className="flex gap-1.5">
-                  {RIR_OPTIONS.map((val) => {
-                    const isSelected = session.pendingSetRir === val;
-                    return (
-                      <button
-                        key={val}
-                        onClick={() => session.selectRestRir(val)}
-                        className={`w-[26px] h-[26px] rounded-full flex items-center justify-center text-[11px] font-bold transition-colors ${
-                          isSelected ? "bg-emerald-400 text-stone-900" : "text-stone-400 border border-white/15"
-                        }`}
-                      >
-                        {val === 4 ? "4+" : val}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-
-            {/* Rest timer ring */}
-            <div className="w-[176px] h-[176px] rounded-full border-[5px] border-emerald-400/25 bg-black/35 backdrop-blur-xl flex items-center justify-center relative shadow-2xl">
+            {/* Rest timer ring — track + progress drawn as two circles in the
+                same SVG at the same radius, so they render as one ring
+                instead of two visibly separate concentric circles (the old
+                version paired an SVG progress circle with a mismatched CSS
+                border-ring on the wrapping div). */}
+            <div className="w-[176px] h-[176px] rounded-full bg-black/35 backdrop-blur-xl flex items-center justify-center relative shadow-2xl">
               <svg width="176" height="176" viewBox="0 0 176 176" className="absolute inset-0 -rotate-90">
+                <circle cx="88" cy="88" r={REST_RING_RADIUS} fill="none" stroke="rgba(52,211,153,0.25)" strokeWidth="5" />
                 <circle
                   cx="88"
                   cy="88"
@@ -297,7 +306,7 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
                 onClick={session.handleEndRest}
                 className="flex-[2] bg-white hover:bg-stone-200 text-stone-900 font-black py-4 rounded-2xl transition-transform hover:scale-[1.02]"
               >
-                דלג למנוחה
+                דלג
               </button>
             </div>
           </div>
