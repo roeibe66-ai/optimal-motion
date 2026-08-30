@@ -1394,7 +1394,7 @@ export default function LegacyAdminApp() {
                             value={editExForm.common_mistake}
                             onChange={(e) => setEditExForm({ ...editExForm, common_mistake: e.target.value })}
                             className="border-b border-red-500/30 bg-transparent text-white text-xs mt-2 outline-none"
-                            placeholder="אזהרה קלינית"
+                            placeholder="דגשים חשובים"
                           />
                           <textarea
                             value={editExForm.description}

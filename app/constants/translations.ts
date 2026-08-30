@@ -23,7 +23,7 @@ export const TRANSLATIONS: Record<Lang, Record<string, string>> = {
     skip_rest: "דלג",
     finish_block: "סיימתי!",
     correct_execution: "ביצוע נכון",
-    warning: "אזהרה קלינית",
+    warning: "דגשים חשובים",
     forgot_pass: "שכחת סיסמה? לחץ כאן"
   },
   en: {
