@@ -98,6 +98,12 @@ export default function LegacyAdminApp() {
   const [exSecondaryMuscles, setExSecondaryMuscles] = useState<string[]>([]);
   const [exMistake, setExMistake] = useState("");
   const [exAdminTags, setExAdminTags] = useState<string[]>([]);
+  // Admin/practitioner-only notes, never sent to patients — deliberately a
+  // separate table (exercise_internal_notes) rather than a column on
+  // exercises, since exercises has a SELECT policy open to all authenticated
+  // users and RLS is row-level, not column-level. See the migration comment.
+  const [exInternalNotes, setExInternalNotes] = useState("");
+  const [internalNotesByExerciseId, setInternalNotesByExerciseId] = useState<Record<string, string>>({});
 
   const [editingExId, setEditingExId] = useState<string | null>(null);
   const [editExForm, setEditExForm] = useState({
@@ -109,6 +115,7 @@ export default function LegacyAdminApp() {
     admin_tags: [] as string[],
     common_mistake: "",
     description: "",
+    internal_notes: "",
   });
 
   const [assignPatientId, setAssignPatientId] = useState("");
@@ -183,16 +190,18 @@ export default function LegacyAdminApp() {
   const fitnessCount = patients.filter((p) => p.patient_type === "fitness").length;
 
   const fetchAdminData = async () => {
-    const [pats, exs, pkgs, logs] = await Promise.all([
+    const [pats, exs, pkgs, logs, notes] = await Promise.all([
       supabase.from("patients").select("*"),
       supabase.from("exercises").select("*"),
       supabase.from("packages").select("*"),
       supabase.from("workout_logs").select("*").order("created_at", { ascending: false }).limit(500),
+      supabase.from("exercise_internal_notes").select("*"),
     ]);
     if (pats.data) setPatients(pats.data);
     if (exs.data) setExercises(exs.data);
     if (pkgs.data) setPackages(pkgs.data);
     if (logs.data) setWorkoutLogs(logs.data);
+    if (notes.data) setInternalNotesByExerciseId(Object.fromEntries(notes.data.map((n) => [n.exercise_id, n.notes ?? ""])));
   };
 
   useEffect(() => {
@@ -235,30 +244,42 @@ export default function LegacyAdminApp() {
 
   const handleExerciseSubmit = async (e: any) => {
     e.preventDefault();
-    const { error } = await supabase.from("exercises").insert([
-      {
-        title: exTitle,
-        category: exCategory,
-        description: exDesc,
-        gif_url: exGifUrl,
-        target_muscle: exPrimaryMuscle,
-        secondary_muscles: exSecondaryMuscles.join(","),
-        admin_tags: exAdminTags.join(","),
-        common_mistake: exMistake,
-      },
-    ]);
-    if (error) alert("שגיאה: " + error.message);
-    else {
-      alert("תרגיל נוצר!");
-      setExTitle("");
-      setExDesc("");
-      setExGifUrl("");
-      setExPrimaryMuscle("");
-      setExSecondaryMuscles([]);
-      setExAdminTags([]);
-      setExMistake("");
-      fetchAdminData();
+    const { data, error } = await supabase
+      .from("exercises")
+      .insert([
+        {
+          title: exTitle,
+          category: exCategory,
+          description: exDesc,
+          gif_url: exGifUrl,
+          target_muscle: exPrimaryMuscle,
+          secondary_muscles: exSecondaryMuscles.join(","),
+          admin_tags: exAdminTags.join(","),
+          common_mistake: exMistake,
+        },
+      ])
+      .select()
+      .single();
+    if (error) {
+      alert("שגיאה: " + error.message);
+      return;
     }
+    if (exInternalNotes.trim()) {
+      const { error: notesError } = await supabase
+        .from("exercise_internal_notes")
+        .upsert({ exercise_id: data.id, notes: exInternalNotes, updated_at: new Date().toISOString() });
+      if (notesError) alert("התרגיל נוצר, אך שמירת ההערות הפנימיות נכשלה: " + notesError.message);
+    }
+    alert("תרגיל נוצר!");
+    setExTitle("");
+    setExDesc("");
+    setExGifUrl("");
+    setExPrimaryMuscle("");
+    setExSecondaryMuscles([]);
+    setExAdminTags([]);
+    setExMistake("");
+    setExInternalNotes("");
+    fetchAdminData();
   };
 
   const toggleSecondaryMuscle = (id: string, isEditing: boolean = false) => {
@@ -290,6 +311,7 @@ export default function LegacyAdminApp() {
       admin_tags: ex.admin_tags ? String(ex.admin_tags).split(",") : [],
       common_mistake: String(ex.common_mistake || ""),
       description: String(ex.description || ""),
+      internal_notes: internalNotesByExerciseId[ex.id] || "",
     });
   };
 
@@ -307,11 +329,16 @@ export default function LegacyAdminApp() {
         common_mistake: editExForm.common_mistake,
       })
       .eq("id", id);
-    if (error) alert("שגיאה בעדכון: " + error.message);
-    else {
-      setEditingExId(null);
-      fetchAdminData();
+    if (error) {
+      alert("שגיאה בעדכון: " + error.message);
+      return;
     }
+    const { error: notesError } = await supabase
+      .from("exercise_internal_notes")
+      .upsert({ exercise_id: id, notes: editExForm.internal_notes, updated_at: new Date().toISOString() });
+    if (notesError) alert("התרגיל עודכן, אך שמירת ההערות הפנימיות נכשלה: " + notesError.message);
+    setEditingExId(null);
+    fetchAdminData();
   };
 
   const handleDeleteEx = async (id: string) => {
@@ -1292,6 +1319,19 @@ export default function LegacyAdminApp() {
                   </div>
                 </div>
 
+                <div className="bg-stone-950 p-5 rounded-2xl border border-stone-800">
+                  <label className="block text-sm font-bold text-stone-400 mb-3 flex items-center gap-2">
+                    <Lock size={16} /> הערות פנימיות לצוות (לאדמין בלבד, לא מוצג למטופלים)
+                  </label>
+                  <textarea
+                    value={exInternalNotes}
+                    onChange={(e) => setExInternalNotes(e.target.value)}
+                    placeholder="הערות קליניות, שיקולים פנימיים וכו'"
+                    className="w-full border-b-2 border-stone-800 p-2 bg-transparent text-white placeholder:text-stone-600 focus:border-teal-500 outline-none"
+                    rows={2}
+                  />
+                </div>
+
                 <div className="bg-red-500/[0.06] p-5 rounded-2xl border border-red-500/20">
                   <label className="block text-sm font-bold text-red-400 mb-2 flex items-center gap-2">
                     <AlertTriangle size={18} /> אזהרה / טעות נפוצה (אופציונלי)
@@ -1443,6 +1483,17 @@ export default function LegacyAdminApp() {
                             className="border border-stone-700 bg-transparent text-white rounded-lg p-2 text-xs mt-2 outline-none"
                             placeholder="דגשים לביצוע"
                           />
+                          <div className="mt-2 pt-2 border-t border-stone-800">
+                            <label className="text-[10px] font-bold text-stone-500 mb-1 flex items-center gap-1">
+                              <Lock size={10} /> הערות פנימיות (לאדמין בלבד)
+                            </label>
+                            <textarea
+                              value={editExForm.internal_notes}
+                              onChange={(e) => setEditExForm({ ...editExForm, internal_notes: e.target.value })}
+                              className="w-full border border-stone-700 bg-transparent text-white rounded-lg p-2 text-xs outline-none"
+                              placeholder="הערות קליניות, שיקולים פנימיים וכו'"
+                            />
+                          </div>
                           <div className="flex gap-2 mt-2">
                             <button onClick={() => handleSaveEditEx(ex.id)} className="flex-1 bg-teal-500 text-stone-950 py-2 rounded-xl text-xs font-bold">
                               שמור
