@@ -202,7 +202,7 @@ export function useWorkoutSession({
         {
           exercise_id: activeAssign.exercise.id,
           set_number: currentBlockSet,
-          reps: actualRepsLogged ? parseInt(actualRepsLogged) : (effectiveTargetReps ?? activeAssign.reps),
+          reps: actualRepsLogged ? parseInt(actualRepsLogged) : Number(effectiveTargetReps ?? activeAssign.reps) || 0,
           rir: pendingSetRir ?? undefined,
         },
       ]);
