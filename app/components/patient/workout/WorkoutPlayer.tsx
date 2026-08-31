@@ -55,6 +55,10 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
   const ex = session.displayedExercise;
   const isSameExerciseNext = session.nextExercise && ex && session.nextExercise.exercise.id === ex.id;
   const restProgress = session.restTimerTotal > 0 ? Math.min(1, Math.max(0, session.restTimer / session.restTimerTotal)) : 0;
+  // Covers both a real rest and the lightweight mid-superset check — both
+  // hide the live-exercise HUD the same way; they differ only in whether a
+  // countdown ring/timer-driven buttons show (see isSupersetCheck below).
+  const isPostSet = session.isResting || session.isSupersetCheck;
 
   return (
     <div
@@ -74,13 +78,13 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
 
       {/* Background Video Layer (Immersive) - Full Screen Object Contain to not crop technique */}
       <div className="absolute inset-0 z-0 bg-stone-950 flex items-center justify-center">
-        {!session.isResting && ex?.gif_url ? (
+        {!isPostSet && ex?.gif_url ? (
           ex.gif_url.toLowerCase().includes(".mp4") || ex.gif_url.toLowerCase().includes(".webm") ? (
             <video src={ex.gif_url} autoPlay muted playsInline loop className="w-full h-full object-contain md:object-cover opacity-60 mix-blend-screen" />
           ) : (
             <img src={ex.gif_url} alt={ex.title || "Exercise media"} className="w-full h-full object-contain md:object-cover opacity-60 mix-blend-screen" />
           )
-        ) : session.isResting ? (
+        ) : isPostSet ? (
           !isSameExerciseNext && session.nextExercise?.exercise?.gif_url ? (
             session.nextExercise.exercise.gif_url.toLowerCase().includes(".mp4") ? (
               <video
@@ -124,7 +128,7 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
           </button>
 
           {/* Exercise Title (no block chip anymore) */}
-          {!session.isResting && (
+          {!isPostSet && (
             <div className="text-right max-w-[70%]">
               <h2 className="text-2xl md:text-4xl font-black text-white drop-shadow-md leading-tight">{ex?.title}</h2>
             </div>
@@ -132,10 +136,11 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
         </div>
 
         {/* Compact reps·set pill + Info / Easier / Harder */}
-        {!session.isResting && (
+        {!isPostSet && (
           <div className="flex justify-end items-center mt-4 gap-2 pointer-events-auto">
             <span className="bg-black/40 border border-white/10 backdrop-blur-md text-white font-bold text-[11px] px-3 h-[38px] rounded-full flex items-center whitespace-nowrap">
-              {session.effectiveTargetReps} חזרות · סט {session.currentBlockSet}/{session.maxSetsInBlock}
+              {session.effectiveTargetReps} {session.activeAssign?.is_time ? "שניות" : "חזרות"}
+              {session.effectiveTargetRir !== null && ` · RIR ${session.effectiveTargetRir}`} · סט {session.currentBlockSet}/{session.maxSetsInBlock}
             </span>
             <button
               onClick={() => ex && session.setViewingExInfo(ex)}
@@ -163,7 +168,7 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
 
       {/* Main Content Area (Layered over video at bottom center) */}
       <div className="relative z-10 flex-1 flex flex-col justify-end pb-8 px-4 w-full max-w-lg mx-auto pointer-events-auto">
-        {!session.isResting ? (
+        {!isPostSet ? (
           session.activeAssign?.is_time ? (
             // Timed exercises aren't covered by the approved mockups — kept as
             // the existing card-based timer UI, only recolored for consistency.
@@ -202,81 +207,89 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
           )
         ) : (
           <div className="flex flex-col items-center justify-start pt-8 md:pt-12 text-center animate-in zoom-in duration-500 h-full w-full gap-5">
-            {/* Reps + RIR — reported here, after the set, not typed live during
-                it. Hidden for timed exercises: there's no "reps you did" or
-                RIR to report for a time-held set. */}
-            {!session.activeAssign?.is_time && (
-              <div className="w-full max-w-sm bg-black/40 border border-white/10 backdrop-blur-md rounded-3xl p-5 flex flex-col gap-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-[12px] font-extrabold text-stone-400">כמה חזרות עשית?</span>
-                  <div className="flex items-center gap-3.5">
-                    <button
-                      onClick={() => session.adjustRestReps(-1)}
-                      className="w-[30px] h-[30px] rounded-full bg-white/10 border border-white/15 flex items-center justify-center text-white"
-                    >
-                      <Minus size={13} />
-                    </button>
-                    <span className="text-2xl font-black text-white min-w-[28px] text-center" dir="ltr">
-                      {session.actualRepsLogged}
-                    </span>
-                    <button
-                      onClick={() => session.adjustRestReps(1)}
-                      className="w-[30px] h-[30px] rounded-full bg-emerald-400/20 border border-emerald-400/40 flex items-center justify-center text-emerald-400"
-                    >
-                      <Plus size={13} />
-                    </button>
-                  </div>
-                </div>
-
-                <div className="h-px bg-white/10"></div>
-
-                <div className="flex items-center justify-between">
-                  <span className="text-[12px] font-extrabold text-stone-400">RIR — חזרות בהספק</span>
-                  <div className="flex gap-1.5">
-                    {RIR_OPTIONS.map((val) => {
-                      const isSelected = session.pendingSetRir === val;
-                      return (
-                        <button
-                          key={val}
-                          onClick={() => session.selectRestRir(val)}
-                          className={`w-[26px] h-[26px] rounded-full flex items-center justify-center text-[11px] font-bold transition-colors ${
-                            isSelected ? "bg-emerald-400 text-stone-900" : "text-stone-400 border border-white/15"
-                          }`}
-                        >
-                          {val === 4 ? "4+" : val}
-                        </button>
-                      );
-                    })}
-                  </div>
+            {/* Actual value + RIR — reported here, after the set, not typed
+                live during it. Shown for every exercise finish, whether it
+                ends a full round (real rest below) or is just one link in a
+                superset (the lightweight check — see isSupersetCheck).
+                "Actual value" is reps for a countable exercise, or seconds
+                held for a timed one — same stepper/state either way, just
+                relabeled, since workout_logs already stores seconds in this
+                same field for timed exercises. */}
+            <div className="w-full max-w-sm bg-black/40 border border-white/10 backdrop-blur-md rounded-3xl p-5 flex flex-col gap-4">
+              <div className="flex items-center justify-between">
+                <span className="text-[12px] font-extrabold text-stone-400">
+                  {session.activeAssign?.is_time ? "כמה זמן החזקת (בשניות)?" : "כמה חזרות עשית?"}
+                </span>
+                <div className="flex items-center gap-3.5">
+                  <button
+                    onClick={() => session.adjustRestReps(session.activeAssign?.is_time ? -5 : -1)}
+                    className="w-[30px] h-[30px] rounded-full bg-white/10 border border-white/15 flex items-center justify-center text-white"
+                  >
+                    <Minus size={13} />
+                  </button>
+                  <span className="text-2xl font-black text-white min-w-[28px] text-center" dir="ltr">
+                    {session.actualRepsLogged}
+                  </span>
+                  <button
+                    onClick={() => session.adjustRestReps(session.activeAssign?.is_time ? 5 : 1)}
+                    className="w-[30px] h-[30px] rounded-full bg-emerald-400/20 border border-emerald-400/40 flex items-center justify-center text-emerald-400"
+                  >
+                    <Plus size={13} />
+                  </button>
                 </div>
               </div>
-            )}
 
-            {/* Rest timer ring — track + progress drawn as two circles in the
-                same SVG at the same radius, so they render as one ring
-                instead of two visibly separate concentric circles (the old
-                version paired an SVG progress circle with a mismatched CSS
-                border-ring on the wrapping div). */}
-            <div className="w-[176px] h-[176px] rounded-full bg-black/35 backdrop-blur-xl flex items-center justify-center relative shadow-2xl">
-              <svg width="176" height="176" viewBox="0 0 176 176" className="absolute inset-0 -rotate-90">
-                <circle cx="88" cy="88" r={REST_RING_RADIUS} fill="none" stroke="rgba(52,211,153,0.25)" strokeWidth="5" />
-                <circle
-                  cx="88"
-                  cy="88"
-                  r={REST_RING_RADIUS}
-                  fill="none"
-                  stroke="#10b981"
-                  strokeWidth="5"
-                  strokeLinecap="round"
-                  strokeDasharray={REST_RING_CIRCUMFERENCE}
-                  strokeDashoffset={REST_RING_CIRCUMFERENCE * (1 - restProgress)}
-                  opacity="0.9"
-                />
-              </svg>
-              <span className="text-5xl font-black text-white tracking-tighter" dir="ltr">
-                {session.restTimer}
-              </span>
+              <div className="h-px bg-white/10"></div>
+
+              <div className="flex items-center justify-between">
+                <span className="text-[12px] font-extrabold text-stone-400">RIR — חזרות בהספק</span>
+                <div className="flex gap-1.5">
+                  {RIR_OPTIONS.map((val) => {
+                    const isSelected = session.pendingSetRir === val;
+                    return (
+                      <button
+                        key={val}
+                        onClick={() => session.selectRestRir(val)}
+                        className={`w-[26px] h-[26px] rounded-full flex items-center justify-center text-[11px] font-bold transition-colors ${
+                          isSelected ? "bg-emerald-400 text-stone-900" : "text-stone-400 border border-white/15"
+                        }`}
+                      >
+                        {val === 4 ? "4+" : val}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
+
+            {/* Rest timer ring — only for a real rest, not the lightweight
+                mid-superset check (no timer there yet). Track + progress
+                drawn as two circles in the same SVG at the same radius, so
+                they render as one ring instead of two visibly separate
+                concentric circles (the old version paired an SVG progress
+                circle with a mismatched CSS border-ring on the wrapping div). */}
+            {!session.isSupersetCheck && (
+              <div className="w-[176px] h-[176px] rounded-full bg-black/35 backdrop-blur-xl flex items-center justify-center relative shadow-2xl">
+                <svg width="176" height="176" viewBox="0 0 176 176" className="absolute inset-0 -rotate-90">
+                  <circle cx="88" cy="88" r={REST_RING_RADIUS} fill="none" stroke="rgba(52,211,153,0.25)" strokeWidth="5" />
+                  <circle
+                    cx="88"
+                    cy="88"
+                    r={REST_RING_RADIUS}
+                    fill="none"
+                    stroke="#10b981"
+                    strokeWidth="5"
+                    strokeLinecap="round"
+                    strokeDasharray={REST_RING_CIRCUMFERENCE}
+                    strokeDashoffset={REST_RING_CIRCUMFERENCE * (1 - restProgress)}
+                    opacity="0.9"
+                  />
+                </svg>
+                <span className="text-5xl font-black text-white tracking-tighter" dir="ltr">
+                  {session.restTimer}
+                </span>
+              </div>
+            )}
 
             {/* Up next — compact row */}
             {isSameExerciseNext ? (
@@ -296,18 +309,29 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
             )}
 
             <div className="flex gap-3 w-full max-w-sm">
-              <button
-                onClick={session.addRestTime}
-                className="flex-1 bg-white/10 backdrop-blur-md hover:bg-white/20 border border-white/18 text-white font-bold py-4 rounded-2xl transition-colors"
-              >
-                +15 שנ&apos;
-              </button>
-              <button
-                onClick={session.handleEndRest}
-                className="flex-[2] bg-white hover:bg-stone-200 text-stone-900 font-black py-4 rounded-2xl transition-transform hover:scale-[1.02]"
-              >
-                דלג
-              </button>
+              {session.isSupersetCheck ? (
+                <button
+                  onClick={session.handleContinueSuperset}
+                  className="flex-1 bg-white hover:bg-stone-200 text-stone-900 font-black py-4 rounded-2xl transition-transform hover:scale-[1.02]"
+                >
+                  המשך לתרגיל הבא
+                </button>
+              ) : (
+                <>
+                  <button
+                    onClick={session.addRestTime}
+                    className="flex-1 bg-white/10 backdrop-blur-md hover:bg-white/20 border border-white/18 text-white font-bold py-4 rounded-2xl transition-colors"
+                  >
+                    +15 שנ&apos;
+                  </button>
+                  <button
+                    onClick={session.handleEndRest}
+                    className="flex-[2] bg-white hover:bg-stone-200 text-stone-900 font-black py-4 rounded-2xl transition-transform hover:scale-[1.02]"
+                  >
+                    דלג
+                  </button>
+                </>
+              )}
             </div>
           </div>
         )}

@@ -18,6 +18,7 @@ import Modal from "@/app/components/ui/Modal";
 interface ExerciseHistoryPoint {
   date: string;
   reps: number;
+  rir: number | null; // null if this log predates RIR capture — leaves a gap on the RIR line rather than plotting 0
 }
 
 interface ExerciseInfoModalProps {
@@ -82,8 +83,10 @@ export default function ExerciseInfoModal({ exercise, historyData, onClose }: Ex
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#333" />
                 <XAxis dataKey="date" tick={{ fontSize: 10, fill: "#888" }} />
                 <YAxis yAxisId="left" tick={{ fontSize: 10, fill: "#888" }} width={30} />
+                <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10, fill: "#888" }} width={24} allowDecimals={false} />
                 <RechartsTooltip contentStyle={{ backgroundColor: "#1c1c1e", borderColor: "#333", color: "#fff" }} />
                 <Line yAxisId="left" type="monotone" dataKey="reps" name="חזרות" stroke="#14b8a6" strokeWidth={3} dot={{ r: 4 }} />
+                <Line yAxisId="right" type="monotone" dataKey="rir" name="RIR" stroke="#f59e0b" strokeWidth={2} dot={{ r: 3 }} connectNulls={false} />
               </LineChart>
             </ResponsiveContainer>
           </div>

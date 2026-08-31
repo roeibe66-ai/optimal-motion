@@ -33,6 +33,7 @@ export type FeedbackPhase = "pain_heatmap" | "pain_scale" | "rpe" | "pain_after"
 export interface ExerciseHistoryPoint {
   date: string;
   reps: number;
+  rir: number | null; // null if this log predates RIR capture (Tier 0.5) — chart leaves a gap rather than plotting 0
 }
 
 interface UseWorkoutSessionParams {
@@ -78,6 +79,11 @@ export function useWorkoutSession({
   const [activeExInBlockIdx, setActiveExInBlockIdx] = useState(0);
   const [currentBlockSet, setCurrentBlockSet] = useState(1);
   const [isResting, setIsResting] = useState(false);
+  // A lightweight variant of isResting for mid-superset exercise transitions:
+  // no rest timer (there isn't one yet), just the actual-value + RIR capture
+  // for the exercise just finished before advancing to the next one in the
+  // same block round. See handleFinishAction/handleContinueSuperset.
+  const [isSupersetCheck, setIsSupersetCheck] = useState(false);
   const [restTimer, setRestTimer] = useState(60);
   // Tracks the starting duration alongside restTimer, purely so the rest
   // screen's progress ring can show real elapsed-vs-total rather than a
@@ -176,10 +182,14 @@ export function useWorkoutSession({
           const parsed: SessionPerformanceEntry[] = JSON.parse(log.performance_data as string);
           const sets = parsed.filter((p) => p.exercise_id === viewingExInfo.id);
           if (sets.length > 0) {
-            const maxReps = Math.max(...sets.map((s) => s.reps || 0));
+            // The specific set that produced the day's best reps, not an
+            // independent max() — so the RIR shown alongside is the RIR
+            // actually reported on that same set, not an unrelated aggregate.
+            const bestSet = sets.reduce((best, s) => ((s.reps || 0) > (best.reps || 0) ? s : best));
             return {
               date: new Date(log.created_at).toLocaleDateString("he-IL", { day: "2-digit", month: "2-digit" }),
-              reps: maxReps,
+              reps: bestSet.reps || 0,
+              rir: bestSet.rir ?? null,
             };
           }
         } catch {
@@ -209,12 +219,17 @@ export function useWorkoutSession({
     }
 
     // actualRepsLogged/pendingSetRir are deliberately NOT cleared here — the
-    // rest screen (or, for the workout's final set, nothing) shows/edits
-    // these values for the set just finished. The reset effect below is what
-    // reseeds them, and only fires once the active slot actually advances.
+    // rest/superset-check screen (or, for the workout's final set, nothing)
+    // shows/edits these values for the set just finished. The reset effect
+    // below is what reseeds them, and only fires once the active slot
+    // actually advances (handleEndRest / handleContinueSuperset).
 
     if (activeExInBlockIdx < activeBlockExercises.length - 1) {
-      setActiveExInBlockIdx((prev) => prev + 1);
+      // Don't advance yet — show the actual-value + RIR capture for the
+      // exercise just finished first (activeAssign still refers to it until
+      // handleContinueSuperset runs), same as the real rest screen does at
+      // the end of a full round.
+      setIsSupersetCheck(true);
     } else if (currentBlockSet < maxSetsInBlock) {
       setIsResting(true);
       setRestTimer(60);
@@ -242,6 +257,15 @@ export function useWorkoutSession({
     }
   };
 
+  // Ends the lightweight mid-superset check and moves to the next exercise
+  // in the same block/round (unlike handleEndRest, never touches
+  // currentBlockSet/activeBlockIdx — there's no round boundary here).
+  const handleContinueSuperset = () => {
+    triggerHaptic("light");
+    setIsSupersetCheck(false);
+    setActiveExInBlockIdx((prev) => prev + 1);
+  };
+
   // --- Effects ---
 
   // Reset the per-set inputs whenever the active slot changes: prefill
@@ -249,6 +273,17 @@ export function useWorkoutSession({
   // and clear the exercise timer so each new timed set starts fresh (seeded
   // on play, see toggleExerciseTimer) instead of inheriting the previous
   // set's finished countdown.
+  //
+  // Depends on activeAssign?.id, not activeAssign itself: usePatientData
+  // used to refetch patientExercises (creating new object references)
+  // whenever loggedInPatient's object identity changed, which happened on
+  // every token refresh — including the one supabase-js fires automatically
+  // when a background tab regains focus. That made activeAssign a "new"
+  // value on every tab switch even though the active exercise/set hadn't
+  // actually changed, spuriously firing this effect and wiping the
+  // in-progress exercise timer. Fixed at the source in usePatientData, but
+  // keying on the id here too is cheap insurance against the same object-
+  // identity-churn class of bug recurring some other way.
   useEffect(() => {
     if (isWorkoutMode && activeAssign) {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- resetting editable/per-set fields' defaults when their subject (the active set) changes, not deriving external state
@@ -258,7 +293,7 @@ export function useWorkoutSession({
       setIsExTimerRunning(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isWorkoutMode, activeAssign, activeExInBlockIdx, activeBlockIdx, currentBlockSet]);
+  }, [isWorkoutMode, activeAssign?.id, activeExInBlockIdx, activeBlockIdx, currentBlockSet]);
 
   // Lock-screen media controls during a workout.
   useEffect(() => {
@@ -321,7 +356,7 @@ export function useWorkoutSession({
   const onTouchEnd = () => {
     if (!touchStart || !touchEnd) return;
     const distance = touchStart - touchEnd;
-    if (distance < -50 && !isResting) handleFinishAction();
+    if (distance < -50 && !isResting && !isSupersetCheck) handleFinishAction();
   };
 
   // --- Remaining actions ---
@@ -334,6 +369,7 @@ export function useWorkoutSession({
       setActiveExInBlockIdx(0);
       setCurrentBlockSet(1);
       setIsResting(false);
+      setIsSupersetCheck(false);
       setWorkoutFinished(false);
       setFeedbackPhase("rpe");
       setActualRepsLogged("");
@@ -357,6 +393,7 @@ export function useWorkoutSession({
     setActiveExInBlockIdx(0);
     setCurrentBlockSet(1);
     setIsResting(false);
+    setIsSupersetCheck(false);
     setWorkoutFinished(false);
   };
 
@@ -368,6 +405,7 @@ export function useWorkoutSession({
     setActiveExInBlockIdx(0);
     setCurrentBlockSet(1);
     setIsResting(false);
+    setIsSupersetCheck(false);
     setWorkoutFinished(false);
     setFeedbackPhase("rpe");
     setActualRepsLogged("");
@@ -568,6 +606,7 @@ export function useWorkoutSession({
     effectiveTargetRir,
     nextExercise,
     isResting,
+    isSupersetCheck,
     restTimer,
     restTimerTotal,
     addRestTime,
@@ -581,6 +620,7 @@ export function useWorkoutSession({
     selectRestRir,
     handleFinishAction,
     handleEndRest,
+    handleContinueSuperset,
     handleSwapExercise,
     makeHarder,
     makeEasier,
