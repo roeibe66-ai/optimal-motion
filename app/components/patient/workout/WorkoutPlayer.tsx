@@ -175,7 +175,7 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
             <div className="w-full bg-[#1c1c1e]/80 backdrop-blur-2xl border border-stone-800 rounded-[2rem] p-6 text-center flex flex-col items-center shadow-2xl animate-in slide-in-from-bottom-8 duration-500">
               <h3 className="text-stone-400 font-bold text-xs tracking-widest uppercase mb-4">טיימר עבודה</h3>
               <div className="text-6xl font-black tracking-tighter mb-6 text-white" dir="ltr">
-                {formatTime(session.exTimer ?? session.activeAssign.reps)}
+                {formatTime(session.exTimer ?? session.effectiveTargetReps ?? session.activeAssign.reps)}
               </div>
               {session.exTimer === 0 ? (
                 <button
@@ -185,14 +185,22 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
                   המשך
                 </button>
               ) : (
-                <button
-                  onClick={session.toggleExerciseTimer}
-                  className={`flex items-center justify-center w-full gap-3 py-4 rounded-xl font-black text-lg transition-all ${
-                    session.isExTimerRunning ? "bg-stone-800 text-white border border-stone-700" : "bg-white text-stone-900 shadow-xl"
-                  }`}
-                >
-                  {session.isExTimerRunning ? "השהה טיימר" : "הפעל טיימר"}
-                </button>
+                <div className="flex gap-3 w-full">
+                  <button
+                    onClick={session.toggleExerciseTimer}
+                    className={`flex-[2] flex items-center justify-center gap-3 py-4 rounded-xl font-black text-lg transition-all ${
+                      session.isExTimerRunning ? "bg-stone-800 text-white border border-stone-700" : "bg-white text-stone-900 shadow-xl"
+                    }`}
+                  >
+                    {session.isExTimerRunning ? "השהה טיימר" : "הפעל טיימר"}
+                  </button>
+                  <button
+                    onClick={session.skipExerciseTimer}
+                    className="flex-1 bg-white/10 backdrop-blur-md hover:bg-white/20 border border-white/18 text-white font-bold py-4 rounded-xl transition-colors"
+                  >
+                    דלג
+                  </button>
+                </div>
               )}
             </div>
           ) : (

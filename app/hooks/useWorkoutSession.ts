@@ -420,13 +420,31 @@ export function useWorkoutSession({
 
   const toggleExerciseTimer = () => {
     triggerHaptic("light");
-    // Seed the countdown from the exercise's duration (stored in `reps` for
-    // timed exercises) the first time it's started for this set; a pause/
+    // Seed the countdown from the effective (possibly make-harder/easier
+    // adjusted) duration the first time it's started for this set — not the
+    // raw prescribed activeAssign.reps, which would silently ignore an
+    // adjustment made before the timer was ever started and disagree with
+    // the live HUD pill, which already shows effectiveTargetReps. A pause/
     // resume leaves the in-progress value alone.
     if (!isExTimerRunning && exTimer === null && activeAssign) {
-      setExTimer(activeAssign.reps);
+      setExTimer(Number(effectiveTargetReps ?? activeAssign.reps));
     }
     setIsExTimerRunning((prev) => !prev);
+  };
+
+  // Ends the timed hold early (or before it was ever started), logging the
+  // actual elapsed seconds — not the prescribed duration — as the
+  // "actual value" the post-set screen reports, same source effectiveTarget
+  // used to seed the countdown in toggleExerciseTimer above.
+  const skipExerciseTimer = () => {
+    triggerHaptic("light");
+    if (activeAssign) {
+      const prescribed = Number(effectiveTargetReps ?? activeAssign.reps);
+      const elapsed = exTimer !== null ? Math.max(0, prescribed - exTimer) : 0;
+      setActualRepsLogged(String(elapsed));
+    }
+    setIsExTimerRunning(false);
+    handleFinishAction();
   };
 
   // "Make easier/harder" — adjusts this set's own target reps/RIR rather than
@@ -613,6 +631,7 @@ export function useWorkoutSession({
     exTimer,
     isExTimerRunning,
     toggleExerciseTimer,
+    skipExerciseTimer,
     actualRepsLogged,
     setActualRepsLogged,
     pendingSetRir,
