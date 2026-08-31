@@ -3,21 +3,25 @@
 import { useState } from "react";
 import { BrainCircuit, Map, Target } from "lucide-react";
 import { useAuth } from "@/app/context/AuthContext";
+import { supabase } from "@/app/lib/supabase";
 
 interface OnboardingFlowProps {
   onFinish: () => void;
 }
 
-// The 3-step wizard shown once right after sign-up (goal -> training
-// location -> "analyzing" -> done). `onboardingAnswers.pain` exists in the
-// original's shape but is never actually set by any step there either —
-// preserved as an unused field rather than invented a use for it.
+// The 3-step wizard shown once at first login after email confirmation (goal
+// -> training location -> "analyzing" -> done). `onboardingAnswers.pain`
+// exists in the original's shape but is never actually set by any step there
+// either — preserved as an unused field rather than invented a use for it.
 export default function OnboardingFlow({ onFinish }: OnboardingFlowProps) {
-  const { lang } = useAuth();
+  const { lang, loggedInPatient } = useAuth();
   const [onboardingStep, setOnboardingStep] = useState(1);
   const [onboardingAnswers, setOnboardingAnswers] = useState({ goal: "", location: "", pain: "" });
 
   const finishOnboarding = () => {
+    if (loggedInPatient) {
+      supabase.from("patients").update({ onboarding_completed_at: new Date().toISOString() }).eq("id", loggedInPatient.id);
+    }
     onFinish();
     alert("הותאמה עבורך תוכנית חינמית להתחלה! בהצלחה.");
   };

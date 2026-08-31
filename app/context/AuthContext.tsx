@@ -13,12 +13,6 @@ interface AuthContextValue {
   setCurrentView: (view: ViewName) => void;
   loggedInPatient: Patient | null;
   setLoggedInPatient: (patient: Patient | null) => void;
-  // One-shot signal set right after a successful sign-up. The (not yet built)
-  // patient shell reads and clears it on mount to kick off the onboarding
-  // wizard — kept here because it's part of the identity transition itself,
-  // not general patient-tab UI state.
-  justRegistered: boolean;
-  setJustRegistered: (value: boolean) => void;
   handleLogout: () => void;
 }
 
@@ -40,7 +34,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [lang, setLang] = useState<Lang>("he");
   const [currentView, setCurrentView] = useState<ViewName>("landing");
   const [loggedInPatient, setLoggedInPatient] = useState<Patient | null>(null);
-  const [justRegistered, setJustRegistered] = useState(false);
 
   useEffect(() => {
     // Survives across events on this same subscription (plain closure
@@ -121,8 +114,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setCurrentView,
     loggedInPatient,
     setLoggedInPatient,
-    justRegistered,
-    setJustRegistered,
     handleLogout,
   };
 

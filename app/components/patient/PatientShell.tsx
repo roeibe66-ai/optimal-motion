@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AlertCircle, Crown, Dumbbell, Home as HomeIcon, User } from "lucide-react";
 import { useAuth } from "@/app/context/AuthContext";
 import { useHaptics } from "@/app/hooks/useHaptics";
@@ -30,7 +30,7 @@ type PatientTab = "plan" | "diy" | "premium" | "profile";
 // fixed overlays, so they visually cover the shell without needing to
 // unmount it (which would otherwise reset tab/filter state under them).
 export default function PatientShell() {
-  const { loggedInPatient, justRegistered, setJustRegistered } = useAuth();
+  const { loggedInPatient } = useAuth();
 
   const [patientTab, setPatientTab] = useState<PatientTab>("plan");
   const [showOnboarding, setShowOnboarding] = useState(false);
@@ -41,13 +41,24 @@ export default function PatientShell() {
   const [showMyWorkouts, setShowMyWorkouts] = useState(false);
   const [editingSavedWorkoutId, setEditingSavedWorkoutId] = useState<string | null>(null);
 
+  // Shows the wizard at first login after email confirmation — the first
+  // time loggedInPatient is hydrated with a null onboarding_completed_at,
+  // not at registration time (the old justRegistered signal was set at
+  // signUp() call time, before confirmation, and didn't survive a reload or
+  // a different tab/device). hasCheckedOnboardingRef makes this a one-time
+  // check per mounted session: without it, a later rehydrate (e.g. a token
+  // refresh) racing ahead of the DB write OnboardingFlow makes on finish
+  // could re-show the wizard right after the patient already dismissed it.
+  const hasCheckedOnboardingRef = useRef(false);
   useEffect(() => {
-    if (justRegistered) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- consuming a one-shot cross-context signal from AuthContext, not deriving from a prop
-      setShowOnboarding(true);
-      setJustRegistered(false);
+    if (loggedInPatient && !hasCheckedOnboardingRef.current) {
+      hasCheckedOnboardingRef.current = true;
+      if (!loggedInPatient.onboarding_completed_at) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time derivation from the freshly-hydrated patient row, not a prop sync
+        setShowOnboarding(true);
+      }
     }
-  }, [justRegistered, setJustRegistered]);
+  }, [loggedInPatient]);
 
   const { hapticsEnabled, setHapticsEnabled, triggerHaptic } = useHaptics();
   const reminders = useReminders(triggerHaptic);

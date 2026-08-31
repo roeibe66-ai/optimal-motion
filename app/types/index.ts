@@ -22,6 +22,7 @@ export interface Patient {
   email_verified?: boolean;
   reminder_time?: string; // "HH:MM"
   reminder_days?: string; // comma-separated DAYS_OF_WEEK ids
+  onboarding_completed_at?: string | null; // null = hasn't finished the onboarding wizard yet
   created_at?: string;
 }
 

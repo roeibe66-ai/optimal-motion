@@ -16,7 +16,7 @@ import { isPasswordConfirmed, isStrongPassword } from "@/app/utils/validation";
 // admin CRM no longer creates accounts, so there's no separate "admin
 // pre-provisions, patient claims later" path to handle here.
 export function useAuthSession() {
-  const { setCurrentView, setJustRegistered } = useAuth();
+  const { setCurrentView } = useAuth();
 
   const [loginIdentifier, setLoginIdentifier] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
@@ -87,12 +87,9 @@ export function useAuthSession() {
     // now that patients has RLS scoped to user_id = auth.uid().
 
     // No active session yet — email confirmation is required, so there's
-    // nothing to route into until the patient confirms and logs in for
-    // real. justRegistered is set anyway as a best-effort signal for the
-    // same-tab case where they confirm and log back in within this same
-    // browser session (in-memory state, so it's a no-op if the tab reloads
-    // in between — not reliable across devices/tabs, just harmless either way).
-    setJustRegistered(true);
+    // nothing to route into until the patient confirms and logs in for real.
+    // The onboarding wizard triggers off patients.onboarding_completed_at
+    // being null at that first real login, not off anything set here.
     alert("נרשמת בהצלחה! שלחנו לך מייל אימות — יש ללחוץ על הקישור במייל ואז להתחבר.");
     setCurrentView("login");
     setRegFirstName("");
