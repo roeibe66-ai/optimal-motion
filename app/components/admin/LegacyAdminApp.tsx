@@ -485,7 +485,11 @@ export default function LegacyAdminApp() {
             const day = pe.scheduled_days || "0";
             if (!newPlan[w]) newPlan[w] = getInitialDays();
             if (!newPlan[w][day]) newPlan[w][day] = [];
-            newPlan[w][day].push({ ...ex, temp_id: Math.random().toString(), sets: pe.sets, reps: pe.reps, rir: pe.rir, is_time: pe.is_time, block: pe.block || "A" });
+            // Number(...): pe.sets/pe.reps come from package_exercises, which is
+            // still a text column — if this loaded protocol later gets assigned
+            // directly to a patient, saveBuilderPlan writes these straight into
+            // patient_exercises, now an integer column.
+            newPlan[w][day].push({ ...ex, temp_id: Math.random().toString(), sets: Number(pe.sets) || 0, reps: Number(pe.reps) || 0, rir: pe.rir, is_time: pe.is_time, block: pe.block || "A" });
           }
         });
         return newPlan;
