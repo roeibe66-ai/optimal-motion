@@ -52,7 +52,16 @@ export function usePatientData() {
     }
     if (exs.data) setExerciseCatalog(exerciseRows);
     if (logs.data) setWorkoutLogs(logs.data as WorkoutLog[]);
-  }, [loggedInPatient]);
+    // Depend on the id, not the whole object: AuthContext calls
+    // setLoggedInPatient() with a brand-new object on every auth event that
+    // carries a session — including TOKEN_REFRESHED, which supabase-js fires
+    // automatically when a background tab regains focus, even though
+    // nothing about the patient actually changed. Depending on the object
+    // itself refetched everything (exercises/logs) on every tab switch,
+    // which fed new object references into useWorkoutSession's activeAssign
+    // and spuriously reset the in-progress exercise timer mid-set.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loggedInPatient?.id]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- fetching from Supabase, an external system, on mount and whenever the logged-in patient changes
