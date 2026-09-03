@@ -19,6 +19,7 @@ export function usePlanSelection(patientExercises: HydratedPatientExercise[]) {
   const [diyMuscleFilter, setDiyMuscleFilter] = useState("all");
   const [diyEquipFilter, setDiyEquipFilter] = useState("all");
   const [diyCategoryFilter, setDiyCategoryFilter] = useState("all");
+  const [diyBodyPartFilter, setDiyBodyPartFilter] = useState("all");
   const [diyScheduleDay, setDiyScheduleDay] = useState(new Date().getDay().toString());
   const [diyWorkoutName, setDiyWorkoutName] = useState("אימון מותאם אישית");
 
@@ -53,6 +54,8 @@ export function usePlanSelection(patientExercises: HydratedPatientExercise[]) {
     setDiyEquipFilter,
     diyCategoryFilter,
     setDiyCategoryFilter,
+    diyBodyPartFilter,
+    setDiyBodyPartFilter,
     diyScheduleDay,
     setDiyScheduleDay,
     diyWorkoutName,

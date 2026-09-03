@@ -32,8 +32,8 @@ export interface Exercise {
   category: string;
   description?: string;
   gif_url?: string;
-  target_muscle?: string; // react-body-highlighter muscle id
-  secondary_muscles?: string; // comma-separated react-body-highlighter muscle ids
+  target_muscle?: string; // AVAILABLE_MUSCLES id (app/constants/catalog.ts) - not react-body-highlighter, which only backs the separate pain-area check-in
+  secondary_muscles?: string; // comma-separated AVAILABLE_MUSCLES ids
   admin_tags?: string; // comma-separated ADMIN_TAGS ids
   common_mistake?: string;
 }

@@ -242,6 +242,8 @@ export default function PatientShell() {
               setDiyEquipFilter={planSelection.setDiyEquipFilter}
               diyCategoryFilter={planSelection.diyCategoryFilter}
               setDiyCategoryFilter={planSelection.setDiyCategoryFilter}
+              diyBodyPartFilter={planSelection.diyBodyPartFilter}
+              setDiyBodyPartFilter={planSelection.setDiyBodyPartFilter}
               diySelectedExercises={planSelection.diySelectedExercises}
               setDiySelectedExercises={planSelection.setDiySelectedExercises}
               diyScheduleDay={planSelection.diyScheduleDay}
