@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { AlertCircle, CalendarDays, Crown, Dumbbell, Home as HomeIcon, User } from "lucide-react";
 import { useAuth } from "@/app/context/AuthContext";
 import { useHaptics } from "@/app/hooks/useHaptics";
@@ -10,7 +10,6 @@ import { usePlanSelection } from "@/app/hooks/usePlanSelection";
 import { useWorkoutSession } from "@/app/hooks/useWorkoutSession";
 import { useSavedWorkouts } from "@/app/hooks/useSavedWorkouts";
 import { getUserRank } from "@/app/utils/scoring";
-import OnboardingFlow from "@/app/components/patient/OnboardingFlow";
 import WorkoutPlayer from "@/app/components/patient/workout/WorkoutPlayer";
 import ExerciseInfoModal from "@/app/components/patient/workout/ExerciseInfoModal";
 import PlanTab from "@/app/components/patient/tabs/PlanTab";
@@ -26,40 +25,20 @@ type PatientTab = "plan" | "calendar" | "diy" | "premium" | "profile";
 // Orchestrates the whole patient experience: instantiates every patient-side
 // hook exactly once (so WorkoutPlayer and the tabs that need the same data —
 // e.g. viewingExInfo, the workout session's blocksMap — stay in sync instead
-// of each holding a disconnected copy), and mounts WorkoutPlayer/Onboarding
-// alongside the tab content rather than early-returning: both are full-screen
-// fixed overlays, so they visually cover the shell without needing to
+// of each holding a disconnected copy), and mounts WorkoutPlayer
+// alongside the tab content rather than early-returning: it's a full-screen
+// fixed overlay, so it visually covers the shell without needing to
 // unmount it (which would otherwise reset tab/filter state under them).
 export default function PatientShell() {
   const { loggedInPatient } = useAuth();
 
   const [patientTab, setPatientTab] = useState<PatientTab>("plan");
-  const [showOnboarding, setShowOnboarding] = useState(false);
   // Lazy init (computed once) rather than calling Date.now() in the render
   // body, which the compiler flags as an impure call — same pattern used in
   // ProfileTab's fallback join date.
   const [greetingHour] = useState(() => new Date().getHours());
   const [showMyWorkouts, setShowMyWorkouts] = useState(false);
   const [editingSavedWorkoutId, setEditingSavedWorkoutId] = useState<string | null>(null);
-
-  // Shows the wizard at first login after email confirmation — the first
-  // time loggedInPatient is hydrated with a null onboarding_completed_at,
-  // not at registration time (the old justRegistered signal was set at
-  // signUp() call time, before confirmation, and didn't survive a reload or
-  // a different tab/device). hasCheckedOnboardingRef makes this a one-time
-  // check per mounted session: without it, a later rehydrate (e.g. a token
-  // refresh) racing ahead of the DB write OnboardingFlow makes on finish
-  // could re-show the wizard right after the patient already dismissed it.
-  const hasCheckedOnboardingRef = useRef(false);
-  useEffect(() => {
-    if (loggedInPatient && !hasCheckedOnboardingRef.current) {
-      hasCheckedOnboardingRef.current = true;
-      if (!loggedInPatient.onboarding_completed_at) {
-        // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time derivation from the freshly-hydrated patient row, not a prop sync
-        setShowOnboarding(true);
-      }
-    }
-  }, [loggedInPatient]);
 
   const { hapticsEnabled, setHapticsEnabled, triggerHaptic } = useHaptics();
   const reminders = useReminders(triggerHaptic);
@@ -144,7 +123,6 @@ export default function PatientShell() {
 
   return (
     <>
-      {showOnboarding && <OnboardingFlow onFinish={() => setShowOnboarding(false)} />}
       <WorkoutPlayer session={session} triggerHaptic={triggerHaptic} />
 
       <div className="min-h-screen bg-stone-950 text-white pb-24">

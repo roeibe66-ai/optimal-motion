@@ -100,8 +100,6 @@ export function useAuthSession() {
 
     // No active session yet — email confirmation is required, so there's
     // nothing to route into until the patient confirms and logs in for real.
-    // The onboarding wizard triggers off patients.onboarding_completed_at
-    // being null at that first real login, not off anything set here.
     alert("נרשמת בהצלחה! שלחנו לך מייל אימות — יש ללחוץ על הקישור במייל ואז להתחבר.");
     setCurrentView("login");
     setRegFirstName("");

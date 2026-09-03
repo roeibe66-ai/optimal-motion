@@ -113,9 +113,3 @@ export interface SavedWorkout {
   exercise_ids: string[]; // ordered, references exercises.id
   created_at: string;
 }
-
-export interface OnboardingAnswers {
-  goal: string;
-  location: string;
-  pain: string;
-}
