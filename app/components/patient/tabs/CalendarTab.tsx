@@ -4,6 +4,7 @@ import { useState } from "react";
 import { CalendarDays, CheckCircle2, ChevronLeft, ChevronRight } from "lucide-react";
 import type { HydratedPatientExercise } from "@/app/hooks/useWorkoutSession";
 import type { WorkoutLog } from "@/app/types";
+import { ADMIN_CATEGORY_STYLES, DEFAULT_ADMIN_CATEGORY_STYLE } from "@/app/constants/catalog";
 
 interface CalendarTabProps {
   patientExercises: HydratedPatientExercise[];
@@ -125,14 +126,22 @@ export default function CalendarTab({ patientExercises, workoutLogs, patientId, 
 
       <div className="grid grid-cols-7 gap-1.5">
         {cells.map((date, idx) => {
-          if (!date) return <div key={idx} className="aspect-square" />;
+          if (!date) return <div key={idx} />;
 
           const week = getWeekForDate(date);
           const dayId = date.getDay().toString();
-          const hasSchedule = week !== null && patientExercises.some((pe) => (pe.week || 1) === week && matchesScheduledDay(pe, dayId));
+          // Distinct workout-style categories (exercise.category, e.g. "כוח
+          // וסיבולת") scheduled on this date - usually one, occasionally more
+          // if a day mixes categories.
+          const scheduledCategories =
+            week === null
+              ? []
+              : Array.from(new Set(patientExercises.filter((pe) => (pe.week || 1) === week && matchesScheduledDay(pe, dayId)).map((pe) => pe.exercise.category)));
           const isCompleted = completedDateKeys.has(toDateKey(date));
           const isToday = isSameDay(date, today);
-          const isClickable = hasSchedule && week !== null;
+          const isClickable = scheduledCategories.length > 0 && week !== null;
+          const primaryCategory = scheduledCategories[0];
+          const categoryStyle = primaryCategory ? ADMIN_CATEGORY_STYLES[primaryCategory] ?? DEFAULT_ADMIN_CATEGORY_STYLE : null;
 
           return (
             <button
@@ -140,15 +149,23 @@ export default function CalendarTab({ patientExercises, workoutLogs, patientId, 
               type="button"
               disabled={!isClickable}
               onClick={() => isClickable && onSelectDate(week as number, dayId)}
-              className={`aspect-square rounded-xl flex flex-col items-center justify-center gap-0.5 border transition-colors ${
+              className={`min-h-[62px] rounded-xl flex flex-col items-center justify-start gap-1 border p-1 transition-colors ${
                 isClickable ? "bg-[#1c1c1e] border-stone-800 hover:border-teal-500/50 cursor-pointer" : "bg-transparent border-transparent"
               } ${isToday ? "ring-2 ring-teal-500/60" : ""}`}
             >
-              <span className={`text-[12px] font-bold ${isClickable ? "text-white" : "text-stone-600"}`}>{date.getDate()}</span>
-              <div className="flex items-center gap-0.5 h-2.5">
-                {hasSchedule && <span className="w-1.5 h-1.5 rounded-full bg-teal-400" />}
-                {isCompleted && <CheckCircle2 size={10} className="text-amber-400" />}
+              <div className="flex items-center gap-1">
+                <span className={`text-[12px] font-bold ${isClickable ? "text-white" : "text-stone-600"}`}>{date.getDate()}</span>
+                {isCompleted && <CheckCircle2 size={10} className="text-amber-400 shrink-0" />}
               </div>
+              {categoryStyle && (
+                <span
+                  className="w-full text-[9px] font-extrabold px-1 py-0.5 rounded-full leading-tight text-center truncate"
+                  style={{ background: categoryStyle.bg, color: categoryStyle.text }}
+                >
+                  {primaryCategory}
+                  {scheduledCategories.length > 1 ? ` +${scheduledCategories.length - 1}` : ""}
+                </span>
+              )}
             </button>
           );
         })}
@@ -156,8 +173,8 @@ export default function CalendarTab({ patientExercises, workoutLogs, patientId, 
 
       <div className="flex items-center gap-4 mt-6 text-[11px] text-stone-400">
         <div className="flex items-center gap-1.5">
-          <span className="w-1.5 h-1.5 rounded-full bg-teal-400" />
-          מתוזמן
+          <span className="w-2 h-2 rounded-full" style={{ background: ADMIN_CATEGORY_STYLES["קליסטניקס"].text }} />
+          שם קטגוריה = אימון מתוזמן
         </div>
         <div className="flex items-center gap-1.5">
           <CheckCircle2 size={11} className="text-amber-400" />
