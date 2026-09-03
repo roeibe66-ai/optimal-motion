@@ -48,6 +48,18 @@ export function useAuthSession() {
     setLoginPassword("");
   };
 
+  // No explicit redirectTo — same as resetPasswordForEmail, relies on the
+  // Supabase project's own configured Site URL. AuthContext's existing
+  // onAuthStateChange listener already hydrates loggedInPatient and routes
+  // to patient/admin for any new session regardless of how it was
+  // established, so the OAuth redirect back needs no special handling here.
+  const handleGoogleSignIn = async () => {
+    const { error } = await supabase.auth.signInWithOAuth({ provider: "google" });
+    if (error) {
+      alert("שגיאה בהתחברות עם Google: " + error.message);
+    }
+  };
+
   const handleRegister = async (e: FormEvent) => {
     e.preventDefault();
     const fullName = `${regFirstName} ${regLastName}`.trim();
@@ -148,6 +160,7 @@ export function useAuthSession() {
     loginPassword,
     setLoginPassword,
     handleLogin,
+    handleGoogleSignIn,
     regFirstName,
     setRegFirstName,
     regLastName,
