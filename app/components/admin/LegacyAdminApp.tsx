@@ -34,7 +34,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/app/lib/supabase";
 import { useAuth } from "@/app/context/AuthContext";
-import { ADMIN_CATEGORY_STYLES, ADMIN_TAGS, AVAILABLE_MUSCLES, DAYS_OF_WEEK, DEFAULT_ADMIN_CATEGORY_STYLE } from "@/app/constants/catalog";
+import { ADMIN_CATEGORY_STYLES, ADMIN_TAGS, AVAILABLE_MUSCLES, DAYS_OF_WEEK, DEFAULT_ADMIN_CATEGORY_STYLE, MUSCLE_REGIONS } from "@/app/constants/catalog";
 import AdminSidebar from "@/app/components/admin/AdminSidebar";
 import { formatAdminDate } from "@/app/utils/format";
 import { getAIInsight } from "@/app/utils/scoring";
@@ -1270,30 +1270,45 @@ export default function LegacyAdminApp() {
                       <option value="" className="bg-[#1c1c1e]">
                         -- בחר שריר מרכזי --
                       </option>
-                      {AVAILABLE_MUSCLES.map((m) => (
-                        <option key={m.id} value={m.id} className="bg-[#1c1c1e]">
-                          {m.label}
-                        </option>
+                      {MUSCLE_REGIONS.map((region) => (
+                        <optgroup key={region.id} label={region.label} className="bg-[#1c1c1e]">
+                          {AVAILABLE_MUSCLES.filter((m) => region.muscleIds.includes(m.id)).map((m) => (
+                            <option key={m.id} value={m.id} className="bg-[#1c1c1e]">
+                              {m.label}
+                            </option>
+                          ))}
+                        </optgroup>
                       ))}
                     </select>
                     <p className="text-[10px] text-teal-500/80 mt-2 font-medium">* לפיו המערכת תחפש תרגילים חלופיים.</p>
                   </div>
                   <div className="flex-[2]">
                     <label className="block text-sm font-bold text-teal-400 mb-2">שרירים מייצבים (סינרגיסטים)</label>
-                    <div className="flex flex-wrap gap-2">
-                      {AVAILABLE_MUSCLES.filter((m) => m.id !== exPrimaryMuscle).map((m) => {
-                        const isSelected = exSecondaryMuscles.includes(m.id);
+                    <div className="flex flex-col gap-2.5">
+                      {MUSCLE_REGIONS.map((region) => {
+                        const muscles = AVAILABLE_MUSCLES.filter((m) => region.muscleIds.includes(m.id) && m.id !== exPrimaryMuscle);
+                        if (muscles.length === 0) return null;
                         return (
-                          <button
-                            key={m.id}
-                            type="button"
-                            onClick={() => toggleSecondaryMuscle(m.id)}
-                            className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all border ${
-                              isSelected ? "bg-teal-500 text-stone-950 border-teal-400 shadow-sm" : "bg-stone-950 text-stone-300 border-stone-800 hover:bg-stone-900"
-                            }`}
-                          >
-                            {m.label}
-                          </button>
+                          <div key={region.id}>
+                            <div className="text-[10px] font-bold text-stone-500 mb-1">{region.label}</div>
+                            <div className="flex flex-wrap gap-2">
+                              {muscles.map((m) => {
+                                const isSelected = exSecondaryMuscles.includes(m.id);
+                                return (
+                                  <button
+                                    key={m.id}
+                                    type="button"
+                                    onClick={() => toggleSecondaryMuscle(m.id)}
+                                    className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all border ${
+                                      isSelected ? "bg-teal-500 text-stone-950 border-teal-400 shadow-sm" : "bg-stone-950 text-stone-300 border-stone-800 hover:bg-stone-900"
+                                    }`}
+                                  >
+                                    {m.label}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
                         );
                       })}
                     </div>
@@ -1439,21 +1454,36 @@ export default function LegacyAdminApp() {
                               <option value="" className="bg-[#1c1c1e]">
                                 -- שריר מרכזי --
                               </option>
-                              {AVAILABLE_MUSCLES.map((m) => (
-                                <option key={m.id} value={m.id} className="bg-[#1c1c1e]">
-                                  {m.label}
-                                </option>
+                              {MUSCLE_REGIONS.map((region) => (
+                                <optgroup key={region.id} label={region.label} className="bg-[#1c1c1e]">
+                                  {AVAILABLE_MUSCLES.filter((m) => region.muscleIds.includes(m.id)).map((m) => (
+                                    <option key={m.id} value={m.id} className="bg-[#1c1c1e]">
+                                      {m.label}
+                                    </option>
+                                  ))}
+                                </optgroup>
                               ))}
                             </select>
                           </div>
 
-                          <div className="flex flex-wrap gap-1 mt-1">
-                            {AVAILABLE_MUSCLES.filter((m) => m.id !== editExForm.target_muscle).map((m) => {
-                              const isSelected = editExForm.secondary_muscles.includes(m.id);
+                          <div className="flex flex-col gap-2 mt-1">
+                            {MUSCLE_REGIONS.map((region) => {
+                              const muscles = AVAILABLE_MUSCLES.filter((m) => region.muscleIds.includes(m.id) && m.id !== editExForm.target_muscle);
+                              if (muscles.length === 0) return null;
                               return (
-                                <button key={m.id} onClick={() => toggleSecondaryMuscle(m.id, true)} className={`text-[10px] px-2 py-1 rounded-md border border-stone-700 ${isSelected ? "bg-teal-500 text-stone-950 border-teal-400" : "bg-stone-950 text-stone-400"}`}>
-                                  {m.label}
-                                </button>
+                                <div key={region.id}>
+                                  <div className="text-[9px] font-bold text-stone-500 mb-1">{region.label}</div>
+                                  <div className="flex flex-wrap gap-1">
+                                    {muscles.map((m) => {
+                                      const isSelected = editExForm.secondary_muscles.includes(m.id);
+                                      return (
+                                        <button key={m.id} onClick={() => toggleSecondaryMuscle(m.id, true)} className={`text-[10px] px-2 py-1 rounded-md border border-stone-700 ${isSelected ? "bg-teal-500 text-stone-950 border-teal-400" : "bg-stone-950 text-stone-400"}`}>
+                                          {m.label}
+                                        </button>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
                               );
                             })}
                           </div>

@@ -2,7 +2,17 @@
 
 import type { Dispatch, SetStateAction } from "react";
 import { Bookmark, ChevronDown, Folder, Plus, X } from "lucide-react";
-import { AVAILABLE_MUSCLES, DAYS_OF_WEEK, DEFAULT_DIY_CATEGORY_STYLE, DIY_CATEGORY_STYLES, EQUIPMENT_LIST } from "@/app/constants/catalog";
+import {
+  AVAILABLE_MUSCLES,
+  BODY_PART_GROUPS,
+  BODY_PART_STYLES,
+  DAYS_OF_WEEK,
+  DEFAULT_BODY_PART_STYLE,
+  DEFAULT_DIY_CATEGORY_STYLE,
+  DIY_CATEGORY_STYLES,
+  EQUIPMENT_LIST,
+  MUSCLE_TO_BODY_PARTS,
+} from "@/app/constants/catalog";
 import type { Exercise } from "@/app/types";
 
 interface DiyBuilderTabProps {
@@ -13,6 +23,8 @@ interface DiyBuilderTabProps {
   setDiyEquipFilter: (value: string) => void;
   diyCategoryFilter: string;
   setDiyCategoryFilter: (value: string) => void;
+  diyBodyPartFilter: string;
+  setDiyBodyPartFilter: (value: string) => void;
   diySelectedExercises: Exercise[];
   setDiySelectedExercises: Dispatch<SetStateAction<Exercise[]>>;
   diyScheduleDay: string;
@@ -43,6 +55,8 @@ export default function DiyBuilderTab({
   setDiyEquipFilter,
   diyCategoryFilter,
   setDiyCategoryFilter,
+  diyBodyPartFilter,
+  setDiyBodyPartFilter,
   diySelectedExercises,
   setDiySelectedExercises,
   diyScheduleDay,
@@ -69,9 +83,23 @@ export default function DiyBuilderTab({
       (ex.description && ex.description.includes(EQUIPMENT_LIST.find((e) => e.id === diyEquipFilter)?.label || "")) ||
       (ex.title && ex.title.includes(EQUIPMENT_LIST.find((e) => e.id === diyEquipFilter)?.label || ""));
     const matchCategory = diyCategoryFilter === "all" || ex.category === diyCategoryFilter;
+    const matchBodyPart =
+      diyBodyPartFilter === "all" ||
+      (ex.target_muscle ? MUSCLE_TO_BODY_PARTS[ex.target_muscle] : undefined)?.includes(diyBodyPartFilter);
 
-    return matchMuscle && matchEquip && matchCategory;
+    return matchMuscle && matchEquip && matchCategory && matchBodyPart;
   });
+
+  // The card only ever shows one body-part pill - the most specific tag a
+  // muscle has (chest/shoulders/arms/core/legs), falling back to the
+  // upper-/lower-body umbrella only for muscles with no more specific tag
+  // (e.g. lats, trapezius). No muscle data at all -> no tag, per spec.
+  const getPrimaryBodyPart = (targetMuscle?: string) => {
+    if (!targetMuscle) return undefined;
+    const parts = MUSCLE_TO_BODY_PARTS[targetMuscle];
+    if (!parts || parts.length === 0) return undefined;
+    return parts.find((p) => p !== "upper-body" && p !== "lower-body") ?? parts[0];
+  };
 
   return (
     <div className="animate-in fade-in duration-500">
@@ -149,6 +177,38 @@ export default function DiyBuilderTab({
               }
             >
               {cat}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Body-part filter chips - anatomical target, separate from and
+          composes with the workout-style category filter above (e.g.
+          "Strength" + "Legs" narrows to both). */}
+      <div className="flex gap-2 overflow-x-auto no-scrollbar pb-4 mb-4">
+        <button
+          onClick={() => setDiyBodyPartFilter("all")}
+          className={`shrink-0 whitespace-nowrap font-black text-xs px-4 py-2 rounded-full transition-colors ${
+            diyBodyPartFilter === "all" ? "bg-teal-500 text-stone-950" : "bg-[#1c1c1e] border border-stone-800 text-stone-400"
+          }`}
+        >
+          כל האזורים
+        </button>
+        {BODY_PART_GROUPS.map((part) => {
+          const style = BODY_PART_STYLES[part.id] ?? DEFAULT_BODY_PART_STYLE;
+          const isSelected = diyBodyPartFilter === part.id;
+          return (
+            <button
+              key={part.id}
+              onClick={() => setDiyBodyPartFilter(part.id)}
+              className="shrink-0 whitespace-nowrap font-extrabold text-xs px-4 py-2 rounded-full transition-colors"
+              style={
+                isSelected
+                  ? { background: style.text, color: "#0c0a09" }
+                  : { background: style.bg, border: `1px solid ${style.border}`, color: style.text }
+              }
+            >
+              {part.label}
             </button>
           );
         })}
@@ -256,7 +316,7 @@ export default function DiyBuilderTab({
 
                 <div className="overflow-hidden">
                   <h4 className="font-extrabold text-white text-[13px] truncate">{ex.title}</h4>
-                  <div className="flex items-center gap-1.5 mt-1">
+                  <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                     <span className="text-[11px] text-stone-400 truncate">{AVAILABLE_MUSCLES.find((m) => m.id === ex.target_muscle)?.label}</span>
                     <span className="w-[3px] h-[3px] rounded-full bg-stone-700 shrink-0"></span>
                     <span
@@ -265,6 +325,20 @@ export default function DiyBuilderTab({
                     >
                       {ex.category}
                     </span>
+                    {(() => {
+                      const bodyPartId = getPrimaryBodyPart(ex.target_muscle);
+                      if (!bodyPartId) return null;
+                      const bodyPartStyle = BODY_PART_STYLES[bodyPartId] ?? DEFAULT_BODY_PART_STYLE;
+                      const bodyPartLabel = BODY_PART_GROUPS.find((p) => p.id === bodyPartId)?.label;
+                      return (
+                        <span
+                          className="text-[10px] font-extrabold px-2 py-0.5 rounded-full whitespace-nowrap"
+                          style={{ background: bodyPartStyle.bg, color: bodyPartStyle.text }}
+                        >
+                          {bodyPartLabel}
+                        </span>
+                      );
+                    })()}
                   </div>
                 </div>
               </div>
