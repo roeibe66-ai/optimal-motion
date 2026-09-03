@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { AlertCircle, Crown, Dumbbell, Home as HomeIcon, User } from "lucide-react";
+import { AlertCircle, CalendarDays, Crown, Dumbbell, Home as HomeIcon, User } from "lucide-react";
 import { useAuth } from "@/app/context/AuthContext";
 import { useHaptics } from "@/app/hooks/useHaptics";
 import { useReminders } from "@/app/hooks/useReminders";
@@ -14,13 +14,14 @@ import OnboardingFlow from "@/app/components/patient/OnboardingFlow";
 import WorkoutPlayer from "@/app/components/patient/workout/WorkoutPlayer";
 import ExerciseInfoModal from "@/app/components/patient/workout/ExerciseInfoModal";
 import PlanTab from "@/app/components/patient/tabs/PlanTab";
+import CalendarTab from "@/app/components/patient/tabs/CalendarTab";
 import DiyBuilderTab from "@/app/components/patient/tabs/DiyBuilderTab";
 import MyWorkoutsScreen from "@/app/components/patient/tabs/MyWorkoutsScreen";
 import PremiumStoreTab from "@/app/components/patient/tabs/PremiumStoreTab";
 import ProfileTab from "@/app/components/patient/tabs/ProfileTab";
 import type { SavedWorkout } from "@/app/types";
 
-type PatientTab = "plan" | "diy" | "premium" | "profile";
+type PatientTab = "plan" | "calendar" | "diy" | "premium" | "profile";
 
 // Orchestrates the whole patient experience: instantiates every patient-side
 // hook exactly once (so WorkoutPlayer and the tabs that need the same data —
@@ -97,6 +98,14 @@ export default function PatientShell() {
     setEditingSavedWorkoutId(null);
   };
 
+  // Calendar tab hands off to the existing Plan tab day view rather than
+  // rendering its own exercise list - jump to the matching week/day there.
+  const handleSelectCalendarDate = (week: number, dayId: string) => {
+    planSelection.setPatientSelectedWeek(week);
+    planSelection.setSelectedDayFilter(dayId);
+    switchTab("plan");
+  };
+
   // Hydrates a saved workout's ordered exercise_ids against the live catalog,
   // silently dropping any id that no longer exists (e.g. an exercise deleted
   // from the catalog since the workout was saved).
@@ -168,6 +177,11 @@ export default function PatientShell() {
             <button onClick={() => switchTab("plan")} className={`flex flex-col items-center justify-center w-16 h-full gap-1 transition-colors ${patientTab === "plan" ? "text-teal-400" : "text-stone-600 hover:text-stone-400"}`}>
               <HomeIcon size={22} className={patientTab === "plan" ? "fill-teal-400/20" : ""} />
               <span className="text-[10px] font-bold">ראשי</span>
+            </button>
+
+            <button onClick={() => switchTab("calendar")} className={`flex flex-col items-center justify-center w-16 h-full gap-1 transition-colors ${patientTab === "calendar" ? "text-teal-400" : "text-stone-600 hover:text-stone-400"}`}>
+              <CalendarDays size={22} className={patientTab === "calendar" ? "fill-teal-400/20" : ""} />
+              <span className="text-[10px] font-bold">לוח שנה</span>
             </button>
 
             {loggedInPatient.patient_type === "fitness" && (
@@ -280,6 +294,16 @@ export default function PatientShell() {
               blocksKeys={session.blocksKeys}
               onViewExerciseInfo={(exercise) => session.setViewingExInfo(exercise)}
               onStartWorkout={session.handleStartClick}
+            />
+          )}
+
+          {patientTab === "calendar" && (
+            <CalendarTab
+              patientExercises={patientData.patientExercises}
+              workoutLogs={patientData.workoutLogs}
+              patientId={loggedInPatient.id}
+              programStartDate={loggedInPatient.created_at || new Date().toISOString()}
+              onSelectDate={handleSelectCalendarDate}
             />
           )}
         </main>
