@@ -10,6 +10,8 @@ interface PasswordFieldsWithStrengthProps {
   setConfirmPassword: (value: string) => void;
   passwordPlaceholder?: string;
   confirmPlaceholder?: string;
+  passwordLabel?: string;
+  confirmLabel?: string;
 }
 
 // Shared by RegisterPage and ResetPasswordPage — same password-strength
@@ -21,6 +23,8 @@ export default function PasswordFieldsWithStrength({
   setConfirmPassword,
   passwordPlaceholder = "בחר סיסמה",
   confirmPlaceholder = "אימות סיסמה",
+  passwordLabel = "סיסמה",
+  confirmLabel = "אימות סיסמה",
 }: PasswordFieldsWithStrengthProps) {
   const meetsMinLength = passwordCriteria.minLength(password);
   const hasLetter = passwordCriteria.hasLetter(password);
@@ -29,14 +33,20 @@ export default function PasswordFieldsWithStrength({
 
   return (
     <>
-      <input
-        type="password"
-        placeholder={passwordPlaceholder}
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-        className="w-full border-b-2 border-stone-200 p-3 bg-transparent focus:border-teal-500 outline-none transition-colors"
-        required
-      />
+      <div>
+        <label htmlFor="pw-strength-password" className="block text-xs font-bold text-stone-500 mb-1.5">
+          {passwordLabel}
+        </label>
+        <input
+          id="pw-strength-password"
+          type="password"
+          placeholder={passwordPlaceholder}
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          className="w-full border-b-2 border-stone-200 p-3 bg-transparent focus:border-teal-500 focus:ring-1 focus:ring-teal-500/30 outline-none transition-colors"
+          required
+        />
+      </div>
 
       {password.length > 0 && (
         <div className="flex flex-wrap gap-x-4 gap-y-1 -mt-2 mb-1">
@@ -46,16 +56,26 @@ export default function PasswordFieldsWithStrength({
         </div>
       )}
 
-      <input
-        type="password"
-        placeholder={confirmPlaceholder}
-        value={confirmPassword}
-        onChange={(e) => setConfirmPassword(e.target.value)}
-        className={`w-full border-b-2 p-3 bg-transparent outline-none transition-colors ${
-          confirmPassword.length > 0 ? (passwordsMatch ? "border-teal-500" : "border-red-400") : "border-stone-200 focus:border-teal-500"
-        }`}
-        required
-      />
+      <div>
+        <label htmlFor="pw-strength-confirm" className="block text-xs font-bold text-stone-500 mb-1.5">
+          {confirmLabel}
+        </label>
+        <input
+          id="pw-strength-confirm"
+          type="password"
+          placeholder={confirmPlaceholder}
+          value={confirmPassword}
+          onChange={(e) => setConfirmPassword(e.target.value)}
+          className={`w-full border-b-2 p-3 bg-transparent outline-none transition-colors focus:ring-1 ${
+            confirmPassword.length > 0
+              ? passwordsMatch
+                ? "border-teal-500 focus:ring-teal-500/30"
+                : "border-red-400 focus:ring-red-400/30"
+              : "border-stone-200 focus:border-teal-500 focus:ring-teal-500/30"
+          }`}
+          required
+        />
+      </div>
       {confirmPassword.length > 0 && !passwordsMatch && <p className="text-xs text-red-500 font-medium -mt-2">הסיסמאות אינן תואמות</p>}
     </>
   );

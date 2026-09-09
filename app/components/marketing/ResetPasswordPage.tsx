@@ -1,6 +1,6 @@
 "use client";
 
-import { KeyRound } from "lucide-react";
+import { Globe, KeyRound } from "lucide-react";
 import { useAuth } from "@/app/context/AuthContext";
 import { useAuthSession } from "@/app/hooks/useAuthSession";
 import { isPasswordConfirmed, isStrongPassword } from "@/app/utils/validation";
@@ -10,7 +10,7 @@ import PasswordFieldsWithStrength from "@/app/components/marketing/PasswordField
 // onAuthStateChange listener routes the PASSWORD_RECOVERY event here
 // instead of straight into patient/admin view.
 export default function ResetPasswordPage() {
-  const { lang } = useAuth();
+  const { lang, setLang } = useAuth();
   const { newPassword, setNewPassword, newPasswordConfirm, setNewPasswordConfirm, handleSetNewPassword } = useAuthSession();
 
   const canSubmit = isStrongPassword(newPassword) && isPasswordConfirmed(newPassword, newPasswordConfirm);
@@ -29,9 +29,17 @@ export default function ResetPasswordPage() {
         }}
       ></div>
       <div className="bg-white/95 backdrop-blur-xl p-8 md:p-12 rounded-[2rem] shadow-2xl w-full max-w-md relative z-10 border border-white/20">
-        <h2 className="text-3xl font-black text-stone-900 flex items-center gap-2 mb-2">
-          <KeyRound size={28} className="text-teal-500" /> קביעת סיסמה חדשה
-        </h2>
+        <div className="flex justify-between items-center mb-2">
+          <h2 className="text-3xl font-black text-stone-900 flex items-center gap-2">
+            <KeyRound size={28} className="text-teal-500" /> קביעת סיסמה חדשה
+          </h2>
+          <button
+            onClick={() => setLang(lang === "he" ? "en" : "he")}
+            className="bg-stone-100 hover:bg-stone-200 text-stone-700 px-3 py-1 rounded-full font-bold text-xs flex items-center gap-1"
+          >
+            <Globe size={14} /> {lang === "he" ? "English" : "עברית"}
+          </button>
+        </div>
         <p className="text-sm text-stone-500 mb-6 font-medium">בחר סיסמה חדשה לחשבונך.</p>
 
         <form onSubmit={handleSetNewPassword} className="space-y-4">
@@ -42,6 +50,8 @@ export default function ResetPasswordPage() {
             setConfirmPassword={setNewPasswordConfirm}
             passwordPlaceholder="סיסמה חדשה"
             confirmPlaceholder="אימות סיסמה חדשה"
+            passwordLabel="סיסמה חדשה"
+            confirmLabel="אימות סיסמה חדשה"
           />
 
           <button

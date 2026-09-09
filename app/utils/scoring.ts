@@ -10,12 +10,18 @@ export interface RankInfo {
   next?: string;
 }
 
+// `color` values were tuned for the old dark patient theme (e.g.
+// text-stone-300, text-cyan-400 — both fail contrast on a white surface).
+// Both consumers (PatientShell's header, ProfileTab) are light-mode now, so
+// these were darkened for legibility; `bg` is untouched since it's only
+// ever used as a progress-bar fill, which doesn't carry a text-contrast
+// requirement either way.
 export const getUserRank = (totalWorkouts: number): RankInfo => {
-  if (totalWorkouts >= 100) return { name: "Diamond", current: totalWorkouts, max: 100, percent: 100, color: "text-purple-500", bg: "bg-purple-500" };
-  if (totalWorkouts >= 50) return { name: "Platinum", current: totalWorkouts, max: 100, percent: (totalWorkouts / 100) * 100, color: "text-cyan-400", bg: "bg-cyan-400", next: "Diamond" };
-  if (totalWorkouts >= 25) return { name: "Gold", current: totalWorkouts, max: 50, percent: (totalWorkouts / 50) * 100, color: "text-yellow-400", bg: "bg-yellow-400", next: "Platinum" };
-  if (totalWorkouts >= 10) return { name: "Silver", current: totalWorkouts, max: 25, percent: (totalWorkouts / 25) * 100, color: "text-stone-300", bg: "bg-stone-300", next: "Gold" };
-  return { name: "Bronze", current: totalWorkouts, max: 10, percent: (totalWorkouts / 10) * 100, color: "text-amber-600", bg: "bg-amber-600", next: "Silver" };
+  if (totalWorkouts >= 100) return { name: "Diamond", current: totalWorkouts, max: 100, percent: 100, color: "text-purple-700", bg: "bg-purple-500" };
+  if (totalWorkouts >= 50) return { name: "Platinum", current: totalWorkouts, max: 100, percent: (totalWorkouts / 100) * 100, color: "text-cyan-700", bg: "bg-cyan-400", next: "Diamond" };
+  if (totalWorkouts >= 25) return { name: "Gold", current: totalWorkouts, max: 50, percent: (totalWorkouts / 50) * 100, color: "text-amber-700", bg: "bg-yellow-400", next: "Platinum" };
+  if (totalWorkouts >= 10) return { name: "Silver", current: totalWorkouts, max: 25, percent: (totalWorkouts / 25) * 100, color: "text-stone-600", bg: "bg-stone-300", next: "Gold" };
+  return { name: "Bronze", current: totalWorkouts, max: 10, percent: (totalWorkouts / 10) * 100, color: "text-amber-800", bg: "bg-amber-600", next: "Silver" };
 };
 
 export const getRPEColor = (num: number) =>

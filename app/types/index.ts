@@ -32,10 +32,13 @@ export interface Exercise {
   category: string;
   description?: string;
   gif_url?: string;
+  secondary_gif_url?: string | null; // optional second camera angle; toggled between in WorkoutPlayer's active-exercise view
   target_muscle?: string; // AVAILABLE_MUSCLES id (app/constants/catalog.ts) - not react-body-highlighter, which only backs the separate pain-area check-in
   secondary_muscles?: string; // comma-separated AVAILABLE_MUSCLES ids
   admin_tags?: string; // comma-separated ADMIN_TAGS ids
   common_mistake?: string;
+  easier_version_id?: string | null; // exercises.id of the regression (e.g. Banded Pull-up for Pull-up)
+  harder_version_id?: string | null; // exercises.id of the progression (e.g. Pull-up for Banded Pull-up)
 }
 
 export interface Package {
@@ -112,4 +115,16 @@ export interface SavedWorkout {
   scheduled_day: string | null; // DAYS_OF_WEEK id
   exercise_ids: string[]; // ordered, references exercises.id
   created_at: string;
+}
+
+// One highly-cited paper's LLM-generated Hebrew digest, produced by
+// app/actions/researchAgent.ts. Not a DB row (nothing is persisted yet) —
+// this is what the future research tab renders directly from the server
+// action's response.
+export interface ResearchFinding {
+  paperTitle: string;
+  paperUrl: string;
+  year: number | null;
+  summaryHe: string;
+  didYouKnowHe: string;
 }

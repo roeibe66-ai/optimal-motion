@@ -21,7 +21,7 @@ export default function WorkoutFinishFlow({ feedbackPhase, onSelectRpe, onSubmit
   if (feedbackPhase === "rpe") {
     return (
       <div
-        className="fixed inset-0 z-[100] bg-stone-900 flex flex-col items-center justify-center p-6 text-center animate-in zoom-in duration-500"
+        className="fixed inset-0 z-[100] bg-stone-950 flex flex-col items-center justify-center p-6 text-center animate-in zoom-in duration-500"
         dir={dir}
       >
         <Flame size={60} className="text-amber-400 mb-6" />
@@ -37,7 +37,7 @@ export default function WorkoutFinishFlow({ feedbackPhase, onSelectRpe, onSubmit
   if (feedbackPhase === "pain_after") {
     return (
       <div
-        className="fixed inset-0 z-[100] bg-stone-900 flex flex-col items-center justify-center p-6 text-center animate-in slide-in-from-right duration-300"
+        className="fixed inset-0 z-[100] bg-stone-950 flex flex-col items-center justify-center p-6 text-center animate-in slide-in-from-right duration-300"
         dir={dir}
       >
         <Activity size={60} className="text-teal-400 mb-6" />

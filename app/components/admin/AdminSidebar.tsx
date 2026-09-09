@@ -77,7 +77,11 @@ export default function AdminSidebar({ adminTab, setAdminTab, isSidebarOpen, set
                 <Icon size={18} />
                 {label}
                 {isVideoReviews && !isActive && (
-                  <span className="bg-red-500 text-white text-[10px] font-extrabold w-[18px] h-[18px] rounded-full flex items-center justify-center mr-auto">1</span>
+                  // Was a hardcoded "1" badge with no real count behind it (video-review
+                  // queue is still a UI mockup, per UX audit finding #8, 2026-09-03) — a
+                  // plain dot keeps the attention cue honest without claiming a specific
+                  // number. Swap for a real unread-count badge once the tab has live data.
+                  <span className="w-2 h-2 rounded-full bg-red-500 mr-auto" aria-hidden="true" />
                 )}
               </button>
             );

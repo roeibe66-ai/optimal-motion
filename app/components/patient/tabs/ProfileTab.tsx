@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type Dispatch, type SetStateAction } from "react";
+import type { Dispatch, SetStateAction } from "react";
 import { Activity, Bell, ChevronLeft, CheckCircle, Crown, Flame, Globe, LogOut, Medal, Receipt } from "lucide-react";
 import { useAuth } from "@/app/context/AuthContext";
 import { DAYS_OF_WEEK } from "@/app/constants/catalog";
@@ -37,12 +37,6 @@ export default function ProfileTab({
 }: ProfileTabProps) {
   const { loggedInPatient, lang, setLang, handleLogout } = useAuth();
 
-  // Fallback "member since" date for the (unexpected) case created_at is
-  // missing — computed once via lazy useState init rather than calling
-  // Date.now() directly in the render body, which the compiler flags as an
-  // impure call.
-  const [fallbackJoinDate] = useState(() => new Date());
-
   const userLogs = workoutLogs.filter((l) => l.patient_id === loggedInPatient?.id);
   const totalWorkouts = userLogs.length;
   const rank = getUserRank(totalWorkouts);
@@ -77,106 +71,113 @@ export default function ProfileTab({
 
   return (
     <div className="animate-in fade-in duration-500">
-      <div className="bg-[#1c1c1e] text-white rounded-[2rem] p-6 md:p-10 shadow-2xl relative overflow-hidden mb-8 border border-stone-800">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-purple-500 rounded-full mix-blend-screen filter blur-3xl opacity-10 animate-pulse"></div>
+      <h1 className="text-4xl font-black italic text-stone-900 tracking-tight mb-6">פרופיל</h1>
 
-        <div className="relative z-10 flex items-center gap-6 mb-10">
-          <div className="w-24 h-24 rounded-full bg-amber-500 text-stone-950 flex items-center justify-center text-3xl font-black shadow-lg">
-            {initials}
-          </div>
-          <div>
-            <h2 className="text-3xl font-black tracking-tight">{loggedInPatient?.full_name}</h2>
-            <p className="text-stone-400 text-sm flex items-center gap-2 mt-1">
-              <Crown size={14} /> חבר מאז{" "}
-              {new Date(loggedInPatient?.created_at || fallbackJoinDate).toLocaleDateString("he-IL", { month: "long", year: "numeric" })}
-            </p>
-          </div>
+      {/* Avatar + name row — avatar first (renders on the right under RTL),
+          name + a static "manage account" subtitle beside it. No chevron
+          here: there's no real account-management screen behind this row,
+          and a chevron would promise a tap that goes nowhere. */}
+      <div className="flex items-center gap-4 mb-8">
+        <div className="w-20 h-20 rounded-full bg-emerald-800 text-white flex items-center justify-center text-2xl font-black shrink-0">
+          {initials}
         </div>
-
-        <div className="grid grid-cols-3 gap-4 mb-8">
-          <div className="bg-stone-900/50 p-4 md:p-6 rounded-3xl border border-stone-800 flex flex-col items-center justify-center text-center">
-            <Flame size={28} className="text-orange-500 mb-2" />
-            <h4 className="text-2xl md:text-3xl font-black">{streak}</h4>
-            <span className="text-[10px] md:text-xs text-stone-500 font-bold uppercase tracking-wider mt-1">ימי רצף</span>
-          </div>
-          <div className="bg-stone-900/50 p-4 md:p-6 rounded-3xl border border-stone-800 flex flex-col items-center justify-center text-center">
-            <Medal size={28} className={`${rank.color} mb-2`} />
-            <h4 className={`text-xl md:text-2xl font-black ${rank.color}`}>{rank.name}</h4>
-            <span className="text-[10px] md:text-xs text-stone-500 font-bold uppercase tracking-wider mt-1">דרגה</span>
-          </div>
-          <div className="bg-stone-900/50 p-4 md:p-6 rounded-3xl border border-stone-800 flex flex-col items-center justify-center text-center">
-            <CheckCircle size={28} className="text-teal-400 mb-2" />
-            <h4 className="text-2xl md:text-3xl font-black">{totalWorkouts}</h4>
-            <span className="text-[10px] md:text-xs text-stone-500 font-bold uppercase tracking-wider mt-1">אימונים</span>
-          </div>
-        </div>
-
-        <div className="bg-stone-900/50 p-6 rounded-3xl border border-stone-800">
-          <div className="flex justify-between items-end mb-3">
-            <div>
-              <span className={`text-sm font-bold flex items-center gap-2 ${rank.color}`}>
-                <Medal size={16} /> {rank.name} · {totalWorkouts} אימונים
-              </span>
-            </div>
-            {rank.next && <span className="text-xs text-stone-500 font-bold">עוד {rank.max - totalWorkouts} ל-{rank.next}</span>}
-          </div>
-          <div className="h-3 w-full bg-stone-950 rounded-full overflow-hidden border border-stone-800">
-            <div className={`h-full ${rank.bg} transition-all duration-1000`} style={{ width: `${rank.percent}%` }}></div>
-          </div>
+        <div className="text-right">
+          <h2 className="text-xl font-black text-stone-900">{loggedInPatient?.full_name}</h2>
+          <p className="text-stone-500 text-sm font-medium mt-0.5">ניהול חשבון</p>
         </div>
       </div>
 
-      {/* תפריט הגדרות פרופיל */}
-      <div className="bg-[#1c1c1e] rounded-[2rem] p-4 shadow-sm border border-stone-800">
-        <div className="space-y-2">
-          <button className="w-full flex items-center justify-between p-4 hover:bg-stone-800 rounded-2xl transition-colors group">
-            <div className="flex items-center gap-4">
-              <div className="w-10 h-10 rounded-full bg-amber-500/20 text-amber-500 flex items-center justify-center">
-                <Crown size={18} />
-              </div>
+      {/* הישגים — Achievements, as plain list rows instead of the old
+          boxed stat cards. Label on the right, value on the far left. */}
+      <div className="mb-8">
+        <h3 className="text-xs font-bold uppercase tracking-widest text-stone-400 px-1 mb-2">הישגים</h3>
+        <div className="bg-white rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden">
+          <div className="flex items-center justify-between px-5 py-4 border-b border-stone-100">
+            <div className="flex items-center gap-3">
+              <Flame size={18} className="text-stone-400" />
+              <span className="font-bold text-stone-900 text-sm">ימי רצף</span>
+            </div>
+            <span className="font-black text-stone-900 tabular-nums">{streak}</span>
+          </div>
+          <div className="flex items-center justify-between px-5 py-4 border-b border-stone-100">
+            <div className="flex items-center gap-3">
+              <Medal size={18} className="text-stone-400" />
+              <span className="font-bold text-stone-900 text-sm">דרגה</span>
+            </div>
+            <span className={`font-black ${rank.color}`}>{rank.name}</span>
+          </div>
+          <div className="flex items-center justify-between px-5 py-4">
+            <div className="flex items-center gap-3">
+              <CheckCircle size={18} className="text-stone-400" />
+              <span className="font-bold text-stone-900 text-sm">אימונים</span>
+            </div>
+            <span className="font-black text-stone-900 tabular-nums">{totalWorkouts}</span>
+          </div>
+        </div>
+
+        {/* Progress to next rank — real data, kept below the list rather
+            than folded into a row of its own. */}
+        {rank.next && (
+          <div className="mt-3 px-1">
+            <div className="flex justify-between items-center mb-1.5 text-xs font-bold text-stone-500">
+              <span>עוד {rank.max - totalWorkouts} אימונים ל-{rank.next}</span>
+              <span className="tabular-nums">{Math.round(rank.percent)}%</span>
+            </div>
+            <div className="h-1.5 w-full bg-stone-100 rounded-full overflow-hidden">
+              <div className={`h-full ${rank.bg} transition-all duration-1000`} style={{ width: `${rank.percent}%` }}></div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* הגדרות — Settings, one grouped list: premium/invoices (still
+          non-functional placeholders, dimmed + "בקרוב" per the earlier UX
+          audit fix — not reintroducing a dead-end affordance), notification
+          scheduling (its own real inputs, inline within the row), haptics
+          toggle, language, logout. */}
+      <div className="mb-8">
+        <h3 className="text-xs font-bold uppercase tracking-widest text-stone-400 px-1 mb-2">הגדרות</h3>
+        <div className="bg-white rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden">
+          <div className="flex items-center justify-between px-5 py-4 border-b border-stone-100 opacity-50 cursor-default">
+            <div className="flex items-center gap-3">
+              <Crown size={18} className="text-stone-400" />
               <div className="text-right">
-                <h4 className="font-bold text-white text-sm">ניהול מנוי פרימיום</h4>
+                <h4 className="font-bold text-stone-900 text-sm">ניהול מנוי פרימיום</h4>
                 <p className="text-xs text-stone-500">הצטרפות, שדרוג וביטול מסלולים</p>
               </div>
             </div>
-            <ChevronLeft size={20} className="text-stone-600 group-hover:text-stone-400" />
-          </button>
+            <span className="text-[10px] font-bold text-stone-500 bg-stone-100 px-2 py-1 rounded-full shrink-0">בקרוב</span>
+          </div>
 
-          <button className="w-full flex items-center justify-between p-4 hover:bg-stone-800 rounded-2xl transition-colors group">
-            <div className="flex items-center gap-4">
-              <div className="w-10 h-10 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center">
-                <Receipt size={18} />
-              </div>
+          <div className="flex items-center justify-between px-5 py-4 border-b border-stone-100 opacity-50 cursor-default">
+            <div className="flex items-center gap-3">
+              <Receipt size={18} className="text-stone-400" />
               <div className="text-right">
-                <h4 className="font-bold text-white text-sm">חשבוניות וקבלות</h4>
+                <h4 className="font-bold text-stone-900 text-sm">חשבוניות וקבלות</h4>
                 <p className="text-xs text-stone-500">היסטוריית תשלומים באפליקציה</p>
               </div>
             </div>
-            <ChevronLeft size={20} className="text-stone-600 group-hover:text-stone-400" />
-          </button>
+            <span className="text-[10px] font-bold text-stone-500 bg-stone-100 px-2 py-1 rounded-full shrink-0">בקרוב</span>
+          </div>
 
           {/* Note: the mockup drops the "edit personal details" row entirely (Premium/Invoices/Notifications/Haptics/Logout only) — removed to match; it was a non-functional placeholder with no onClick either way, so nothing behavioral is lost. */}
 
           {/* הגדרות התראות באזור האישי */}
-          <div className="flex flex-col p-4 border-t border-stone-800 mt-2 pt-4 gap-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="w-10 h-10 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center">
-                  <Bell size={18} />
-                </div>
-                <div className="text-right">
-                  <h4 className="font-bold text-white text-sm">התראות אימון (Push)</h4>
-                  <p className="text-xs text-stone-500">בחר שעה וימים לקבלת תזכורת</p>
-                </div>
+          <div className="flex flex-col px-5 py-4 border-b border-stone-100 gap-4">
+            <div className="flex items-center gap-3">
+              <Bell size={18} className="text-stone-400" />
+              <div className="text-right">
+                <h4 className="font-bold text-stone-900 text-sm">התראות אימון (Push)</h4>
+                <p className="text-xs text-stone-500">בחר שעה וימים לקבלת תזכורת</p>
               </div>
             </div>
 
-            <div className="bg-stone-950 p-4 rounded-xl flex flex-col md:flex-row gap-4 items-center border border-stone-800">
+            <div className="bg-stone-50 p-4 rounded-xl flex flex-col md:flex-row gap-4 items-center">
               <input
                 type="time"
                 value={reminderTime}
                 onChange={(e) => setReminderTime(e.target.value)}
-                className="text-center font-black text-white border border-stone-700 rounded-lg p-2 focus:border-teal-500 outline-none bg-[#1c1c1e]"
+                className="text-center font-black text-stone-900 border border-stone-200 rounded-lg p-2 focus:border-emerald-800 focus:ring-1 focus:ring-emerald-800/20 outline-none bg-white"
               />
               <div className="flex flex-wrap justify-center gap-1">
                 {DAYS_OF_WEEK.map((day) => {
@@ -186,57 +187,60 @@ export default function ProfileTab({
                       key={day.id}
                       type="button"
                       onClick={() => setReminderDays((prev) => (isSelected ? prev.filter((d) => d !== day.id) : [...prev, day.id]))}
-                      className={`w-8 h-8 rounded-lg font-bold text-xs transition-colors ${isSelected ? "bg-purple-500 text-white shadow-sm" : "bg-stone-800 text-stone-500 hover:bg-stone-700 border border-stone-700"}`}
+                      className={`w-8 h-8 rounded-lg font-bold text-xs transition-all duration-150 ease-out active:scale-90 ${
+                        isSelected ? "bg-emerald-800 text-white shadow-sm scale-105" : "bg-white text-stone-500 hover:bg-stone-100 border border-stone-200"
+                      }`}
                     >
                       {lang === "he" ? day.he_short : day.short}
                     </button>
                   );
                 })}
               </div>
-              <button onClick={onSaveSettings} className="bg-white text-stone-900 px-4 py-2 rounded-lg text-sm font-bold hover:bg-stone-200 w-full md:w-auto">
+              <button
+                onClick={onSaveSettings}
+                className="bg-emerald-800 hover:bg-emerald-900 text-white px-4 py-2 rounded-lg text-sm font-bold active:scale-95 transition-all duration-150 ease-out w-full md:w-auto"
+              >
                 שמור
               </button>
             </div>
           </div>
 
-          <div className="flex items-center justify-between p-4 border-t border-stone-800">
-            <div className="flex items-center gap-4">
-              <div className="w-10 h-10 rounded-full bg-teal-500/20 text-teal-400 flex items-center justify-center">
-                <Activity size={18} />
-              </div>
+          <div className="flex items-center justify-between px-5 py-4 border-b border-stone-100">
+            <div className="flex items-center gap-3">
+              <Activity size={18} className="text-stone-400" />
               <div className="text-right">
-                <h4 className="font-bold text-white text-sm">פידבק רטט (Haptics)</h4>
+                <h4 className="font-bold text-stone-900 text-sm">פידבק רטט (Haptics)</h4>
                 <p className="text-xs text-stone-500">רטט בסיום סטים ומנוחה</p>
               </div>
             </div>
             {/* Size tuned to the mockup; the enabled/disabled positioning classes below are untouched per the brief — don't change that logic, only confirm the visuals match it */}
-            <button onClick={toggleHaptics} className={`w-[46px] h-[26px] rounded-full transition-colors relative flex items-center ${hapticsEnabled ? "bg-teal-500" : "bg-stone-700"}`}>
-              <div className={`w-5 h-5 bg-white rounded-full absolute shadow-sm transition-transform ${hapticsEnabled ? "left-1" : "right-1"}`}></div>
+            <button
+              onClick={toggleHaptics}
+              className={`w-[46px] h-[26px] rounded-full transition-all duration-300 ease-out relative flex items-center active:scale-95 ${
+                hapticsEnabled ? "bg-emerald-800" : "bg-stone-300"
+              }`}
+            >
+              <div className={`w-5 h-5 bg-white rounded-full absolute shadow-sm transition-transform duration-300 ease-out ${hapticsEnabled ? "left-1" : "right-1"}`}></div>
             </button>
           </div>
 
-          <button onClick={() => setLang(lang === "he" ? "en" : "he")} className="w-full flex items-center justify-between p-4 hover:bg-stone-800 rounded-2xl transition-colors group mt-2 border-t border-stone-800">
-            <div className="flex items-center gap-4">
-              <div className="w-10 h-10 rounded-full bg-stone-800 text-stone-400 flex items-center justify-center">
-                <Globe size={18} />
-              </div>
+          <button
+            onClick={() => setLang(lang === "he" ? "en" : "he")}
+            className="w-full flex items-center justify-between px-5 py-4 border-b border-stone-100 hover:bg-stone-50 active:scale-[0.99] transition-all duration-150 ease-out group"
+          >
+            <div className="flex items-center gap-3">
+              <Globe size={18} className="text-stone-400" />
               <div className="text-right">
-                <h4 className="font-bold text-white text-sm">שפת מערכת</h4>
+                <h4 className="font-bold text-stone-900 text-sm">שפת מערכת</h4>
                 <p className="text-xs text-stone-500">{lang === "he" ? "עברית" : "English"}</p>
               </div>
             </div>
-            <ChevronLeft size={20} className="text-stone-600 group-hover:text-stone-400" />
+            <ChevronLeft size={18} className="text-stone-300 group-hover:text-stone-500" />
           </button>
 
-          <button onClick={handleLogout} className="w-full flex items-center justify-between p-4 hover:bg-red-900/20 rounded-2xl transition-colors group mt-2">
-            <div className="flex items-center gap-4">
-              <div className="w-10 h-10 rounded-full bg-red-500/15 text-red-400 flex items-center justify-center">
-                <LogOut size={18} />
-              </div>
-              <div className="text-right">
-                <h4 className="font-bold text-red-400 text-sm">התנתק מהמערכת</h4>
-              </div>
-            </div>
+          <button onClick={handleLogout} className="w-full flex items-center gap-3 px-5 py-4 hover:bg-red-50 active:scale-[0.99] transition-all duration-150 ease-out">
+            <LogOut size={18} className="text-red-600" />
+            <h4 className="font-bold text-red-600 text-sm">התנתק מהמערכת</h4>
           </button>
         </div>
       </div>

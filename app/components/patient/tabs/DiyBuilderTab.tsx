@@ -123,7 +123,7 @@ export default function DiyBuilderTab({
           <select
             value={diyMuscleFilter}
             onChange={(e) => setDiyMuscleFilter(e.target.value)}
-            className="appearance-none bg-[#1c1c1e] border border-stone-800 text-stone-300 rounded-full pl-8 pr-4 py-2.5 outline-none font-bold text-xs focus:border-teal-500"
+            className="appearance-none bg-[#1c1c1e] border border-stone-800 text-stone-300 rounded-full pl-8 pr-4 py-2.5 outline-none font-bold text-xs focus:border-teal-500 focus:ring-1 focus:ring-teal-500/30"
           >
             <option value="all">כל השרירים</option>
             {AVAILABLE_MUSCLES.map((m) => (
@@ -139,7 +139,7 @@ export default function DiyBuilderTab({
           <select
             value={diyEquipFilter}
             onChange={(e) => setDiyEquipFilter(e.target.value)}
-            className="appearance-none bg-[#1c1c1e] border border-stone-800 text-stone-300 rounded-full pl-8 pr-4 py-2.5 outline-none font-bold text-xs focus:border-teal-500"
+            className="appearance-none bg-[#1c1c1e] border border-stone-800 text-stone-300 rounded-full pl-8 pr-4 py-2.5 outline-none font-bold text-xs focus:border-teal-500 focus:ring-1 focus:ring-teal-500/30"
           >
             <option value="all">כל הציוד</option>
             {EQUIPMENT_LIST.map((eq) => (
@@ -236,9 +236,12 @@ export default function DiyBuilderTab({
               <div key={idx} className="bg-[#1c1c1e] border border-stone-800 rounded-2xl p-2 flex items-center gap-2 min-w-[140px] relative">
                 <button
                   onClick={() => setDiySelectedExercises((prev) => prev.filter((_, i) => i !== idx))}
-                  className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 text-white rounded-full flex items-center justify-center shadow-md"
+                  aria-label="הסר תרגיל"
+                  className="absolute -top-3.5 -right-3.5 w-8 h-8 flex items-center justify-center"
                 >
-                  <X size={8} strokeWidth={3} />
+                  <span className="w-4 h-4 bg-red-500 text-white rounded-full flex items-center justify-center shadow-md">
+                    <X size={8} strokeWidth={3} />
+                  </span>
                 </button>
                 {ex.gif_url ? (
                   ex.gif_url.toLowerCase().includes(".mp4") || ex.gif_url.toLowerCase().includes(".webm") ? (
@@ -256,11 +259,14 @@ export default function DiyBuilderTab({
 
           <div className="grid grid-cols-2 gap-2.5">
             <div>
-              <div className="text-[10px] font-extrabold text-teal-400 uppercase mb-1.5">יום בשבוע</div>
+              <label htmlFor="diy-schedule-day" className="block text-[10px] font-extrabold text-teal-400 uppercase mb-1.5">
+                יום בשבוע
+              </label>
               <select
+                id="diy-schedule-day"
                 value={diyScheduleDay}
                 onChange={(e) => setDiyScheduleDay(e.target.value)}
-                className="w-full bg-stone-950 border border-stone-800 text-white p-2.5 rounded-xl text-xs font-bold outline-none focus:border-teal-500"
+                className="w-full bg-stone-950 border border-stone-800 text-white p-2.5 rounded-xl text-xs font-bold outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500/30"
               >
                 {DAYS_OF_WEEK.map((d) => (
                   <option key={d.id} value={d.id}>
@@ -270,12 +276,15 @@ export default function DiyBuilderTab({
               </select>
             </div>
             <div>
-              <div className="text-[10px] font-extrabold text-teal-400 uppercase mb-1.5">שם האימון</div>
+              <label htmlFor="diy-workout-name" className="block text-[10px] font-extrabold text-teal-400 uppercase mb-1.5">
+                שם האימון
+              </label>
               <input
+                id="diy-workout-name"
                 type="text"
                 value={diyWorkoutName}
                 onChange={(e) => setDiyWorkoutName(e.target.value)}
-                className="w-full bg-stone-950 border border-stone-800 text-white p-2.5 rounded-xl text-xs font-bold outline-none focus:border-teal-500"
+                className="w-full bg-stone-950 border border-stone-800 text-white p-2.5 rounded-xl text-xs font-bold outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500/30"
               />
             </div>
           </div>

@@ -50,6 +50,14 @@ export default function CalendarTab({ patientExercises, workoutLogs, patientId, 
     return d;
   });
 
+  // Which day's workouts the sheet below the grid is showing. Presentation
+  // state only — reads the exact same getWeekForDate/matchesScheduledDay
+  // logic below as everything else in this file, it just decides what's
+  // expanded rather than navigating away immediately on tap (that jump now
+  // happens from a card inside the sheet instead, via the same onSelectDate
+  // prop). Defaults to today so the sheet isn't empty on first load.
+  const [selectedDate, setSelectedDate] = useState<Date | null>(() => new Date());
+
   const availableWeeks = Array.from(new Set(patientExercises.map((ex) => ex.week || 1))).sort((a, b) => a - b);
 
   // programStartDate is always a valid ISO string - PatientShell falls back
@@ -74,8 +82,6 @@ export default function CalendarTab({ patientExercises, workoutLogs, patientId, 
     workoutLogs.filter((l) => l.patient_id === patientId).map((l) => toDateKey(new Date(l.created_at)))
   );
 
-  const today = new Date();
-
   const year = viewedMonth.getFullYear();
   const month = viewedMonth.getMonth();
   const firstOfMonth = new Date(year, month, 1);
@@ -90,96 +96,172 @@ export default function CalendarTab({ patientExercises, workoutLogs, patientId, 
 
   const monthLabel = viewedMonth.toLocaleDateString("he-IL", { month: "long", year: "numeric" });
 
+  const handleChangeMonth = (delta: number) => {
+    setViewedMonth(new Date(year, month + delta, 1));
+    // A selection from the previous month has no meaning here — the sheet
+    // prompts for a new pick instead of silently showing stale data.
+    setSelectedDate(null);
+  };
+
+  // Workouts (one card per distinct category) scheduled on the selected
+  // date — same week/day computation the grid itself uses per-cell below.
+  const selectedWeek = selectedDate ? getWeekForDate(selectedDate) : null;
+  const selectedDayId = selectedDate ? selectedDate.getDay().toString() : null;
+  const selectedDayExercises =
+    selectedWeek !== null && selectedDayId !== null
+      ? patientExercises.filter((pe) => (pe.week || 1) === selectedWeek && matchesScheduledDay(pe, selectedDayId))
+      : [];
+  const selectedDayCategories = Array.from(new Set(selectedDayExercises.map((pe) => pe.exercise.category)));
+
   return (
     <div className="animate-in fade-in duration-500">
-      <div className="mb-6">
-        <h2 className="text-2xl md:text-3xl font-black text-white tracking-tight mb-1.5 flex items-center gap-2">
-          <CalendarDays size={26} className="text-teal-400" />
-          לוח שנה
-        </h2>
-        <p className="text-stone-400 text-[13px] md:text-sm">תצוגת חודש של האימונים המתוזמנים שלך.</p>
+      <h2 className="text-xl md:text-2xl font-black text-white tracking-tight flex items-center gap-2 mb-6">
+        <CalendarDays size={22} className="text-teal-400" />
+        לוח שנה
+      </h2>
+
+      {/* Month switcher — minimal glyph arrows, no button chrome, matching
+          the reference's understated header. */}
+      <div className="flex items-center justify-between mb-7">
+        <button
+          onClick={() => handleChangeMonth(-1)}
+          aria-label="חודש קודם"
+          className="text-stone-500 hover:text-white active:scale-90 transition-all duration-150 ease-out p-2 -m-2"
+        >
+          <ChevronRight size={22} />
+        </button>
+        <h3 className="font-black text-2xl md:text-3xl text-white tracking-tight">{monthLabel}</h3>
+        <button
+          onClick={() => handleChangeMonth(1)}
+          aria-label="חודש הבא"
+          className="text-stone-500 hover:text-white active:scale-90 transition-all duration-150 ease-out p-2 -m-2"
+        >
+          <ChevronLeft size={22} />
+        </button>
       </div>
 
-      <div className="flex items-center justify-between mb-5">
-        <button
-          onClick={() => setViewedMonth(new Date(year, month - 1, 1))}
-          className="w-9 h-9 rounded-full bg-[#1c1c1e] border border-stone-800 text-stone-300 flex items-center justify-center hover:border-stone-700 transition-colors"
-        >
-          <ChevronRight size={18} />
-        </button>
-        <h3 className="font-extrabold text-white text-base">{monthLabel}</h3>
-        <button
-          onClick={() => setViewedMonth(new Date(year, month + 1, 1))}
-          className="w-9 h-9 rounded-full bg-[#1c1c1e] border border-stone-800 text-stone-300 flex items-center justify-center hover:border-stone-700 transition-colors"
-        >
-          <ChevronLeft size={18} />
-        </button>
-      </div>
-
-      <div className="grid grid-cols-7 gap-1.5 mb-2">
+      <div className="grid grid-cols-7 mb-4">
         {WEEKDAY_LABELS.map((label) => (
-          <div key={label} className="text-center text-[11px] font-extrabold text-stone-500 py-1">
+          <div key={label} className="text-center text-[11px] font-bold text-stone-500 tracking-wide">
             {label}
           </div>
         ))}
       </div>
 
-      <div className="grid grid-cols-7 gap-1.5">
+      {/* Minimal grid — no per-cell card/border, just a number, an optional
+          glowing selection ring, and tiny colored dots for what's scheduled
+          (one dot per category, real info rather than decoration). */}
+      <div className="grid grid-cols-7 gap-y-4">
         {cells.map((date, idx) => {
           if (!date) return <div key={idx} />;
 
           const week = getWeekForDate(date);
           const dayId = date.getDay().toString();
-          // Distinct workout-style categories (exercise.category, e.g. "כוח
-          // וסיבולת") scheduled on this date - usually one, occasionally more
-          // if a day mixes categories.
           const scheduledCategories =
             week === null
               ? []
               : Array.from(new Set(patientExercises.filter((pe) => (pe.week || 1) === week && matchesScheduledDay(pe, dayId)).map((pe) => pe.exercise.category)));
           const isCompleted = completedDateKeys.has(toDateKey(date));
-          const isToday = isSameDay(date, today);
           const isClickable = scheduledCategories.length > 0 && week !== null;
-          const primaryCategory = scheduledCategories[0];
-          const categoryStyle = primaryCategory ? ADMIN_CATEGORY_STYLES[primaryCategory] ?? DEFAULT_ADMIN_CATEGORY_STYLE : null;
+          const isSelected = selectedDate !== null && isSameDay(date, selectedDate);
 
           return (
             <button
               key={idx}
               type="button"
               disabled={!isClickable}
-              onClick={() => isClickable && onSelectDate(week as number, dayId)}
-              className={`min-h-[62px] rounded-xl flex flex-col items-center justify-start gap-1 border p-1 transition-colors ${
-                isClickable ? "bg-[#1c1c1e] border-stone-800 hover:border-teal-500/50 cursor-pointer" : "bg-transparent border-transparent"
-              } ${isToday ? "ring-2 ring-teal-500/60" : ""}`}
+              onClick={() => isClickable && setSelectedDate(date)}
+              className="flex flex-col items-center gap-1.5 group"
             >
-              <div className="flex items-center gap-1">
-                <span className={`text-[12px] font-bold ${isClickable ? "text-white" : "text-stone-600"}`}>{date.getDate()}</span>
-                {isCompleted && <CheckCircle2 size={10} className="text-amber-400 shrink-0" />}
+              <span
+                className={`relative w-9 h-9 rounded-full flex items-center justify-center text-[13px] font-bold tabular-nums transition-all duration-200 ease-out ${
+                  isSelected
+                    ? "bg-teal-500/15 ring-2 ring-teal-400 text-white shadow-[0_0_16px_-3px_rgba(45,212,191,0.6)]"
+                    : isClickable
+                      ? "text-white group-hover:bg-white/5 group-active:scale-90"
+                      : "text-stone-600"
+                }`}
+              >
+                {date.getDate()}
+                {isCompleted && <CheckCircle2 size={11} className="absolute -top-1 -right-1 text-amber-400 bg-stone-950 rounded-full" />}
+              </span>
+              <div className="flex items-center gap-1 h-1.5">
+                {scheduledCategories.slice(0, 3).map((cat) => (
+                  <span
+                    key={cat}
+                    className="w-1.5 h-1.5 rounded-full"
+                    style={{ background: (ADMIN_CATEGORY_STYLES[cat] ?? DEFAULT_ADMIN_CATEGORY_STYLE).text }}
+                  />
+                ))}
               </div>
-              {categoryStyle && (
-                <span
-                  className="w-full text-[9px] font-extrabold px-1 py-0.5 rounded-full leading-tight text-center truncate"
-                  style={{ background: categoryStyle.bg, color: categoryStyle.text }}
-                >
-                  {primaryCategory}
-                  {scheduledCategories.length > 1 ? ` +${scheduledCategories.length - 1}` : ""}
-                </span>
-              )}
             </button>
           );
         })}
       </div>
 
-      <div className="flex items-center gap-4 mt-6 text-[11px] text-stone-400">
+      <div className="flex items-center gap-4 mt-6 mb-8 text-[11px] text-stone-500">
         <div className="flex items-center gap-1.5">
           <span className="w-2 h-2 rounded-full" style={{ background: ADMIN_CATEGORY_STYLES["קליסטניקס"].text }} />
-          שם קטגוריה = אימון מתוזמן
+          נקודה צבעונית = קטגוריית אימון מתוזמנת
         </div>
         <div className="flex items-center gap-1.5">
           <CheckCircle2 size={11} className="text-amber-400" />
           הושלם
         </div>
+      </div>
+
+      {/* "Bottom sheet" — visually a sheet (distinct surface, rounded top
+          corners, drag-handle pill) sitting under the calendar. Kept in
+          normal document flow rather than position:fixed so a long workout
+          list can never overlap PatientShell's sticky header or bottom nav —
+          it just grows and the page scrolls, which is the safer choice for
+          a list whose length varies with how many categories are scheduled. */}
+      <div className="-mx-4 md:-mx-8 bg-[#1c1c1e] border-t border-stone-800 rounded-t-[2rem] px-5 pt-3 pb-10 shadow-[0_-16px_40px_-16px_rgba(0,0,0,0.6)]">
+        <div className="w-10 h-1.5 rounded-full bg-stone-700 mx-auto mb-5"></div>
+
+        <div className="flex items-center justify-between mb-4">
+          <h4 className="font-black text-white text-base">
+            {selectedDayCategories.length} {selectedDayCategories.length === 1 ? "אימון" : "אימונים"}
+          </h4>
+          {selectedDate && (
+            <span className="text-[12px] font-bold text-stone-500">
+              {selectedDate.toLocaleDateString("he-IL", { weekday: "long", day: "numeric", month: "long" })}
+            </span>
+          )}
+        </div>
+
+        {!selectedDate ? (
+          <p className="text-stone-500 text-sm text-center py-6">בחר יום כדי לראות את האימונים שלו.</p>
+        ) : selectedDayCategories.length === 0 ? (
+          <p className="text-stone-500 text-sm text-center py-6">אין אימונים מתוזמנים ביום הזה.</p>
+        ) : (
+          <div className="flex flex-col gap-2">
+            {selectedDayCategories.map((cat) => {
+              const style = ADMIN_CATEGORY_STYLES[cat] ?? DEFAULT_ADMIN_CATEGORY_STYLE;
+              const catExercises = selectedDayExercises.filter((pe) => pe.exercise.category === cat);
+              const thumbUrl = catExercises.find((pe) => pe.exercise.gif_url && !/\.(mp4|webm)$/i.test(pe.exercise.gif_url))?.exercise.gif_url;
+
+              return (
+                <button
+                  key={cat}
+                  onClick={() => selectedWeek !== null && selectedDayId !== null && onSelectDate(selectedWeek, selectedDayId)}
+                  className="w-full flex items-center gap-3.5 text-right hover:bg-white/5 active:scale-[0.98] rounded-2xl p-1.5 transition-all duration-150 ease-out"
+                >
+                  <div className="relative w-14 h-14 rounded-2xl overflow-hidden shrink-0" style={{ background: style.bg }}>
+                    {thumbUrl && <img src={thumbUrl} alt="" className="w-full h-full object-cover" />}
+                    <div className="absolute bottom-0 inset-x-0 h-[3px]" style={{ background: style.text }}></div>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h5 className="font-black text-white text-[15px] truncate">{cat}</h5>
+                    <p className="text-stone-500 text-[12px] font-semibold mt-0.5">
+                      שבוע {selectedWeek} · {catExercises.length} תרגילים
+                    </p>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );

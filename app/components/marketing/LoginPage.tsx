@@ -57,15 +57,21 @@ export default function LoginPage() {
           ) : (
             <form onSubmit={handleForgotPassword} className="space-y-5">
               <p className="text-sm text-stone-500">הזן את כתובת המייל שלך ונשלח אליה קישור לאיפוס הסיסמה.</p>
-              <input
+              <div>
+                <label htmlFor="forgot-email" className="block text-xs font-bold text-stone-500 mb-1.5">
+                  אימייל
+                </label>
+                <input
+                id="forgot-email"
                 type="email"
                 placeholder="אימייל"
                 value={forgotEmail}
                 onChange={(e) => setForgotEmail(e.target.value)}
-                className="w-full border-b-2 border-stone-200 p-3 bg-transparent focus:border-teal-500 outline-none transition-colors"
+                className="w-full border-b-2 border-stone-200 p-3 bg-transparent focus:border-teal-500 focus:ring-1 focus:ring-teal-500/30 outline-none transition-colors"
                 required
-              />
-              <button type="submit" className="w-full bg-stone-900 text-white py-4 rounded-xl font-bold hover:bg-teal-600 transition-colors mt-2">
+                />
+              </div>
+              <button type="submit" className="w-full bg-teal-500 text-white py-4 rounded-xl font-bold hover:bg-teal-600 transition-colors mt-2">
                 שלח קישור לאיפוס
               </button>
               <button
@@ -80,24 +86,36 @@ export default function LoginPage() {
         ) : (
           <>
             <form onSubmit={handleLogin} className="space-y-5">
-              <input
-                type="email"
-                placeholder="אימייל"
-                value={loginIdentifier}
-                onChange={(e) => setLoginIdentifier(e.target.value)}
-                className="w-full border-b-2 border-stone-200 p-3 bg-transparent focus:border-teal-500 outline-none transition-colors"
-                required
-              />
-              <input
-                type="password"
-                placeholder="סיסמה"
-                value={loginPassword}
-                onChange={(e) => setLoginPassword(e.target.value)}
-                className="w-full border-b-2 border-stone-200 p-3 bg-transparent focus:border-teal-500 outline-none transition-colors"
-                required
-              />
+              <div>
+                <label htmlFor="login-email" className="block text-xs font-bold text-stone-500 mb-1.5">
+                  אימייל
+                </label>
+                <input
+                  id="login-email"
+                  type="email"
+                  placeholder="אימייל"
+                  value={loginIdentifier}
+                  onChange={(e) => setLoginIdentifier(e.target.value)}
+                  className="w-full border-b-2 border-stone-200 p-3 bg-transparent focus:border-teal-500 focus:ring-1 focus:ring-teal-500/30 outline-none transition-colors"
+                  required
+                />
+              </div>
+              <div>
+                <label htmlFor="login-password" className="block text-xs font-bold text-stone-500 mb-1.5">
+                  סיסמה
+                </label>
+                <input
+                  id="login-password"
+                  type="password"
+                  placeholder="סיסמה"
+                  value={loginPassword}
+                  onChange={(e) => setLoginPassword(e.target.value)}
+                  className="w-full border-b-2 border-stone-200 p-3 bg-transparent focus:border-teal-500 focus:ring-1 focus:ring-teal-500/30 outline-none transition-colors"
+                  required
+                />
+              </div>
 
-              <button type="submit" className="w-full bg-stone-900 text-white py-4 rounded-xl font-bold hover:bg-teal-600 transition-colors mt-2">
+              <button type="submit" className="w-full bg-teal-500 text-white py-4 rounded-xl font-bold hover:bg-teal-600 transition-colors mt-2">
                 התחבר
               </button>
             </form>

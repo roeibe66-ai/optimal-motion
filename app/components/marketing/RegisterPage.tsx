@@ -1,13 +1,13 @@
 "use client";
 
-import { Dumbbell, HeartPulse, UserPlus } from "lucide-react";
+import { Dumbbell, Globe, HeartPulse, UserPlus } from "lucide-react";
 import { useAuth } from "@/app/context/AuthContext";
 import { useAuthSession } from "@/app/hooks/useAuthSession";
 import { isPasswordConfirmed, isStrongPassword } from "@/app/utils/validation";
 import PasswordFieldsWithStrength from "@/app/components/marketing/PasswordFieldsWithStrength";
 
 export default function RegisterPage() {
-  const { lang, t, setCurrentView } = useAuth();
+  const { lang, setLang, t, setCurrentView } = useAuth();
   const {
     regFirstName,
     setRegFirstName,
@@ -45,36 +45,60 @@ export default function RegisterPage() {
           <h2 className="text-3xl font-black text-stone-900 flex items-center gap-2">
             <UserPlus size={28} className="text-teal-500" /> {t.signup}
           </h2>
+          <button
+            onClick={() => setLang(lang === "he" ? "en" : "he")}
+            className="bg-stone-100 hover:bg-stone-200 text-stone-700 px-3 py-1 rounded-full font-bold text-xs flex items-center gap-1"
+          >
+            <Globe size={14} /> {lang === "he" ? "English" : "עברית"}
+          </button>
         </div>
         <p className="text-sm text-stone-500 mb-6 font-medium">הצטרף למערכת כדי לקבל גישה לתוכניות המקצועיות שלנו.</p>
 
         <form onSubmit={handleRegister} className="space-y-4">
           <div className="flex gap-4">
+            <div className="w-1/2">
+              <label htmlFor="reg-first-name" className="block text-xs font-bold text-stone-500 mb-1.5">
+                שם פרטי
+              </label>
+              <input
+                id="reg-first-name"
+                type="text"
+                placeholder="שם פרטי"
+                value={regFirstName}
+                onChange={(e) => setRegFirstName(e.target.value)}
+                className="w-full border-b-2 border-stone-200 p-3 bg-transparent focus:border-teal-500 focus:ring-1 focus:ring-teal-500/30 outline-none transition-colors"
+                required
+              />
+            </div>
+            <div className="w-1/2">
+              <label htmlFor="reg-last-name" className="block text-xs font-bold text-stone-500 mb-1.5">
+                שם משפחה
+              </label>
+              <input
+                id="reg-last-name"
+                type="text"
+                placeholder="שם משפחה"
+                value={regLastName}
+                onChange={(e) => setRegLastName(e.target.value)}
+                className="w-full border-b-2 border-stone-200 p-3 bg-transparent focus:border-teal-500 focus:ring-1 focus:ring-teal-500/30 outline-none transition-colors"
+                required
+              />
+            </div>
+          </div>
+          <div>
+            <label htmlFor="reg-email" className="block text-xs font-bold text-stone-500 mb-1.5">
+              אימייל
+            </label>
             <input
-              type="text"
-              placeholder="שם פרטי"
-              value={regFirstName}
-              onChange={(e) => setRegFirstName(e.target.value)}
-              className="w-1/2 border-b-2 border-stone-200 p-3 bg-transparent focus:border-teal-500 outline-none transition-colors"
-              required
-            />
-            <input
-              type="text"
-              placeholder="שם משפחה"
-              value={regLastName}
-              onChange={(e) => setRegLastName(e.target.value)}
-              className="w-1/2 border-b-2 border-stone-200 p-3 bg-transparent focus:border-teal-500 outline-none transition-colors"
+              id="reg-email"
+              type="email"
+              placeholder="אימייל"
+              value={regEmail}
+              onChange={(e) => setRegEmail(e.target.value)}
+              className="w-full border-b-2 border-stone-200 p-3 bg-transparent focus:border-teal-500 focus:ring-1 focus:ring-teal-500/30 outline-none transition-colors"
               required
             />
           </div>
-          <input
-            type="email"
-            placeholder="אימייל"
-            value={regEmail}
-            onChange={(e) => setRegEmail(e.target.value)}
-            className="w-full border-b-2 border-stone-200 p-3 bg-transparent focus:border-teal-500 outline-none transition-colors"
-            required
-          />
           <PasswordFieldsWithStrength password={regPass} setPassword={setRegPass} confirmPassword={regConfirmPass} setConfirmPassword={setRegConfirmPass} />
 
           <div>

@@ -1,7 +1,9 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import {
   ChevronLeft,
+  ChevronRight,
   Dumbbell,
   Info,
   Lock,
@@ -16,6 +18,44 @@ import { getTrackAccess } from "@/app/utils/premium";
 import { AVAILABLE_MUSCLES, DEFAULT_TRACK_GLOW, TRACK_GLOW_TINTS } from "@/app/constants/catalog";
 import type { Exercise, WorkoutLog } from "@/app/types";
 import type { HydratedPatientExercise, SessionExercise } from "@/app/hooks/useWorkoutSession";
+
+// Same client-only body-diagram library BodyDiagram.tsx uses for the
+// pre-workout pain check-in, instantiated separately here since the hero
+// needs its own colors/size/two-view (front+back) treatment rather than
+// that component's single-view pain-selection styling.
+const BodyModel = dynamic(() => import("react-body-highlighter"), { ssr: false });
+
+// react-body-highlighter only recognizes a fixed ~21-muscle vocabulary and
+// crashes (not silently ignores) on any id outside it — confirmed the hard
+// way: fillMuscleData() indexes straight into a lookup object with no
+// undefined guard. Our own AVAILABLE_MUSCLES has 30 entries (several with
+// no equivalent in the library, plus one name mismatch: our "adductors"
+// vs its "adductor"), so ids are mapped through this allowlist rather than
+// passed straight through; anything with no mapping is dropped instead of
+// risking the crash again.
+const BODY_MODEL_MUSCLE_MAP: Record<string, string> = {
+  chest: "chest",
+  "front-deltoids": "front-deltoids",
+  "back-deltoids": "back-deltoids",
+  biceps: "biceps",
+  triceps: "triceps",
+  forearm: "forearm",
+  "upper-back": "upper-back",
+  "lower-back": "lower-back",
+  trapezius: "trapezius",
+  abs: "abs",
+  obliques: "obliques",
+  adductors: "adductor",
+  abductors: "abductors",
+  hamstring: "hamstring",
+  quadriceps: "quadriceps",
+  calves: "calves",
+  gluteal: "gluteal",
+};
+
+function toBodyModelMuscles(ids: string[]): string[] {
+  return Array.from(new Set(ids.map((id) => BODY_MODEL_MUSCLE_MAP[id]).filter((m): m is string => Boolean(m))));
+}
 
 interface PlanTabProps {
   workoutLogs: WorkoutLog[];
@@ -94,6 +134,10 @@ export default function PlanTab({
     let todayExerciseCount = 0;
     let todayBlockCount = 0;
     let todayEstimatedMinutes = 0;
+    // Real target muscles for today's exercises, fed to the hero's body
+    // diagram overlay below — not decorative, drawn from the same filtered
+    // list as the counts above.
+    let todayMuscleIds: string[] = [];
     if (todayCat) {
       const todayCategoryExercises = weekFilteredExercises.filter((pe) => {
         if (pe.exercise.category !== todayCat) return false;
@@ -109,6 +153,9 @@ export default function PlanTab({
       // "3" + "4" === "34"), producing wildly wrong duration estimates.
       const todayTotalSets = todayCategoryExercises.reduce((acc, pe) => acc + (Number(pe.sets) || 0), 0);
       todayEstimatedMinutes = Math.max(10, Math.round(todayTotalSets * 1.5));
+      todayMuscleIds = Array.from(
+        new Set(todayCategoryExercises.map((pe) => pe.exercise.target_muscle).filter((m): m is string => Boolean(m)))
+      );
     }
 
     // Recent-trend sparkline: last 6 logs' RPE, plus their average.
@@ -130,67 +177,104 @@ export default function PlanTab({
             onClick={goPrevWeek}
             disabled={weekIndex <= 0}
             aria-label="Previous week"
-            className="w-8 h-8 rounded-full bg-[#1c1c1e] border border-stone-800 flex items-center justify-center text-stone-300 hover:bg-stone-800 transition-colors disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-[#1c1c1e]"
+            className="w-8 h-8 rounded-full bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] flex items-center justify-center text-stone-600 hover:bg-stone-50 active:scale-90 transition-all duration-150 ease-out disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-white disabled:active:scale-100"
           >
-            <ChevronLeft size={14} />
+            <ChevronRight size={14} />
           </button>
-          <span className="text-[13px] font-black text-white tracking-wide px-5 py-1.5 bg-[#1c1c1e] border border-stone-800 rounded-full min-w-[100px] text-center">
+          <span className="text-[13px] font-black text-stone-900 tracking-wide px-5 py-1.5 bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-full min-w-[100px] text-center">
             שבוע {activePatientWeek}
           </span>
           <button
             onClick={goNextWeek}
             disabled={weekIndex >= weeks.length - 1}
             aria-label="Next week"
-            className="w-8 h-8 rounded-full bg-[#1c1c1e] border border-stone-800 flex items-center justify-center text-stone-300 hover:bg-stone-800 transition-colors disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-[#1c1c1e]"
+            className="w-8 h-8 rounded-full bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] flex items-center justify-center text-stone-600 hover:bg-stone-50 active:scale-90 transition-all duration-150 ease-out disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-white disabled:active:scale-100"
           >
-            <ChevronLeft size={14} className="rotate-180" />
+            <ChevronLeft size={14} />
           </button>
         </div>
 
-        {/* Day selector */}
-        <div className="flex justify-between items-center bg-[#1c1c1e] p-1.5 rounded-full border border-stone-800 mb-8">
-          {DAYS_OF_WEEK_SHORT.map((day) => {
-            const isActive = selectedDayFilter === day.id;
-            return (
-              <button
-                key={day.id}
-                onClick={() => setSelectedDayFilter(day.id)}
-                className={`flex-1 h-9 flex items-center justify-center rounded-full text-xs font-bold transition-all ${isActive ? "bg-white text-[#1b1b1b]" : "text-stone-400 hover:text-stone-200"}`}
-              >
-                {day.short}
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Today hero card */}
+        {/* Today hero card — full-bleed photo (placeholder, see note below)
+            with a floating glassmorphic day-selector overlaid at the top
+            (replaces the old standalone dark pill bar), a real target-muscle
+            diagram on the left, and title/meta/play mirrored for RTL: text
+            bottom-right, action button bottom-left. */}
         {todayCat ? (
-          <div
-            className="relative h-[280px] rounded-[2rem] overflow-hidden border border-stone-800 mb-10"
-            style={{
-              background:
-                "radial-gradient(120% 100% at 20% 0%, #3d2a14 0%, #0c0a09 60%), linear-gradient(160deg, #35230f, #0c0a09 70%)",
-            }}
-          >
-            <div
-              className="absolute inset-0"
-              style={{ background: "radial-gradient(circle at 75% 30%, rgba(245,158,11,0.38), transparent 55%)" }}
-            ></div>
-            <div className="absolute inset-0 bg-gradient-to-t from-stone-950 via-stone-950/15 to-transparent"></div>
+          <div className="relative h-[400px] rounded-[2rem] overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.08)] mb-10">
+            {/* Placeholder hero photo — a live Unsplash hotlink (Edoardo
+                Cuoghi, Unsplash License, unsplash.com/photos/5uzsDVRov2w),
+                not a repo asset. Swap for a real owned asset before this
+                ships; kept as a remote <img> rather than downloaded since it
+                was requested explicitly as a placeholder. The dark gradient
+                scrim over the photo stays even in light mode — that's photo
+                legibility (white text needs a dark ground under it), not a
+                dark-theme leftover; nothing outside the photo itself is dark. */}
+            <img
+              src="https://images.unsplash.com/photo-1634225251578-d5f6ffced78a?w=1200&q=80&fm=jpg&fit=crop&auto=format"
+              alt=""
+              className="absolute inset-0 w-full h-full object-cover"
+            />
+            {/* Warm color-grade tying the photo to this hero's established
+                amber palette, plus the bottom scrim for text legibility. */}
+            <div className="absolute inset-0" style={{ background: "linear-gradient(160deg, rgba(61,42,20,0.55), rgba(12,10,9,0.55) 60%)" }}></div>
+            <div className="absolute inset-0" style={{ background: "radial-gradient(circle at 75% 20%, rgba(245,158,11,0.28), transparent 55%)" }}></div>
+            <div className="absolute inset-0 bg-gradient-to-t from-stone-950 via-stone-950/50 to-transparent"></div>
 
-            <button
-              onClick={() => setSelectedCategory(String(todayCat))}
-              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-14 h-14 rounded-full bg-white/15 border border-white/25 backdrop-blur-md flex items-center justify-center hover:bg-white/25 transition-colors"
-            >
-              <Play size={20} className="fill-white text-white" />
-            </button>
+            {/* Floating glassmorphic day-selector */}
+            <div className="absolute top-4 inset-x-4 z-10 flex justify-between items-center bg-white/10 backdrop-blur-md border border-white/15 p-1.5 rounded-full">
+              {DAYS_OF_WEEK_SHORT.map((day) => {
+                const isActive = selectedDayFilter === day.id;
+                return (
+                  <button
+                    key={day.id}
+                    onClick={() => setSelectedDayFilter(day.id)}
+                    className={`flex-1 h-8 flex items-center justify-center rounded-full text-[11px] font-bold transition-all duration-200 ease-out active:scale-90 ${
+                      isActive ? "bg-white text-stone-900 shadow-sm" : "text-white/70 hover:text-white"
+                    }`}
+                  >
+                    {day.short}
+                  </button>
+                );
+              })}
+            </div>
 
-            <div className="absolute top-4 right-4 bg-white/15 backdrop-blur-md border border-white/20 text-white text-[10px] font-bold tracking-wide px-3 py-1.5 rounded-full">
+            {/* Floating status badge */}
+            <div className="absolute top-[4.75rem] right-4 z-10 bg-white/15 backdrop-blur-md border border-white/20 text-white text-[10px] font-bold tracking-wide px-3 py-1.5 rounded-full">
               האימון של היום
             </div>
 
-            <div className="absolute bottom-5 right-5 left-5 flex flex-col gap-2.5">
-              <h3 className="text-[28px] font-black tracking-tight leading-tight text-white">{isDiyMode ? diyWorkoutName : todayCat}</h3>
+            {/* Muscle-target overlay, left side (RTL: text lives on the
+                right) — two compact read-only diagrams since the library
+                only renders one view (front/back) at a time. Muscle ids are
+                run through toBodyModelMuscles first — see its comment for
+                why that's required, not optional. */}
+            {(() => {
+              const bodyModelMuscles = toBodyModelMuscles(todayMuscleIds);
+              return (
+                bodyModelMuscles.length > 0 && (
+                  <div className="absolute top-1/2 left-4 -translate-y-1/2 z-10 flex items-center gap-0.5 opacity-95">
+                    <BodyModel
+                      type="anterior"
+                      data={[{ name: "היום", muscles: bodyModelMuscles as never }]}
+                      bodyColor="rgba(255,255,255,0.18)"
+                      highlightedColors={["#f59e0b"]}
+                      style={{ width: "44px" }}
+                    />
+                    <BodyModel
+                      type="posterior"
+                      data={[{ name: "היום", muscles: bodyModelMuscles as never }]}
+                      bodyColor="rgba(255,255,255,0.18)"
+                      highlightedColors={["#f59e0b"]}
+                      style={{ width: "44px" }}
+                    />
+                  </div>
+                )
+              );
+            })()}
+
+            {/* Title + meta, bottom-right (RTL) */}
+            <div className="absolute bottom-5 right-5 left-24 z-10 flex flex-col gap-2">
+              <h3 className="text-[26px] font-black tracking-tight leading-tight text-white truncate">{isDiyMode ? diyWorkoutName : todayCat}</h3>
               <div className="flex items-center gap-3.5 text-stone-300 text-[13px] font-semibold">
                 <span className="flex items-center gap-1.5">
                   <Timer size={14} /> כ-{todayEstimatedMinutes} דק&apos;
@@ -201,20 +285,29 @@ export default function PlanTab({
                 </span>
               </div>
             </div>
+
+            {/* Primary action, bottom-left — mirrors the reference's
+                bottom-right button for RTL. */}
+            <button
+              onClick={() => setSelectedCategory(String(todayCat))}
+              className="absolute bottom-5 left-5 z-10 w-14 h-14 rounded-full bg-white/15 border border-white/25 backdrop-blur-md flex items-center justify-center hover:bg-white/25 hover:scale-110 active:scale-95 transition-all duration-200 ease-out shadow-[0_8px_24px_-4px_rgba(0,0,0,0.5)]"
+            >
+              <Play size={20} className="fill-white text-white" />
+            </button>
           </div>
         ) : (
-          <div className="rounded-[2rem] p-10 text-center border border-stone-800 h-[280px] flex flex-col items-center justify-center relative overflow-hidden mb-10 bg-[#1c1c1e]">
-            <Wind size={44} className="text-teal-400 mb-4" />
-            <h3 className="text-xl font-black text-white mb-2">מנוחה פעילה</h3>
-            <p className="text-stone-400 text-sm">אין אימוני כוח מתוכננים להיום. מומלץ לבצע רוטינת תנועתיות בסיסית.</p>
+          <div className="rounded-[2rem] p-10 text-center h-[280px] flex flex-col items-center justify-center relative overflow-hidden mb-10 bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+            <Wind size={44} className="text-emerald-800 mb-4" />
+            <h3 className="text-xl font-black text-stone-900 mb-2">מנוחה פעילה</h3>
+            <p className="text-stone-500 text-sm">אין אימוני כוח מתוכננים להיום. מומלץ לבצע רוטינת תנועתיות בסיסית.</p>
           </div>
         )}
 
         {/* Tracks */}
         <div className="mb-10">
-          <div className="text-[11px] font-extrabold tracking-widest text-stone-400 uppercase mb-3.5">המסלולים שלך</div>
+          <div className="text-[11px] font-extrabold tracking-widest text-stone-500 uppercase mb-3.5">המסלולים שלך</div>
           {patientCategories.length === 0 ? (
-            <div className="bg-[#1c1c1e] p-10 rounded-[2rem] border border-stone-800 text-center flex flex-col items-center">
+            <div className="bg-white p-10 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] text-center flex flex-col items-center">
               <p className="text-stone-500 text-sm">אתה יכול גם להסתכל על שאר התוכניות שלך (אם קיימות).</p>
             </div>
           ) : (
@@ -228,22 +321,22 @@ export default function PlanTab({
                   <button
                     key={idx}
                     onClick={() => setSelectedCategory(String(cat))}
-                    className="min-w-[158px] rounded-3xl overflow-hidden border border-stone-800 bg-[#1c1c1e] text-right shrink-0"
+                    className="min-w-[158px] rounded-3xl overflow-hidden bg-white text-right shrink-0 shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-[0_16px_32px_-8px_rgba(0,0,0,0.1)] active:scale-[0.97] active:translate-y-0"
                   >
-                    <div className="h-[120px] relative bg-[#1c1c1e]">
+                    <div className="h-[120px] relative bg-stone-50">
                       <div
                         className="absolute inset-0"
                         style={{ background: `radial-gradient(circle at 70% 25%, ${glowTint}, transparent 55%)` }}
                       ></div>
                     </div>
                     <div className="p-3 flex flex-col gap-2">
-                      <div className="font-bold text-[13px] text-white">{cat}</div>
+                      <div className="font-bold text-[13px] text-stone-900">{cat}</div>
                       {isLocked ? (
-                        <div className="text-[11px] font-bold px-2.5 py-1 rounded-full w-fit" style={{ color: "#fdba74", backgroundColor: "rgba(251,146,60,0.16)" }}>
+                        <div className="text-[11px] font-bold px-2.5 py-1 rounded-full w-fit" style={{ color: "#c2410c", backgroundColor: "rgba(251,146,60,0.14)" }}>
                           נפתח בשבוע 3
                         </div>
                       ) : (
-                        <div className="text-[11px] font-bold px-2.5 py-1 rounded-full w-fit" style={{ color: "#facc15", backgroundColor: "rgba(234,179,8,0.14)" }}>
+                        <div className="text-[11px] font-bold px-2.5 py-1 rounded-full w-fit" style={{ color: "#854d0e", backgroundColor: "rgba(234,179,8,0.14)" }}>
                           פעיל
                         </div>
                       )}
@@ -257,17 +350,17 @@ export default function PlanTab({
 
         {/* Recent trend */}
         <div>
-          <div className="text-[11px] font-extrabold tracking-widest text-stone-400 uppercase mb-3.5">מגמה אחרונה</div>
+          <div className="text-[11px] font-extrabold tracking-widest text-stone-500 uppercase mb-3.5">מגמה אחרונה</div>
           {workoutLogs.length === 0 ? (
-            <div className="bg-[#1c1c1e] p-10 rounded-[2rem] border border-stone-800 text-center">
+            <div className="bg-white p-10 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] text-center">
               <p className="text-stone-500 text-sm">הנתונים יופיעו כאן ברגע שתסיים את האימון הראשון.</p>
             </div>
           ) : (
-            <div className="bg-[#1c1c1e] border border-stone-800 rounded-[1.75rem] p-5">
+            <div className="bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-[1.75rem] p-5">
               <div className="flex justify-between items-start mb-3.5">
-                <span className="text-[13px] font-bold text-stone-300">מאמץ (RPE) · {recentLogs.length} אימונים אחרונים</span>
+                <span className="text-[13px] font-bold text-stone-600">מאמץ (RPE) · {recentLogs.length} אימונים אחרונים</span>
                 <div className="text-left" dir="ltr">
-                  <div className="text-xl font-black text-amber-400">{avgRpe.toFixed(1)}</div>
+                  <div className="text-xl font-black text-amber-700">{avgRpe.toFixed(1)}</div>
                   <div className="text-[10px] text-stone-500 font-semibold">ממוצע</div>
                 </div>
               </div>
@@ -300,20 +393,24 @@ export default function PlanTab({
   return (
     <div className="animate-in slide-in-from-left duration-500 print:hidden max-w-lg mx-auto">
       <div className="mb-6 flex items-center justify-between">
-        <button onClick={() => setSelectedCategory(null)} className="p-2 bg-[#1c1c1e] rounded-full hover:bg-stone-800 transition-colors text-white">
+        <button
+          onClick={() => setSelectedCategory(null)}
+          aria-label="חזור"
+          className="p-2 bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-full hover:bg-stone-50 active:scale-90 transition-all duration-150 ease-out text-stone-700"
+        >
           <ChevronLeft size={24} />
         </button>
-        <span className="text-xs font-bold uppercase tracking-widest text-stone-500">Details</span>
-        <button className="p-2 text-stone-500 hover:text-white">
+        <span className="text-xs font-bold uppercase tracking-widest text-stone-500">פרטים</span>
+        <button aria-label="עוד אפשרויות" className="p-2 text-stone-400 hover:text-stone-700 active:scale-90 transition-all duration-150 ease-out">
           <MoreHorizontal size={24} />
         </button>
       </div>
 
       {loggedInPatient?.patient_type === "fitness" && activePatientWeek >= 3 && !userOwnsTrack && !isDiyMode ? (
-        <div className="bg-gradient-to-b from-[#1c1c1e] to-stone-950 rounded-[2.5rem] p-10 text-center text-white relative overflow-hidden shadow-2xl border border-stone-800">
-          <Lock size={60} className="text-amber-500 mx-auto mb-6 relative z-10" />
+        <div className="bg-white rounded-[2.5rem] p-10 text-center text-stone-900 relative overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.06)]">
+          <Lock size={60} className="text-amber-600 mx-auto mb-6 relative z-10" />
           <h2 className="text-3xl md:text-5xl font-black mb-4 relative z-10 tracking-tight">המשך המסלול נעול</h2>
-          <p className="text-lg text-stone-400 mb-8 max-w-md mx-auto relative z-10 font-medium">
+          <p className="text-lg text-stone-500 mb-8 max-w-md mx-auto relative z-10 font-medium">
             סיימת את השבועיים הראשונים במסלול {selectedCategory}! כדי להמשיך להתקדם ולהיפתח לכל התרגילים, פתח את מסלול הפרימיום.
           </p>
           <button
@@ -326,7 +423,7 @@ export default function PlanTab({
                 "_blank"
               );
             }}
-            className="bg-amber-500 hover:bg-amber-400 text-stone-900 px-10 py-4 rounded-xl font-black text-lg transition-colors relative z-10 shadow-xl"
+            className="bg-amber-500 hover:bg-amber-400 active:scale-[0.97] text-stone-900 px-10 py-4 rounded-xl font-black text-lg transition-all duration-200 ease-out relative z-10 shadow-xl"
           >
             שדרג עכשיו לפרימיום
           </button>
@@ -342,44 +439,48 @@ export default function PlanTab({
           const equipSet = new Set<string>();
           displayedExercises.forEach((a) => {
             const str = (a.exercise?.title + " " + a.exercise?.description).toLowerCase();
-            if (str.includes("מתח") || str.includes("pull up") || str.includes("pull-up")) equipSet.add("Pull up bar");
-            if (str.includes("מקבילים") || str.includes("dip")) equipSet.add("Dip bar");
-            if (str.includes("טבעות") || str.includes("ring")) equipSet.add("Rings");
-            if (str.includes("פרללס") || str.includes("parallettes")) equipSet.add("Parallettes");
-            if (str.includes("משקולות") || str.includes("dumbbell")) equipSet.add("Dumbbells");
+            if (str.includes("מתח") || str.includes("pull up") || str.includes("pull-up")) equipSet.add("מתח");
+            if (str.includes("מקבילים") || str.includes("dip")) equipSet.add("מקבילים");
+            if (str.includes("טבעות") || str.includes("ring")) equipSet.add("טבעות");
+            if (str.includes("פרללס") || str.includes("parallettes")) equipSet.add("פרללס");
+            if (str.includes("משקולות") || str.includes("dumbbell")) equipSet.add("משקולות");
           });
-          const equipmentLabels = equipSet.size > 0 ? Array.from(equipSet).join(", ") : "Bodyweight (No equipment)";
+          const equipmentLabels = equipSet.size > 0 ? Array.from(equipSet).join(", ") : "משקל גוף (ללא ציוד)";
 
           return (
             <>
               <div className="mb-8">
-                <span className="bg-stone-800 text-stone-300 font-bold px-3 py-1 rounded-md text-[10px] uppercase tracking-widest mb-3 inline-block border border-stone-700">Classic</span>
-                <h1 className="text-4xl font-black text-white tracking-tight leading-tight mb-2">{isDiyMode ? diyWorkoutName : selectedCategory}</h1>
+                <span className="bg-stone-100 text-stone-600 font-bold px-2.5 py-1 rounded-md text-[10px] uppercase tracking-widest mb-3 inline-block">קלאסי</span>
+                <h1 className="text-4xl font-black text-stone-900 tracking-tight leading-tight mb-2">{isDiyMode ? diyWorkoutName : selectedCategory}</h1>
                 <p className="text-stone-500 text-sm font-medium">
-                  Week {activePatientWeek} - Session {selectedDayFilter === "all" ? "1" : selectedDayFilter} - {new Date().toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
+                  שבוע {activePatientWeek} - אימון {selectedDayFilter === "all" ? "1" : selectedDayFilter} - {new Date().toLocaleDateString("he-IL", { weekday: "short", month: "short", day: "numeric" })}
                 </p>
               </div>
 
-              <div className="space-y-4 mb-10 text-stone-300 text-sm">
-                <div className="flex items-start gap-4">
-                  <Dumbbell size={20} className="text-orange-500 shrink-0 mt-0.5" />
-                  <div className="flex-1 flex justify-between items-center border-b border-stone-800 pb-4">
+              {/* Metadata rows — no dividers, tight rhythm; primary icon at
+                  the trailing (right) edge in RTL, info glyph at the far
+                  leading (left) edge, matching the reference's list-row
+                  pattern instead of the old bordered rows. */}
+              <div className="space-y-3.5 mb-10 text-stone-600 text-sm">
+                <div className="flex items-center gap-4">
+                  <Dumbbell size={20} className="text-emerald-800 shrink-0" />
+                  <div className="flex-1 flex justify-between items-center">
                     <span>{equipmentLabels}</span>
-                    <Info size={14} className="text-stone-600" />
+                    <Info size={14} className="text-stone-400" />
                   </div>
                 </div>
-                <div className="flex items-start gap-4">
-                  <Timer size={20} className="text-orange-500 shrink-0 mt-0.5" />
-                  <div className="flex-1 flex justify-between items-center border-b border-stone-800 pb-4">
-                    <span>~{estimatedTime} mins</span>
-                    <Info size={14} className="text-stone-600" />
+                <div className="flex items-center gap-4">
+                  <Timer size={20} className="text-emerald-800 shrink-0" />
+                  <div className="flex-1 flex justify-between items-center">
+                    <span>~{estimatedTime} דק׳</span>
+                    <Info size={14} className="text-stone-400" />
                   </div>
                 </div>
-                <div className="flex items-start gap-4">
-                  <User size={20} className="text-orange-500 shrink-0 mt-0.5" />
-                  <div className="flex-1 flex justify-between items-center pb-4">
-                    <span className="leading-relaxed pr-4">{muscleLabels || "Full body"}</span>
-                    <Info size={14} className="text-stone-600" />
+                <div className="flex items-center gap-4">
+                  <User size={20} className="text-emerald-800 shrink-0" />
+                  <div className="flex-1 flex justify-between items-center">
+                    <span className="leading-relaxed pr-4">{muscleLabels || "גוף מלא"}</span>
+                    <Info size={14} className="text-stone-400" />
                   </div>
                 </div>
               </div>
@@ -387,11 +488,11 @@ export default function PlanTab({
               <div className="space-y-4 pb-32">
                 {blocksKeys.map((blockKey) => (
                   <div key={blockKey} className="space-y-4">
-                    {blocksMap[blockKey].length > 1 && <div className="text-xs font-bold text-teal-400 uppercase tracking-widest mt-6 mb-2">Block {blockKey} (Super-Set)</div>}
+                    {blocksMap[blockKey].length > 1 && <div className="text-xs font-bold text-emerald-800 uppercase tracking-widest mt-6 mb-2">בלוק {blockKey} (סופר-סט)</div>}
 
                     {blocksMap[blockKey].map((assignment) => (
-                      <div key={assignment.id} className="flex items-center gap-4 group cursor-pointer hover:bg-stone-900 p-2 -mx-2 rounded-2xl transition-colors" onClick={() => onViewExerciseInfo(assignment.exercise)}>
-                        <div className="w-16 h-16 rounded-2xl overflow-hidden bg-stone-900 shrink-0 border border-stone-800">
+                      <div key={assignment.id} className="flex items-center gap-4 group cursor-pointer hover:bg-white hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] active:scale-[0.98] p-2 -mx-2 rounded-2xl transition-all duration-150 ease-out" onClick={() => onViewExerciseInfo(assignment.exercise)}>
+                        <div className="w-16 h-16 rounded-2xl overflow-hidden bg-stone-100 shrink-0">
                           {assignment.exercise.gif_url ? (
                             assignment.exercise.gif_url.toLowerCase().includes(".mp4") || assignment.exercise.gif_url.toLowerCase().includes(".webm") ? (
                               <video src={assignment.exercise.gif_url} className="w-full h-full object-cover" />
@@ -399,17 +500,17 @@ export default function PlanTab({
                               <img src={assignment.exercise.gif_url} alt={assignment.exercise.title} className="w-full h-full object-cover" />
                             )
                           ) : (
-                            <div className="w-full h-full bg-stone-800"></div>
+                            <div className="w-full h-full bg-stone-100"></div>
                           )}
                         </div>
                         <div className="flex-1 overflow-hidden py-1">
                           <div className="text-stone-500 text-xs font-bold mb-1 flex items-center gap-1">
-                            {assignment.sets} sets x {assignment.is_time ? `${assignment.reps}"` : `${assignment.reps} reps`}
-                            {assignment.rir && <span className="bg-stone-800 text-stone-400 px-1.5 py-0.5 rounded text-[8px] ml-1">RIR {assignment.rir}</span>}
+                            {assignment.sets} סטים x {assignment.is_time ? `${assignment.reps}"` : `${assignment.reps} חזרות`}
+                            {assignment.rir && <span className="bg-stone-100 text-stone-600 px-1.5 py-0.5 rounded text-[8px] ml-1">RIR {assignment.rir}</span>}
                           </div>
-                          <h4 className="text-white font-bold truncate">{assignment.exercise.title}</h4>
+                          <h4 className="text-stone-900 font-bold truncate">{assignment.exercise.title}</h4>
                         </div>
-                        <ChevronLeft size={16} className="text-stone-600 group-hover:text-white transition-colors rotate-180" />
+                        <ChevronLeft size={16} className="text-stone-400 group-hover:text-stone-900 transition-colors rotate-180" />
                       </div>
                     ))}
                   </div>
@@ -417,9 +518,17 @@ export default function PlanTab({
               </div>
 
               {displayedExercises.length > 0 && (
-                <div className="fixed bottom-[4.5rem] left-0 right-0 p-6 bg-gradient-to-t from-stone-950 via-stone-950/90 to-transparent z-40 flex justify-center pointer-events-none">
-                  <button onClick={onStartWorkout} className="w-full max-w-sm bg-orange-600/90 backdrop-blur-md text-white py-4 rounded-full font-black text-lg hover:bg-orange-500 transition-colors shadow-[0_10px_40px_-5px_rgba(234,88,12,0.3)] pointer-events-auto tracking-widest">
-                    START SESSION
+                // Light glass bar (bg-white/70 backdrop-blur-md) the page
+                // bleeds through, holding a solid emerald CTA pill — the
+                // primary accent now carries the button itself, not just
+                // its text. Sits just above the app's own fixed bottom nav
+                // (bottom-[4.5rem] matches its h-16 + gap).
+                <div className="fixed bottom-[4.5rem] left-0 right-0 z-40 bg-white/70 backdrop-blur-md border-t border-stone-100 px-5 py-4">
+                  <button
+                    onClick={onStartWorkout}
+                    className="w-full max-w-lg mx-auto flex items-center justify-center bg-emerald-800 hover:bg-emerald-900 text-white active:scale-[0.98] transition-all duration-150 ease-out font-black text-lg py-4 rounded-full tracking-widest shadow-[0_8px_24px_-4px_rgba(6,78,59,0.35)]"
+                  >
+                    התחל אימון
                   </button>
                 </div>
               )}

@@ -30,6 +30,7 @@ export default function Modal({ onClose, title, icon, children }: ModalProps) {
           </h3>
           <button
             onClick={onClose}
+            aria-label="סגור"
             className="text-stone-400 hover:text-white bg-stone-800 hover:bg-stone-700 p-2 rounded-full transition-colors"
           >
             <X size={20} />

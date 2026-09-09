@@ -125,24 +125,28 @@ export default function PatientShell() {
     <>
       <WorkoutPlayer session={session} triggerHaptic={triggerHaptic} />
 
-      <div className="min-h-screen bg-stone-950 text-white pb-24">
+      <div className="min-h-screen bg-[#FDFBF7] text-stone-900 pb-24">
         {session.viewingExInfo && (
           <ExerciseInfoModal exercise={session.viewingExInfo} historyData={session.exHistoryData} onClose={() => session.setViewingExInfo(null)} />
         )}
 
-        <header className="bg-stone-950/80 backdrop-blur-lg border-b border-stone-800 py-4 px-6 sticky top-0 z-40 print:hidden">
+        <header className="bg-white/70 backdrop-blur-md border-b border-stone-100 py-4 px-6 sticky top-0 z-40 print:hidden">
           <div className="max-w-5xl mx-auto flex justify-between items-center">
             <div className="flex items-center gap-3">
-              <button onClick={() => setPatientTab("plan")} className="w-11 h-11 bg-amber-500 text-stone-950 rounded-2xl flex items-center justify-center font-bold text-lg shadow-lg hover:bg-amber-400 hover:scale-105 transition-all">
+              <button onClick={() => setPatientTab("plan")} className="w-11 h-11 bg-amber-500 text-stone-950 rounded-2xl flex items-center justify-center font-bold text-lg shadow-sm hover:bg-amber-400 hover:scale-105 transition-all">
                 {loggedInPatient.full_name.charAt(0)}
               </button>
               <div>
-                <h1 className="font-black text-white text-[15px]">
+                <h1 className="font-black text-stone-900 text-[15px]">
                   {greeting}, {firstName}
                 </h1>
-                <p className="text-[11px] text-stone-400 font-semibold flex items-center gap-1.5 mt-0.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-stone-600"></span>
-                  דרגה: <span className={headerRank.color}>{headerRank.name}</span>
+                <p className="text-[11px] text-stone-500 font-semibold flex items-center gap-1.5 mt-0.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-stone-300"></span>
+                  {/* getUserRank's colors are now light-mode-safe (fixed
+                      alongside ProfileTab's own light-mode pass), so this
+                      can use the real per-rank hue again instead of a fixed
+                      stand-in color. */}
+                  דרגה: <span className={`font-bold ${headerRank.color}`}>{headerRank.name}</span>
                 </p>
               </div>
             </div>
@@ -150,34 +154,34 @@ export default function PatientShell() {
         </header>
 
         {/* BOTTOM NAVIGATION BAR */}
-        <nav className="fixed bottom-0 left-0 right-0 bg-[#1c1c1e]/90 backdrop-blur-lg border-t border-stone-800 z-50 print:hidden pb-safe">
+        <nav className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-md border-t border-stone-100 z-50 print:hidden pb-safe">
           <div className="flex justify-around items-center h-16 max-w-5xl mx-auto px-2">
-            <button onClick={() => switchTab("plan")} className={`flex flex-col items-center justify-center w-16 h-full gap-1 transition-colors ${patientTab === "plan" ? "text-teal-400" : "text-stone-600 hover:text-stone-400"}`}>
-              <HomeIcon size={22} className={patientTab === "plan" ? "fill-teal-400/20" : ""} />
+            <button onClick={() => switchTab("plan")} className={`flex flex-col items-center justify-center w-16 h-full gap-1 transition-colors ${patientTab === "plan" ? "text-emerald-800" : "text-stone-400 hover:text-stone-600"}`}>
+              <HomeIcon size={22} className={patientTab === "plan" ? "fill-emerald-800/15" : ""} />
               <span className="text-[10px] font-bold">ראשי</span>
             </button>
 
-            <button onClick={() => switchTab("calendar")} className={`flex flex-col items-center justify-center w-16 h-full gap-1 transition-colors ${patientTab === "calendar" ? "text-teal-400" : "text-stone-600 hover:text-stone-400"}`}>
-              <CalendarDays size={22} className={patientTab === "calendar" ? "fill-teal-400/20" : ""} />
+            <button onClick={() => switchTab("calendar")} className={`flex flex-col items-center justify-center w-16 h-full gap-1 transition-colors ${patientTab === "calendar" ? "text-emerald-800" : "text-stone-400 hover:text-stone-600"}`}>
+              <CalendarDays size={22} className={patientTab === "calendar" ? "fill-emerald-800/15" : ""} />
               <span className="text-[10px] font-bold">לוח שנה</span>
             </button>
 
             {loggedInPatient.patient_type === "fitness" && (
-              <button onClick={() => switchTab("diy")} className={`flex flex-col items-center justify-center w-16 h-full gap-1 transition-colors ${patientTab === "diy" ? "text-teal-400" : "text-stone-600 hover:text-stone-400"}`}>
+              <button onClick={() => switchTab("diy")} className={`flex flex-col items-center justify-center w-16 h-full gap-1 transition-colors ${patientTab === "diy" ? "text-emerald-800" : "text-stone-400 hover:text-stone-600"}`}>
                 <Dumbbell size={22} />
                 <span className="text-[10px] font-bold">בנה אימון</span>
               </button>
             )}
 
             {loggedInPatient.patient_type === "fitness" && (
-              <button onClick={() => switchTab("premium")} className={`flex flex-col items-center justify-center w-16 h-full gap-1 transition-colors ${patientTab === "premium" ? "text-teal-400" : "text-stone-600 hover:text-stone-400"}`}>
-                <Crown size={22} className={patientTab === "premium" ? "fill-teal-400/20" : ""} />
+              <button onClick={() => switchTab("premium")} className={`flex flex-col items-center justify-center w-16 h-full gap-1 transition-colors ${patientTab === "premium" ? "text-emerald-800" : "text-stone-400 hover:text-stone-600"}`}>
+                <Crown size={22} className={patientTab === "premium" ? "fill-emerald-800/15" : ""} />
                 <span className="text-[10px] font-bold">תוכניות</span>
               </button>
             )}
 
-            <button onClick={() => switchTab("profile")} className={`flex flex-col items-center justify-center w-16 h-full gap-1 transition-colors ${patientTab === "profile" ? "text-teal-400" : "text-stone-600 hover:text-stone-400"}`}>
-              <User size={22} className={patientTab === "profile" ? "fill-teal-400/20" : ""} />
+            <button onClick={() => switchTab("profile")} className={`flex flex-col items-center justify-center w-16 h-full gap-1 transition-colors ${patientTab === "profile" ? "text-emerald-800" : "text-stone-400 hover:text-stone-600"}`}>
+              <User size={22} className={patientTab === "profile" ? "fill-emerald-800/15" : ""} />
               <span className="text-[10px] font-bold">פרופיל</span>
             </button>
           </div>
@@ -186,13 +190,13 @@ export default function PatientShell() {
         <main className="max-w-5xl mx-auto p-4 md:p-8 mt-4 relative z-0">
           {loggedInPatient.patient_type === "fitness" && loggedInPatient.email_verified === false && (
             <div className="print:hidden mb-6">
-              <div className="bg-yellow-900/20 border border-yellow-900/50 p-4 rounded-2xl flex items-start gap-4 shadow-sm animate-in fade-in slide-in-from-top-4">
-                <div className="w-10 h-10 bg-yellow-500/20 text-yellow-500 rounded-full flex items-center justify-center shrink-0 mt-1">
+              <div className="bg-amber-50 border border-amber-100 p-4 rounded-2xl flex items-start gap-4 shadow-[0_8px_30px_rgb(0,0,0,0.04)] animate-in fade-in slide-in-from-top-4">
+                <div className="w-10 h-10 bg-amber-100 text-amber-700 rounded-full flex items-center justify-center shrink-0 mt-1">
                   <AlertCircle size={20} />
                 </div>
                 <div>
-                  <h4 className="font-bold text-yellow-400 text-sm">אנא אמת את כתובת המייל שלך</h4>
-                  <p className="text-yellow-200/70 text-xs font-medium mt-1">
+                  <h4 className="font-bold text-amber-800 text-sm">אנא אמת את כתובת המייל שלך</h4>
+                  <p className="text-amber-700/80 text-xs font-medium mt-1">
                     נשלח קישור לאימות לכתובת {loggedInPatient.email}. יש לך 7 ימים לאמת את החשבון כדי שתוכל להמשיך להשתמש בפלטפורמה ולרכוש מסלולים חדשים.
                   </p>
                 </div>
