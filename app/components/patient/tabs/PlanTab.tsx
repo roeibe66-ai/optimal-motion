@@ -1,7 +1,8 @@
 "use client";
 
-import dynamic from "next/dynamic";
+import { useState } from "react";
 import {
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   Dumbbell,
@@ -9,6 +10,7 @@ import {
   Lock,
   MoreHorizontal,
   Play,
+  Sparkles,
   Timer,
   User,
   Wind,
@@ -16,46 +18,10 @@ import {
 import { useAuth } from "@/app/context/AuthContext";
 import { getTrackAccess } from "@/app/utils/premium";
 import { AVAILABLE_MUSCLES, DEFAULT_TRACK_GLOW, TRACK_GLOW_TINTS } from "@/app/constants/catalog";
-import type { Exercise, WorkoutLog } from "@/app/types";
+import type { AIAssistantContext, CuratedFact, Exercise, WorkoutLog } from "@/app/types";
 import type { HydratedPatientExercise, SessionExercise } from "@/app/hooks/useWorkoutSession";
-
-// Same client-only body-diagram library BodyDiagram.tsx uses for the
-// pre-workout pain check-in, instantiated separately here since the hero
-// needs its own colors/size/two-view (front+back) treatment rather than
-// that component's single-view pain-selection styling.
-const BodyModel = dynamic(() => import("react-body-highlighter"), { ssr: false });
-
-// react-body-highlighter only recognizes a fixed ~21-muscle vocabulary and
-// crashes (not silently ignores) on any id outside it — confirmed the hard
-// way: fillMuscleData() indexes straight into a lookup object with no
-// undefined guard. Our own AVAILABLE_MUSCLES has 30 entries (several with
-// no equivalent in the library, plus one name mismatch: our "adductors"
-// vs its "adductor"), so ids are mapped through this allowlist rather than
-// passed straight through; anything with no mapping is dropped instead of
-// risking the crash again.
-const BODY_MODEL_MUSCLE_MAP: Record<string, string> = {
-  chest: "chest",
-  "front-deltoids": "front-deltoids",
-  "back-deltoids": "back-deltoids",
-  biceps: "biceps",
-  triceps: "triceps",
-  forearm: "forearm",
-  "upper-back": "upper-back",
-  "lower-back": "lower-back",
-  trapezius: "trapezius",
-  abs: "abs",
-  obliques: "obliques",
-  adductors: "adductor",
-  abductors: "abductors",
-  hamstring: "hamstring",
-  quadriceps: "quadriceps",
-  calves: "calves",
-  gluteal: "gluteal",
-};
-
-function toBodyModelMuscles(ids: string[]): string[] {
-  return Array.from(new Set(ids.map((id) => BODY_MODEL_MUSCLE_MAP[id]).filter((m): m is string => Boolean(m))));
-}
+import PatientCoachSheet from "@/app/components/patient/PatientCoachSheet";
+import AnatomyDiagram from "@/app/components/patient/AnatomyDiagram";
 
 interface PlanTabProps {
   workoutLogs: WorkoutLog[];
@@ -75,6 +41,7 @@ interface PlanTabProps {
   blocksKeys: string[];
   onViewExerciseInfo: (exercise: Exercise) => void;
   onStartWorkout: () => void;
+  curatedFacts: CuratedFact[];
 }
 
 
@@ -87,6 +54,52 @@ const DAYS_OF_WEEK_SHORT = [
   { id: "5", short: "ו׳" },
   { id: "6", short: "ש׳" },
 ];
+
+// One "Did you know?" card — full width, matching the hero card exactly
+// (same rounded-[2rem] corner radius and shadow token), collapsed to just
+// the badge + hero line by default. "קרא עוד" reveals the summary and
+// citation via a CSS grid-template-rows transition (0fr -> 1fr), which
+// animates to the content's natural height without measuring it in JS.
+function CuratedFactCard({ fact }: { fact: CuratedFact }) {
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  return (
+    <div className="w-full shrink-0 snap-center relative overflow-hidden bg-white rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.08)] p-7 md:p-9 flex flex-col gap-4">
+      <div className="absolute -top-12 -left-12 w-40 h-40 rounded-full bg-emerald-50" aria-hidden="true"></div>
+
+      <span className="relative self-start inline-flex items-center gap-1.5 bg-emerald-800 text-white text-[10px] font-extrabold tracking-wide px-3 py-1.5 rounded-full">
+        <Sparkles size={12} /> הידעת?
+      </span>
+
+      <p className="relative text-stone-900 text-[22px] md:text-[26px] font-black leading-snug">{fact.did_you_know_he}</p>
+
+      <div className={`relative grid transition-[grid-template-rows] duration-300 ease-out ${isExpanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}>
+        <div className="overflow-hidden">
+          <p className="text-stone-500 text-[14px] leading-relaxed pt-1">{fact.summary_he}</p>
+          <a
+            href={fact.paper_url || undefined}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-4 pt-4 border-t border-stone-100 block text-[11px] font-semibold text-stone-400 hover:text-emerald-800 transition-colors truncate"
+          >
+            {fact.paper_title}
+            {fact.year ? ` · ${fact.year}` : ""}
+          </a>
+        </div>
+      </div>
+
+      <button
+        type="button"
+        onClick={() => setIsExpanded((v) => !v)}
+        aria-expanded={isExpanded}
+        className="relative self-start flex items-center gap-1 text-emerald-800 text-[12px] font-bold hover:text-emerald-900 active:scale-95 transition-all duration-150 ease-out"
+      >
+        {isExpanded ? "הצג פחות" : "קרא עוד"}
+        <ChevronDown size={14} className={`transition-transform duration-300 ease-out ${isExpanded ? "rotate-180" : ""}`} />
+      </button>
+    </div>
+  );
+}
 
 export default function PlanTab({
   workoutLogs,
@@ -106,8 +119,32 @@ export default function PlanTab({
   blocksKeys,
   onViewExerciseInfo,
   onStartWorkout,
+  curatedFacts,
 }: PlanTabProps) {
   const { loggedInPatient } = useAuth();
+
+  // Grounds the patient coach chat in this patient's real plan and recent
+  // sessions — the same week's assigned exercises shown below, plus their
+  // last few workout logs (RPE/pain), so "should I go easier today" has
+  // something real to work from instead of a cold start every time.
+  const patientCoachContext: AIAssistantContext = {
+    patientName: loggedInPatient?.full_name,
+    patientType: loggedInPatient?.patient_type,
+    currentExercises: weekFilteredExercises.map((pe) => ({
+      title: pe.exercise.title,
+      block: pe.block || "A",
+      sets: Number(pe.sets) || 0,
+      reps: Number(pe.reps) || 0,
+    })),
+    recentWorkoutLogs: workoutLogs.slice(0, 5).map((log) => ({
+      category: log.category,
+      rpe: log.rpe,
+      painBefore: log.pain_before,
+      painAfter: log.pain_after,
+      createdAt: log.created_at,
+    })),
+    painAreas: Array.from(new Set(workoutLogs.slice(0, 5).flatMap((log) => (log.pain_areas ? log.pain_areas.split(",") : [])))),
+  };
 
   // Week Switcher: steps through availablePatientWeeks (the only weeks that
   // actually have content) rather than raw +1/-1, so it can't get stuck on a
@@ -171,6 +208,8 @@ export default function PlanTab({
 
     return (
       <div className="animate-in fade-in duration-700 print:hidden">
+        <PatientCoachSheet contextData={patientCoachContext} />
+
         {/* Week Switcher */}
         <div className="flex items-center justify-center gap-3 mb-8">
           <button
@@ -244,33 +283,19 @@ export default function PlanTab({
             </div>
 
             {/* Muscle-target overlay, left side (RTL: text lives on the
-                right) — two compact read-only diagrams since the library
-                only renders one view (front/back) at a time. Muscle ids are
-                run through toBodyModelMuscles first — see its comment for
-                why that's required, not optional. */}
-            {(() => {
-              const bodyModelMuscles = toBodyModelMuscles(todayMuscleIds);
-              return (
-                bodyModelMuscles.length > 0 && (
-                  <div className="absolute top-1/2 left-4 -translate-y-1/2 z-10 flex items-center gap-0.5 opacity-95">
-                    <BodyModel
-                      type="anterior"
-                      data={[{ name: "היום", muscles: bodyModelMuscles as never }]}
-                      bodyColor="rgba(255,255,255,0.18)"
-                      highlightedColors={["#f59e0b"]}
-                      style={{ width: "44px" }}
-                    />
-                    <BodyModel
-                      type="posterior"
-                      data={[{ name: "היום", muscles: bodyModelMuscles as never }]}
-                      bodyColor="rgba(255,255,255,0.18)"
-                      highlightedColors={["#f59e0b"]}
-                      style={{ width: "44px" }}
-                    />
-                  </div>
-                )
-              );
-            })()}
+                right) — same AnatomyDiagram as the exercise-info sheet, same
+                solid-white/stone-800-stroke medical-chart look, in its
+                "overlay" variant: a small opaque white card (not the
+                "card" variant's bigger padded bg-stone-50 panel) so the
+                diagram pops with full contrast against the hero photo
+                behind it, rather than either blending in or looking like a
+                translucent photo effect. size={44} matches the original
+                react-body-highlighter width; AnatomyDiagram's per-view
+                viewBox is what lets that shrink cleanly with no clipping or
+                loss of line detail. */}
+            <div className="absolute top-1/2 left-4 -translate-y-1/2 z-10">
+              <AnatomyDiagram primaryMuscles={todayMuscleIds} variant="overlay" size={44} />
+            </div>
 
             {/* Title + meta, bottom-right (RTL) */}
             <div className="absolute bottom-5 right-5 left-24 z-10 flex flex-col gap-2">
@@ -300,6 +325,24 @@ export default function PlanTab({
             <Wind size={44} className="text-emerald-800 mb-4" />
             <h3 className="text-xl font-black text-stone-900 mb-2">מנוחה פעילה</h3>
             <p className="text-stone-500 text-sm">אין אימוני כוח מתוכננים להיום. מומלץ לבצע רוטינת תנועתיות בסיסית.</p>
+          </div>
+        )}
+
+        {/* "Did you know?" — admin-curated research facts (curated_facts,
+            published from the admin research tab; see
+            app/actions/researchAgent.ts and useCuratedFacts.ts). Each card is
+            full width — same as the hero above it, not a peeking-carousel —
+            so with more than one fact, the row still scroll-snaps but pages
+            one full card at a time rather than showing slivers of neighbors.
+            Renders nothing until the admin has published at least one fact. */}
+        {curatedFacts.length > 0 && (
+          <div className="mb-10">
+            <div className="text-[11px] font-extrabold tracking-widest text-stone-500 uppercase mb-3.5">הידעת?</div>
+            <div className="flex gap-4 overflow-x-auto no-scrollbar snap-x snap-mandatory -mx-1 px-1">
+              {curatedFacts.map((fact) => (
+                <CuratedFactCard key={fact.id} fact={fact} />
+              ))}
+            </div>
           </div>
         )}
 
@@ -392,6 +435,8 @@ export default function PlanTab({
 
   return (
     <div className="animate-in slide-in-from-left duration-500 print:hidden max-w-lg mx-auto">
+      <PatientCoachSheet contextData={patientCoachContext} />
+
       <div className="mb-6 flex items-center justify-between">
         <button
           onClick={() => setSelectedCategory(null)}
@@ -491,8 +536,12 @@ export default function PlanTab({
                     {blocksMap[blockKey].length > 1 && <div className="text-xs font-bold text-emerald-800 uppercase tracking-widest mt-6 mb-2">בלוק {blockKey} (סופר-סט)</div>}
 
                     {blocksMap[blockKey].map((assignment) => (
-                      <div key={assignment.id} className="flex items-center gap-4 group cursor-pointer hover:bg-white hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] active:scale-[0.98] p-2 -mx-2 rounded-2xl transition-all duration-150 ease-out" onClick={() => onViewExerciseInfo(assignment.exercise)}>
-                        <div className="w-16 h-16 rounded-2xl overflow-hidden bg-stone-100 shrink-0">
+                      <div
+                        key={assignment.id}
+                        className="flex items-center gap-4 group cursor-pointer bg-[#1c1c1c] hover:bg-stone-800 active:scale-[0.98] p-3 rounded-2xl shadow-[0_8px_20px_-6px_rgba(0,0,0,0.35)] transition-all duration-150 ease-out"
+                        onClick={() => onViewExerciseInfo(assignment.exercise)}
+                      >
+                        <div className="w-16 h-16 rounded-2xl overflow-hidden bg-stone-800 shrink-0">
                           {assignment.exercise.gif_url ? (
                             assignment.exercise.gif_url.toLowerCase().includes(".mp4") || assignment.exercise.gif_url.toLowerCase().includes(".webm") ? (
                               <video src={assignment.exercise.gif_url} className="w-full h-full object-cover" />
@@ -500,17 +549,17 @@ export default function PlanTab({
                               <img src={assignment.exercise.gif_url} alt={assignment.exercise.title} className="w-full h-full object-cover" />
                             )
                           ) : (
-                            <div className="w-full h-full bg-stone-100"></div>
+                            <div className="w-full h-full bg-stone-800"></div>
                           )}
                         </div>
                         <div className="flex-1 overflow-hidden py-1">
-                          <div className="text-stone-500 text-xs font-bold mb-1 flex items-center gap-1">
+                          <div className="text-stone-400 text-xs font-bold mb-1 flex items-center gap-1">
                             {assignment.sets} סטים x {assignment.is_time ? `${assignment.reps}"` : `${assignment.reps} חזרות`}
-                            {assignment.rir && <span className="bg-stone-100 text-stone-600 px-1.5 py-0.5 rounded text-[8px] ml-1">RIR {assignment.rir}</span>}
+                            {assignment.rir && <span className="bg-stone-700 text-stone-300 px-1.5 py-0.5 rounded text-[8px] ml-1">RIR {assignment.rir}</span>}
                           </div>
-                          <h4 className="text-stone-900 font-bold truncate">{assignment.exercise.title}</h4>
+                          <h4 className="text-white font-bold truncate">{assignment.exercise.title}</h4>
                         </div>
-                        <ChevronLeft size={16} className="text-stone-400 group-hover:text-stone-900 transition-colors rotate-180" />
+                        <ChevronLeft size={16} className="text-stone-500 group-hover:text-white transition-colors rotate-180" />
                       </div>
                     ))}
                   </div>

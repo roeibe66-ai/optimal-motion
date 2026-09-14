@@ -1,6 +1,6 @@
 "use client";
 
-import { Activity, ClipboardList, Image as ImageIcon, LogOut, Menu, Settings, Users, Video, Wand2, X } from "lucide-react";
+import { Activity, BookOpen, ClipboardList, Image as ImageIcon, LogOut, Menu, Settings, Users, Video, Wand2, X } from "lucide-react";
 
 interface AdminSidebarProps {
   adminTab: string;
@@ -18,6 +18,7 @@ const NAV_ITEMS: { id: string; label: string; icon: typeof Activity }[] = [
   { id: "builder", label: "בונה חכם & פרוטוקולים", icon: Wand2 },
   { id: "assign", label: "שיוך ידני", icon: ClipboardList },
   { id: "manage_plans", label: "עריכת תוכניות", icon: Settings },
+  { id: "research", label: "מחקר ועדכוני הידעת", icon: BookOpen },
 ];
 
 // The dark practitioner-console sidebar shared across every admin tab (see

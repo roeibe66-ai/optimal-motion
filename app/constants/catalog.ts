@@ -92,16 +92,27 @@ export const MUSCLE_TO_BODY_PARTS: Record<string, string[]> = {
 // any hex from DIY_CATEGORY_STYLES or ADMIN_CATEGORY_STYLES below so the
 // two existing tag systems and this new one never collide on an exercise
 // card.
-export const BODY_PART_STYLES: Record<string, { text: string; bg: string; border: string }> = {
-  chest: { text: "#fb7185", bg: "rgba(251,113,133,0.14)", border: "rgba(251,113,133,0.3)" },
-  shoulders: { text: "#e879f9", bg: "rgba(232,121,249,0.14)", border: "rgba(232,121,249,0.3)" },
-  arms: { text: "#a3e635", bg: "rgba(163,230,53,0.14)", border: "rgba(163,230,53,0.3)" },
-  core: { text: "#34d399", bg: "rgba(52,211,153,0.14)", border: "rgba(52,211,153,0.3)" },
-  legs: { text: "#818cf8", bg: "rgba(129,140,248,0.14)", border: "rgba(129,140,248,0.3)" },
-  "upper-body": { text: "#22d3ee", bg: "rgba(34,211,238,0.14)", border: "rgba(34,211,238,0.3)" },
-  "lower-body": { text: "#38bdf8", bg: "rgba(56,189,248,0.14)", border: "rgba(56,189,248,0.3)" },
+//
+// `text`/`bg`/`border` are tuned for the light "boutique clinic" patient
+// pages (DiyBuilderTab, MyWorkoutsScreen) — a dark ~700/800-shade text color
+// on a pale ~12% tint clears WCAG AA (4.5:1) against the app's off-white
+// (#FDFBF7) background, unlike the bright/saturated hues this used to use
+// (those were legible on a dark backdrop, which these screens no longer
+// have). `solid` is the pill's own selected-state fill, paired with white
+// text — a separate value from `text` (not reused as the fill) since a
+// handful of these hues need to go one shade darker than `text` to clear
+// 4.5:1 for white-on-solid specifically; verified with an actual contrast
+// calculation, not eyeballed.
+export const BODY_PART_STYLES: Record<string, { text: string; bg: string; border: string; solid: string }> = {
+  chest: { text: "#be123c", bg: "rgba(244,63,94,0.12)", border: "rgba(244,63,94,0.3)", solid: "#be123c" },
+  shoulders: { text: "#a21caf", bg: "rgba(217,70,239,0.12)", border: "rgba(217,70,239,0.3)", solid: "#a21caf" },
+  arms: { text: "#3f6212", bg: "rgba(132,204,22,0.14)", border: "rgba(132,204,22,0.3)", solid: "#4d7c0f" },
+  core: { text: "#047857", bg: "rgba(16,185,129,0.12)", border: "rgba(16,185,129,0.3)", solid: "#047857" },
+  legs: { text: "#4338ca", bg: "rgba(99,102,241,0.12)", border: "rgba(99,102,241,0.3)", solid: "#4338ca" },
+  "upper-body": { text: "#0e7490", bg: "rgba(6,182,212,0.12)", border: "rgba(6,182,212,0.3)", solid: "#0e7490" },
+  "lower-body": { text: "#0369a1", bg: "rgba(14,165,233,0.12)", border: "rgba(14,165,233,0.3)", solid: "#0369a1" },
 };
-export const DEFAULT_BODY_PART_STYLE = { text: "#a8a29e", bg: "rgba(168,162,158,0.14)", border: "rgba(168,162,158,0.3)" };
+export const DEFAULT_BODY_PART_STYLE = { text: "#57534e", bg: "rgba(168,162,158,0.14)", border: "rgba(168,162,158,0.3)", solid: "#78716c" };
 
 export const EQUIPMENT_LIST = [
   { id: "pullup_bar", label: "מתח" },
@@ -160,13 +171,17 @@ export const DEFAULT_TRACK_GLOW = "rgba(245,158,11,0.22)";
 // `category` is a free-text column, so any value not in this map (e.g. a
 // legacy value like "כוח וסיבולת") falls back to DEFAULT_DIY_CATEGORY_STYLE
 // rather than being hidden.
-export const DIY_CATEGORY_STYLES: Record<string, { text: string; bg: string; border: string }> = {
-  "קטלבל": { text: "#f59e0b", bg: "rgba(245,158,11,0.14)", border: "rgba(245,158,11,0.3)" },
-  "יוגה": { text: "#f87156", bg: "rgba(248,113,86,0.14)", border: "rgba(248,113,86,0.3)" },
-  "שרירים": { text: "#60a5fa", bg: "rgba(59,130,246,0.14)", border: "rgba(59,130,246,0.3)" },
-  "מוביליטי": { text: "#facc15", bg: "rgba(234,179,8,0.14)", border: "rgba(234,179,8,0.3)" },
+//
+// Same light-theme contrast tuning as BODY_PART_STYLES above (dark text on
+// a pale tint, plus a `solid` fill for the selected state) — this map feeds
+// the same DiyBuilderTab.tsx pills.
+export const DIY_CATEGORY_STYLES: Record<string, { text: string; bg: string; border: string; solid: string }> = {
+  "קטלבל": { text: "#92400e", bg: "rgba(245,158,11,0.14)", border: "rgba(245,158,11,0.3)", solid: "#b45309" },
+  "יוגה": { text: "#9a3412", bg: "rgba(248,113,86,0.14)", border: "rgba(248,113,86,0.3)", solid: "#c2410c" },
+  "שרירים": { text: "#1d4ed8", bg: "rgba(59,130,246,0.14)", border: "rgba(59,130,246,0.3)", solid: "#1d4ed8" },
+  "מוביליטי": { text: "#854d0e", bg: "rgba(234,179,8,0.14)", border: "rgba(234,179,8,0.3)", solid: "#a16207" },
 };
-export const DEFAULT_DIY_CATEGORY_STYLE = { text: "#a8a29e", bg: "rgba(168,162,158,0.14)", border: "rgba(168,162,158,0.3)" };
+export const DEFAULT_DIY_CATEGORY_STYLE = { text: "#57534e", bg: "rgba(168,162,158,0.14)", border: "rgba(168,162,158,0.3)", solid: "#78716c" };
 
 // Admin-facing category tag colors (AdminExerciseLibrary + ProtocolBuilder).
 // A separate 7-value taxonomy from DIY_CATEGORY_STYLES above — keyed by
@@ -182,3 +197,97 @@ export const ADMIN_CATEGORY_STYLES: Record<string, { text: string; bg: string; b
   "שיקום": { text: "#60a5fa", bg: "rgba(96,165,250,0.14)", border: "rgba(96,165,250,0.3)", glow: "#14263a", radial: "rgba(96,165,250,0.28)" },
 };
 export const DEFAULT_ADMIN_CATEGORY_STYLE = { text: "#a8a29e", bg: "rgba(168,162,158,0.14)", border: "rgba(168,162,158,0.3)", glow: "#1c1c1e", radial: "rgba(168,162,158,0.24)" };
+
+// react-body-highlighter (the muscle-diagram library backing ExerciseMuscleMap
+// and PlanTab's hero diagram) only recognizes a fixed ~21-muscle vocabulary and
+// crashes (not silently ignores) on any id outside it — confirmed the hard way:
+// fillMuscleData() indexes straight into a lookup object with no undefined
+// guard. Our own AVAILABLE_MUSCLES has 30 entries (several with no equivalent
+// in the library, plus one name mismatch: our "adductors" vs its "adductor"),
+// so ids are mapped through this allowlist rather than passed straight
+// through. A muscle with no entry here is dropped from the diagram entirely
+// (by design, confirmed with Roei) rather than approximated to a nearby
+// region — anatomical accuracy matters more here than a fuller-looking
+// picture. Single source of truth: PlanTab's hero diagram and
+// ExerciseMuscleMap both import this rather than keeping their own copies.
+export const BODY_MODEL_MUSCLE_MAP: Record<string, string> = {
+  chest: "chest",
+  "front-deltoids": "front-deltoids",
+  "back-deltoids": "back-deltoids",
+  biceps: "biceps",
+  triceps: "triceps",
+  forearm: "forearm",
+  "upper-back": "upper-back",
+  "lower-back": "lower-back",
+  trapezius: "trapezius",
+  abs: "abs",
+  obliques: "obliques",
+  adductors: "adductor",
+  abductors: "abductors",
+  hamstring: "hamstring",
+  quadriceps: "quadriceps",
+  calves: "calves",
+  gluteal: "gluteal",
+};
+
+export function toBodyModelMuscles(ids: string[]): string[] {
+  return Array.from(new Set(ids.map((id) => BODY_MODEL_MUSCLE_MAP[id]).filter((m): m is string => Boolean(m))));
+}
+
+// Two-tone intensity scale for ExerciseMuscleMap: index 0 = secondary/
+// stabilizer muscles (exercises.secondary_muscles), index 1 = the primary
+// agonist (exercises.target_muscle) — matches react-body-highlighter's
+// `highlightedColors[frequency - 1]` indexing (see ExerciseMuscleMap.tsx).
+export const MUSCLE_MAP_TIER_COLORS = ["#fecaca", "#dc2626"];
+
+// AnatomyDiagram (the detailed line-art front/back muscle map that replaced
+// react-body-highlighter in ExerciseMuscleMap) draws its paths from the
+// `body-muscles` npm package's FRONT_MUSCLES/BACK_MUSCLES data — 70+
+// individually-addressable regions, split left/right, split by sub-head
+// where the anatomy actually has one (traps upper/mid/lower, lats
+// upper/mid/lower, triceps long/lateral, hamstrings medial/lateral, calves
+// gastroc-medial/gastroc-lateral/soleus). That's a much finer vocabulary
+// than react-body-highlighter's ~21 fixed regions, so most of our 30
+// AVAILABLE_MUSCLES now map to *something* real — but not all of them:
+// rotator-cuff, rhomboids, brachialis, transverse-abdominis, hip abductors,
+// and peroneus-longus still have no distinct region in this library either.
+// Same rule as before: a muscle with no entry here is dropped from the
+// diagram rather than approximated to a nearby region. Every entry's ids
+// belong to a single view — no muscle is visible from both front and back.
+export const MUSCLE_TO_ANATOMY_REGIONS: Record<string, { view: "front" | "back"; ids: string[] }> = {
+  chest: { view: "front", ids: ["chest-upper-left", "chest-lower-left", "chest-upper-right", "chest-lower-right"] },
+  "front-deltoids": { view: "front", ids: ["shoulder-front-left", "shoulder-front-right"] },
+  "side-deltoids": { view: "front", ids: ["shoulder-side-left", "shoulder-side-right"] },
+  "back-deltoids": { view: "back", ids: ["deltoid-rear-left", "deltoid-rear-right"] },
+  biceps: { view: "front", ids: ["biceps-left", "biceps-right"] },
+  triceps: { view: "back", ids: ["triceps-long-left", "triceps-lateral-left", "triceps-long-right", "triceps-lateral-right"] },
+  "forearm-flexors": { view: "back", ids: ["forearm-flexors-left", "forearm-flexors-right"] },
+  "forearm-extensors": { view: "back", ids: ["forearm-extensors-left", "forearm-extensors-right"] },
+  "lower-back": { view: "back", ids: ["lower-back-erectors-left", "lower-back-ql-left", "lower-back-erectors-right", "lower-back-ql-right"] },
+  abs: { view: "front", ids: ["abs-upper-left", "abs-upper-right", "abs-lower-right", "abs-lower-left"] },
+  obliques: { view: "front", ids: ["obliques-left", "obliques-right"] },
+  gluteal: { view: "back", ids: ["gluteus-maximus-left", "gluteus-maximus-right"] },
+  "glute-medius": { view: "back", ids: ["gluteus-medius-left", "gluteus-medius-right"] },
+  quadriceps: { view: "front", ids: ["quads-left", "quads-right"] },
+  hamstring: { view: "back", ids: ["hamstrings-medial-left", "hamstrings-lateral-left", "hamstrings-medial-right", "hamstrings-lateral-right"] },
+  calves: { view: "back", ids: ["calves-gastroc-medial-left", "calves-gastroc-lateral-left", "calves-gastroc-medial-right", "calves-gastroc-lateral-right"] },
+  adductors: { view: "front", ids: ["adductors-left", "adductors-right"] },
+  "serratus-anterior": { view: "front", ids: ["serratus-anterior-left", "serratus-anterior-right"] },
+  lats: { view: "back", ids: ["lats-upper-left", "lats-mid-left", "lats-lower-left", "lats-upper-right", "lats-mid-right", "lats-lower-right"] },
+  trapezius: { view: "back", ids: ["traps-upper-left", "traps-mid-left", "traps-lower-left", "traps-upper-right", "traps-mid-right", "traps-lower-right"] },
+  "hip-flexors": { view: "front", ids: ["hip-flexor-left", "hip-flexor-right"] },
+  soleus: { view: "back", ids: ["calves-soleus-left", "calves-soleus-right"] },
+  "tibialis-anterior": { view: "front", ids: ["tibialis-anterior-left", "tibialis-anterior-right"] },
+};
+
+// Emerald rather than the red/pink this app's pain-area check-in already
+// uses (react-body-highlighter's default) — a "muscles this exercise
+// works" diagram and a "where does it hurt" diagram are different concepts,
+// and reusing red for both risked reading as if the highlighted muscles
+// were the sore ones. Emerald is also this app's established positive/
+// premium accent everywhere else (the patient coach FAB, primary CTAs, the
+// selected calendar day). `primary` is emerald-700 — one shade lighter than
+// this app's usual emerald-800 CTA fill, picked (per explicit design
+// direction) to read as its own clinical tone on the diagram rather than
+// literally reusing button-emerald.
+export const ANATOMY_TIER_COLORS = { primary: "#047857", secondary: "#a7f3d0" };

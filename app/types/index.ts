@@ -128,3 +128,40 @@ export interface ResearchFinding {
   summaryHe: string;
   didYouKnowHe: string;
 }
+
+// A ResearchFinding the admin has approved and published — the curated_facts
+// table (snake_case columns, matching every other table here) rather than
+// the LLM-shaped ResearchFinding above. Read directly by the patient home
+// screen's "Did you know?" section.
+export interface CuratedFact {
+  id: string;
+  paper_title: string;
+  paper_url: string | null;
+  year: number | null;
+  summary_he: string;
+  did_you_know_he: string;
+  created_at: string;
+}
+
+// app/actions/aiAssistant.ts's dual-mode chat: "admin" gets the peer-to-peer
+// clinical co-pilot persona, "patient" gets the premium-coach persona.
+export type AIAssistantRole = "admin" | "patient";
+
+export interface AIChatMessage {
+  role: "user" | "assistant";
+  content: string;
+}
+
+// Freeform grounding data the caller assembles from whatever it already has
+// on screen (the admin builder's in-progress plan, or the patient's own
+// assigned plan/logs) and hands to chatWithAssistant alongside the message
+// history — every field is optional since admin and patient callers each
+// only have some of these available.
+export interface AIAssistantContext {
+  patientName?: string;
+  patientType?: PatientType;
+  currentExercises?: { title: string; block: string; sets: number; reps: number }[];
+  recentWorkoutLogs?: { category: string; rpe: number; painBefore: number | null; painAfter: number | null; createdAt: string }[];
+  painAreas?: string[];
+  notes?: string;
+}

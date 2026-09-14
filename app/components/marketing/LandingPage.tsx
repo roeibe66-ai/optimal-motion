@@ -7,43 +7,19 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen relative overflow-hidden bg-[#0c0a09] text-white" dir={lang === "he" ? "rtl" : "ltr"}>
-      {/* Illustrated sunset sky — CSS/SVG stand-in per the brief; swap this layer for a real photo later, nothing else needs to change */}
-      <div
-        className="absolute inset-0"
-        style={{
-          background:
-            "linear-gradient(180deg, #170d07 0%, #3c1f0f 22%, #9a3e10 46%, #f2984c 58%, #d9631f 66%, #4a230f 80%, #120905 100%)",
-        }}
-      ></div>
-      <div
-        className="absolute inset-0"
-        style={{ background: "radial-gradient(45% 28% at 50% 58%, rgba(255,205,140,0.9), rgba(255,150,70,0.35) 45%, transparent 72%)" }}
-      ></div>
+      {/* Full-bleed hero photo — real Unsplash hotlink (Alex Avila, Unsplash
+          License, unsplash.com/photos/VAPMuCqepWc), not a repo asset, same
+          hotlinking approach PlanTab.tsx's hero already uses. Replaces the
+          earlier CSS-gradient-sky + SVG-silhouette stand-in now that a real
+          photo is available. */}
+      <img
+        src="https://images.unsplash.com/photo-1764889743602-21cd1d4e4745?w=2000&q=80&fm=jpg&fit=crop&auto=format"
+        alt=""
+        className="absolute inset-0 w-full h-full object-cover"
+      />
 
-      {/* handstand silhouette */}
-      <svg
-        viewBox="0 0 200 420"
-        className="absolute left-1/2 top-[120px] md:top-[130px] -translate-x-1/2 w-[185px] h-[388px] md:w-[300px] md:h-[630px] opacity-95"
-      >
-        <ellipse cx="77" cy="415" rx="17" ry="5" fill="rgba(0,0,0,0.35)" />
-        <ellipse cx="123" cy="415" rx="17" ry="5" fill="rgba(0,0,0,0.35)" />
-        <rect x="68" y="300" width="18" height="120" rx="9" transform="rotate(-6 77 300)" fill="rgba(8,5,3,0.94)" />
-        <rect x="114" y="300" width="18" height="120" rx="9" transform="rotate(6 123 300)" fill="rgba(8,5,3,0.94)" />
-        <circle cx="101" cy="333" r="27" fill="rgba(8,5,3,0.94)" />
-        <rect x="78" y="200" width="46" height="112" rx="18" fill="rgba(8,5,3,0.94)" />
-        <rect x="76" y="184" width="50" height="22" rx="11" fill="rgba(8,5,3,0.94)" />
-        <rect x="78" y="17" width="20" height="173" rx="10" fill="rgba(8,5,3,0.94)" />
-        <rect x="104" y="24" width="20" height="166" rx="10" fill="rgba(8,5,3,0.94)" />
-      </svg>
-
-      {/* darken overlay for text/button legibility */}
-      <div
-        className="absolute inset-0"
-        style={{
-          background:
-            "linear-gradient(180deg, rgba(6,4,2,0.62) 0%, rgba(6,4,2,0.08) 20%, rgba(6,4,2,0.05) 55%, rgba(6,4,2,0.75) 100%)",
-        }}
-      ></div>
+      {/* Dark gradient overlay for text/button legibility over the photo */}
+      <div className="absolute inset-0 bg-gradient-to-b from-black/50 to-black/80"></div>
 
       <button
         onClick={() => setLang(lang === "he" ? "en" : "he")}

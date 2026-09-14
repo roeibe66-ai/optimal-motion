@@ -6,6 +6,7 @@ import {
   AlertTriangle,
   BrainCircuit,
   Calendar,
+  Check,
   Clock,
   Coffee,
   DownloadCloud,
@@ -18,6 +19,7 @@ import {
   HelpCircle,
   History,
   Image as ImageIcon,
+  Loader2,
   Lock,
   Map,
   Mic,
@@ -26,6 +28,7 @@ import {
   Plus,
   Repeat,
   Save,
+  Search,
   Sparkles,
   Target,
   Trash2,
@@ -40,8 +43,11 @@ import { supabase } from "@/app/lib/supabase";
 import { useAuth } from "@/app/context/AuthContext";
 import { ADMIN_CATEGORY_STYLES, ADMIN_TAGS, AVAILABLE_MUSCLES, DAYS_OF_WEEK, DEFAULT_ADMIN_CATEGORY_STYLE, MUSCLE_REGIONS } from "@/app/constants/catalog";
 import AdminSidebar from "@/app/components/admin/AdminSidebar";
+import AdminCoPilotDrawer from "@/app/components/admin/AdminCoPilotDrawer";
 import { formatAdminDate } from "@/app/utils/format";
 import { getAIInsight } from "@/app/utils/scoring";
+import { generateResearchFacts } from "@/app/actions/researchAgent";
+import type { AIAssistantContext, CuratedFact, ResearchFinding } from "@/app/types";
 
 // NOT YET REFACTORED. This is a byte-faithful port of the admin side of the
 // original monolith — CRM, exercise library, the drag-and-drop builder,
@@ -105,6 +111,17 @@ export default function LegacyAdminApp() {
   const [exAdminTags, setExAdminTags] = useState<string[]>([]);
   const [exEasierVersionId, setExEasierVersionId] = useState("");
   const [exHarderVersionId, setExHarderVersionId] = useState("");
+
+  const [curatedFacts, setCuratedFacts] = useState<CuratedFact[]>([]);
+  const [researchQuery, setResearchQuery] = useState("");
+  const [researchResults, setResearchResults] = useState<ResearchFinding[] | null>(null);
+  const [isResearchLoading, setIsResearchLoading] = useState(false);
+  const [researchError, setResearchError] = useState("");
+  // Tracks which of the current researchResults have been saved this
+  // session, keyed by paperUrl (findings have no id until they become a
+  // curated_facts row) — lets the "Save to App" button flip to a disabled
+  // "Saved" state without waiting on a refetch of curatedFacts.
+  const [savedFactUrls, setSavedFactUrls] = useState<Set<string>>(new Set());
   // Admin/practitioner-only notes, never sent to patients — deliberately a
   // separate table (exercise_internal_notes) rather than a column on
   // exercises, since exercises has a SELECT policy open to all authenticated
@@ -192,6 +209,23 @@ export default function LegacyAdminApp() {
     return e.admin_tags && e.admin_tags.split(",").includes(builderSearchFilter);
   });
 
+  // Grounds the co-pilot drawer in whatever's actually on screen: the
+  // patient this plan is for (when in "patient" mode) and every exercise
+  // currently dropped into the selected week's grid, across all days.
+  const builderCoPilotContext: AIAssistantContext = (() => {
+    const assignedPatient = builderMode === "patient" ? patients.find((p) => p.id === builderPatientId) : undefined;
+    const weekPlan = builderPlan[builderSelectedWeek] || {};
+    const currentExercises = Object.values(weekPlan)
+      .flat()
+      .map((ex: any) => ({ title: ex.title, block: ex.block || "A", sets: ex.sets, reps: ex.reps }));
+    return {
+      patientName: assignedPatient?.full_name,
+      patientType: assignedPatient?.patient_type,
+      currentExercises,
+      notes: builderMode === "protocol" ? `בונה תבנית עבודה כללית${builderProtocolName ? ` בשם "${builderProtocolName}"` : ""}, לא משויכת למטופל ספציפי.` : undefined,
+    };
+  })();
+
   const displayedPatients = patients.filter((p) => {
     if (crmFilter === "all") return true;
     return p.patient_type === crmFilter;
@@ -200,18 +234,20 @@ export default function LegacyAdminApp() {
   const fitnessCount = patients.filter((p) => p.patient_type === "fitness").length;
 
   const fetchAdminData = async () => {
-    const [pats, exs, pkgs, logs, notes] = await Promise.all([
+    const [pats, exs, pkgs, logs, notes, facts] = await Promise.all([
       supabase.from("patients").select("*"),
       supabase.from("exercises").select("*"),
       supabase.from("packages").select("*"),
       supabase.from("workout_logs").select("*").order("created_at", { ascending: false }).limit(500),
       supabase.from("exercise_internal_notes").select("*"),
+      supabase.from("curated_facts").select("*").order("created_at", { ascending: false }),
     ]);
     if (pats.data) setPatients(pats.data);
     if (exs.data) setExercises(exs.data);
     if (pkgs.data) setPackages(pkgs.data);
     if (logs.data) setWorkoutLogs(logs.data);
     if (notes.data) setInternalNotesByExerciseId(Object.fromEntries(notes.data.map((n) => [n.exercise_id, n.notes ?? ""])));
+    if (facts.data) setCuratedFacts(facts.data);
   };
 
   useEffect(() => {
@@ -249,6 +285,47 @@ export default function LegacyAdminApp() {
     const nextType = currentType === "fitness" ? "clinical" : "fitness";
     const { error } = await supabase.from("patients").update({ patient_type: nextType }).eq("id", patientId);
     if (error) alert("שגיאה: " + error.message);
+    else fetchAdminData();
+  };
+
+  const handleResearchSearch = async (e: any) => {
+    e.preventDefault();
+    if (!researchQuery.trim()) return;
+    setIsResearchLoading(true);
+    setResearchError("");
+    setResearchResults(null);
+    setSavedFactUrls(new Set());
+    const result = await generateResearchFacts(researchQuery);
+    setIsResearchLoading(false);
+    if (!result.ok) {
+      setResearchError(result.error);
+      return;
+    }
+    setResearchResults(result.findings);
+  };
+
+  const handleSaveFact = async (finding: ResearchFinding) => {
+    const { error } = await supabase.from("curated_facts").insert([
+      {
+        paper_title: finding.paperTitle,
+        paper_url: finding.paperUrl,
+        year: finding.year,
+        summary_he: finding.summaryHe,
+        did_you_know_he: finding.didYouKnowHe,
+      },
+    ]);
+    if (error) {
+      alert("שגיאה בשמירה: " + error.message);
+      return;
+    }
+    setSavedFactUrls((prev) => new Set(prev).add(finding.paperUrl));
+    fetchAdminData();
+  };
+
+  const handleDeleteCuratedFact = async (id: string) => {
+    if (!confirm("להסיר עובדה זו מהאפליקציה? מטופלים לא יראו אותה יותר.")) return;
+    const { error } = await supabase.from("curated_facts").delete().eq("id", id);
+    if (error) alert("שגיאה במחיקה: " + error.message);
     else fetchAdminData();
   };
 
@@ -950,6 +1027,7 @@ export default function LegacyAdminApp() {
         {/* ----- הבונה החכם המבוסס ימים ----- */}
         {adminTab === "builder" && (
           <div className="max-w-7xl mx-auto animate-in fade-in h-full flex flex-col">
+            <AdminCoPilotDrawer contextData={builderCoPilotContext} />
             <header className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
               <h1 className="text-2xl md:text-3xl font-black text-white tracking-tight flex items-center gap-3">
                 <Wand2 className="text-teal-400" size={28} /> בונה חכם & תבניות
@@ -2063,6 +2141,126 @@ export default function LegacyAdminApp() {
                           </>
                         )}
                       </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {adminTab === "research" && (
+          <div className="max-w-6xl mx-auto animate-in fade-in">
+            <header className="mb-10 hidden md:block">
+              <h1 className="text-3xl md:text-4xl font-black text-white tracking-tight">מחקר ועדכוני &quot;הידעת?&quot;</h1>
+              <p className="text-[13px] text-stone-500 mt-1.5">חפש ספרות אקדמית מדורגת לפי ציטוטים, ובחר אילו ממצאים יוצגו למטופלים כעובדות &quot;הידעת?&quot; באפליקציה.</p>
+            </header>
+
+            <div className="bg-[#1c1c1e] rounded-[1.75rem] border border-stone-800 p-8 md:p-10 mb-10">
+              <form onSubmit={handleResearchSearch} className="flex flex-col md:flex-row gap-4">
+                <input
+                  type="text"
+                  value={researchQuery}
+                  onChange={(e) => setResearchQuery(e.target.value)}
+                  placeholder='נושא לחיפוש, לדוגמה: "ACL rehab"'
+                  className="flex-1 border-b-2 border-stone-800 p-3 bg-transparent text-white placeholder:text-stone-600 focus:border-teal-500 focus:ring-1 focus:ring-teal-500/30 outline-none"
+                  dir="auto"
+                  required
+                />
+                <button
+                  type="submit"
+                  disabled={isResearchLoading}
+                  className="bg-teal-500 text-stone-950 px-8 py-3.5 rounded-2xl font-black hover:bg-teal-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shrink-0"
+                >
+                  {isResearchLoading ? (
+                    <>
+                      <Loader2 size={18} className="animate-spin" /> מחפש ומנתח...
+                    </>
+                  ) : (
+                    <>
+                      <Search size={18} /> חפש מאמרים
+                    </>
+                  )}
+                </button>
+              </form>
+
+              {researchError && <div className="mt-5 bg-red-500/10 border border-red-500/20 text-red-400 text-sm font-bold px-5 py-3.5 rounded-2xl">{researchError}</div>}
+            </div>
+
+            {researchResults && (
+              <div className="mb-12">
+                <h2 className="text-lg font-extrabold text-white mb-5 border-b-2 border-teal-500 pb-3 inline-block">
+                  תוצאות עבור &quot;{researchQuery}&quot; ({researchResults.length})
+                </h2>
+                {researchResults.length === 0 ? (
+                  <div className="text-center p-10 text-stone-500 bg-stone-950 rounded-3xl border border-stone-800">לא נמצאו מאמרים מתאימים לנושא זה. נסה ניסוח אחר או נושא רחב יותר.</div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                    {researchResults.map((finding) => {
+                      const isSaved = savedFactUrls.has(finding.paperUrl);
+                      return (
+                        <div key={finding.paperUrl} className="bg-[#1c1c1e] rounded-[1.75rem] border border-stone-800 p-6 flex flex-col gap-4">
+                          <div>
+                            <span className="inline-flex items-center gap-1.5 bg-emerald-500/10 text-emerald-400 text-[10px] font-extrabold px-3 py-1.5 rounded-full border border-emerald-500/20">
+                              <Sparkles size={11} /> הידעת?
+                            </span>
+                            <p className="text-white font-bold text-[15px] leading-relaxed mt-3">{finding.didYouKnowHe}</p>
+                          </div>
+                          <p className="text-stone-400 text-[13px] leading-relaxed flex-1">{finding.summaryHe}</p>
+                          <div className="pt-4 border-t border-stone-800">
+                            <a
+                              href={finding.paperUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-[11px] font-bold text-stone-500 hover:text-teal-400 transition-colors line-clamp-2"
+                            >
+                              {finding.paperTitle} {finding.year ? `(${finding.year})` : ""}
+                            </a>
+                            <button
+                              onClick={() => handleSaveFact(finding)}
+                              disabled={isSaved}
+                              className={`w-full mt-4 py-3 rounded-xl font-black text-sm flex items-center justify-center gap-2 transition-colors ${
+                                isSaved ? "bg-emerald-500/10 text-emerald-400 cursor-default" : "bg-teal-500 text-stone-950 hover:bg-teal-400"
+                              }`}
+                            >
+                              {isSaved ? (
+                                <>
+                                  <Check size={16} /> נשמר באפליקציה
+                                </>
+                              ) : (
+                                <>
+                                  <Plus size={16} /> הוסף לאפליקציה
+                                </>
+                              )}
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div>
+              <h2 className="text-lg font-extrabold text-white mb-5 border-b-2 border-emerald-500 pb-3 inline-block">
+                עובדות פעילות באפליקציה <span className="text-emerald-400">({curatedFacts.length})</span>
+              </h2>
+              {curatedFacts.length === 0 ? (
+                <div className="text-center p-10 text-stone-500 bg-stone-950 rounded-3xl border border-stone-800">עדיין לא נשמרו עובדות. חפש נושא למעלה כדי להתחיל.</div>
+              ) : (
+                <div className="space-y-3">
+                  {curatedFacts.map((fact) => (
+                    <div key={fact.id} className="bg-[#1c1c1e] border border-stone-800 rounded-2xl p-5 flex items-start justify-between gap-4">
+                      <div className="flex-1">
+                        <p className="text-white font-bold text-sm mb-1">{fact.did_you_know_he}</p>
+                        <p className="text-stone-500 text-xs">
+                          {fact.paper_title} {fact.year ? `· ${fact.year}` : ""}
+                        </p>
+                      </div>
+                      <button onClick={() => handleDeleteCuratedFact(fact.id)} className="shrink-0 bg-red-500/10 text-red-400 p-2.5 rounded-xl hover:bg-red-500/20 transition-colors">
+                        <Trash2 size={16} />
+                      </button>
                     </div>
                   ))}
                 </div>

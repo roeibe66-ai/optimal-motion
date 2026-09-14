@@ -6,6 +6,7 @@ import { useAuth } from "@/app/context/AuthContext";
 import { useHaptics } from "@/app/hooks/useHaptics";
 import { useReminders } from "@/app/hooks/useReminders";
 import { usePatientData } from "@/app/hooks/usePatientData";
+import { useCuratedFacts } from "@/app/hooks/useCuratedFacts";
 import { usePlanSelection } from "@/app/hooks/usePlanSelection";
 import { useWorkoutSession } from "@/app/hooks/useWorkoutSession";
 import { useSavedWorkouts } from "@/app/hooks/useSavedWorkouts";
@@ -45,6 +46,7 @@ export default function PatientShell() {
   const patientData = usePatientData();
   const planSelection = usePlanSelection(patientData.patientExercises);
   const savedWorkoutsData = useSavedWorkouts();
+  const { curatedFacts } = useCuratedFacts();
 
   const session = useWorkoutSession({
     patientExercises: patientData.patientExercises,
@@ -278,6 +280,7 @@ export default function PatientShell() {
               blocksKeys={session.blocksKeys}
               onViewExerciseInfo={(exercise) => session.setViewingExInfo(exercise)}
               onStartWorkout={session.handleStartClick}
+              curatedFacts={curatedFacts}
             />
           )}
 

@@ -1,8 +1,7 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
-
-@AGENTS.md
+This file provides guidance to Claude Code (claude.ai/code) when working with code in
+this repository.
 
 ## Commands
 
@@ -15,24 +14,55 @@ There is no test suite configured in this repo.
 
 ## Architecture
 
-**Everything lives in one client component.** [app/page.tsx](app/page.tsx) (~2900 lines, `"use client"`) is effectively the whole app: landing page, admin console, and patient portal are all rendered from this single file, switched via a `currentView` state string (`"landing" | "admin" | "patient"`), not via routing. There is only one actual Next.js route (`/`) — [app/layout.tsx](app/layout.tsx) is the root layout (Hebrew `lang="he" dir="rtl"`, Rubik font, PWA manifest/theme-color). When making changes, expect to be editing large blocks of state/handlers/JSX within this one file rather than separate route or component files.
+This is a git repository (`main` branch), deployed to Vercel.
 
-**Data layer: Supabase accessed directly from the client**, via [app/lib/supabase.ts](app/lib/supabase.ts) (imported in page.tsx as `../lib/supabase`). There are no API routes or server actions — every read/write is a `supabase.from(...)` call made straight from browser state using the public anon key. Tables in use: `patients`, `exercises`, `packages`, `package_exercises`, `patient_exercises`, `workout_logs`.
+**`app/page.tsx` is a thin router**, not the app itself: it renders one of
+`LandingPage`, `LoginPage`, `RegisterPage`, `ResetPasswordPage`, `PatientShell`, or
+`LegacyAdminApp` based on `currentView` from `AuthContext` (`app/context/AuthContext.tsx`).
+Actual feature code lives under `app/components/`, organized by domain:
 
-Note: a second, unused copy of the Supabase client exists at the repo-root [lib/supabase.ts](lib/supabase.ts) (identical content, not imported anywhere). Edit `app/lib/supabase.ts`, not the root one.
+- `app/components/admin/` — practitioner/admin console (`LegacyAdminApp`,
+  `AdminSidebar`, `AdminCoPilotDrawer`, ...)
+- `app/components/patient/` — patient-facing app (`PatientShell` + tabs: `PlanTab`,
+  `CalendarTab`, `DiyBuilderTab`, `MyWorkoutsScreen`, ...)
+- `app/components/marketing/` — landing/login/register/reset-password pages
+- `app/hooks/` — data & session hooks (`usePatientData`, `useAuthSession`,
+  `useWorkoutSession`, `useSavedWorkouts`, `useReminders`, `useHaptics`,
+  `usePlanSelection`, `useAIAssistantChat`, `useCuratedFacts`)
+- `app/actions/` — server actions (`researchAgent.ts`, `aiAssistant.ts`)
+- `app/constants/` — `translations.ts` (he/en `TRANSLATIONS` object), `catalog.ts`
+  (exercise/muscle catalog)
+- `app/utils/` — validation, premium, format, scoring helpers
 
-**Auth is custom, not Supabase Auth.** Admin login is a hardcoded `"admin"`/`"admin"` check in `handleLogin`. Patient login queries the `patients` table by email-or-phone plus a plaintext `password` column. The logged-in user is persisted client-side under the `optimalMotionUser` key in `localStorage` (if "remember me") or `sessionStorage`, and the current patient's assigned plan is additionally cached to `localStorage` under `om_offline_plan` for offline access.
+**Data layer: Supabase, accessed directly from the client** via `app/lib/supabase.ts`
+(there is only one copy now — a duplicate at repo-root `lib/supabase.ts` was removed;
+always import from `app/lib/supabase.ts`). Tables in use: `patients`, `exercises`,
+`packages`, `package_exercises`, `patient_exercises`, `workout_logs`, `curated_facts`.
+Migrations live under `supabase/migrations/`.
 
-**Known gap:** there is no server-side auth boundary — every table is reachable via the public anon key with no Supabase Auth session behind it, so RLS policies keyed on `patient_id` alone would not be real protection (no `auth.uid()` to check against). Real Supabase Auth + RLS across all patient-data tables needs to happen as its own dedicated pass before any real patient data goes into this app — not something to patch table-by-table as new tables are added.
+**Auth is still custom, not Supabase Auth** — see `AUTH-MIGRATION-SPEC.md` for the
+planned migration. **Known gap:** there is no server-side auth boundary; every table
+is reachable via the public anon key, so RLS policies keyed on `patient_id` alone are
+not real protection without `auth.uid()` behind them. Check `AUTH-MIGRATION-SPEC.md`
+before touching auth or RLS policies.
 
-**Domain model**, roughly:
-- Admin builds a **library of exercises** (`exercises`) tagged by category/muscle/equipment (`ADMIN_TAGS`, `AVAILABLE_MUSCLES`, `EQUIPMENT_LIST` constants near the top of page.tsx).
-- Exercises are grouped into **protocols/templates** (`packages` + `package_exercises`) or assigned directly to a patient (`patient_exercises`), organized by week/day/block (`DAYS_OF_WEEK`, blocks `A/B/C…`).
-- Patients run assigned plans in a guided **workout mode** (rest timers, set/rep tracking, pain-before/RPE/pain-after feedback), which writes to `workout_logs`.
-- `workout_logs` feeds the **progress charts** (recharts) and a rank/streak system (`getUserRank`).
+**i18n**: single `TRANSLATIONS` object (`he`/`en`) in `app/constants/translations.ts`.
+UI is RTL Hebrew by default (`app/layout.tsx` sets `lang="he" dir="rtl"`, Rubik font).
 
-**i18n** is a single inline `TRANSLATIONS` object (`he`/`en`) at the top of page.tsx; UI text is otherwise mostly hardcoded Hebrew strings throughout handlers (alerts, confirms), not routed through `TRANSLATIONS`.
+**In-progress work**: an AI assistant/coach feature (`app/actions/aiAssistant.ts`,
+`useAIAssistantChat`, `AdminCoPilotDrawer`, `PatientCoachSheet`, `curated_facts` table)
+may be uncommitted — check `git status` before assuming it's finished or merged.
 
-**Notable libraries**: `react-body-highlighter` (muscle diagram, loaded via `next/dynamic` with `ssr: false`), `recharts` (progress charts), `lucide-react` (icons), Tailwind v4 via `@tailwindcss/postcss`.
+**Deploy**: linked to Vercel (`.vercel/project.json`).
 
-**Deploy**: linked to Vercel (`.vercel/project.json`); this repo is not a git repository.
+## Related docs
+
+`PROJECT_BRIEF.md` (vision/design language), `UI-IMPLEMENTATION-BRIEF.md`,
+`UX-AUDIT-REPORT.md`, `AUTH-MIGRATION-SPEC.md`.
+
+## Known mistakes
+
+`MISTAKES.md` is a running ledger of real bugs caught in this repo. Check it before
+touching related code — especially anything involving Supabase column types, RLS, or
+the Supabase client setup. Log a new entry there the moment a mistake is found or
+fixed.
