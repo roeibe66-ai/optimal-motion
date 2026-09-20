@@ -41,10 +41,12 @@ import {
 } from "lucide-react";
 import { supabase } from "@/app/lib/supabase";
 import { useAuth } from "@/app/context/AuthContext";
-import { ADMIN_CATEGORY_STYLES, ADMIN_TAGS, AVAILABLE_MUSCLES, DAYS_OF_WEEK, DEFAULT_ADMIN_CATEGORY_STYLE, MUSCLE_REGIONS } from "@/app/constants/catalog";
+import { ADMIN_CATEGORY_STYLES, ADMIN_TAGS, AVAILABLE_MUSCLES, DAYS_OF_WEEK, DEFAULT_ADMIN_CATEGORY_STYLE, DIFFICULTY_LEVELS, NAME_DISPLAY_PREFERENCES, MUSCLE_REGIONS } from "@/app/constants/catalog";
 import AdminSidebar from "@/app/components/admin/AdminSidebar";
 import AdminCoPilotDrawer from "@/app/components/admin/AdminCoPilotDrawer";
-import { formatAdminDate } from "@/app/utils/format";
+import ProgramLibraryTab from "@/app/components/admin/tabs/ProgramLibraryTab";
+import MusclePicker from "@/app/components/admin/MusclePicker";
+import { formatAdminDate, formatCueLines, getExerciseName } from "@/app/utils/format";
 import { getAIInsight } from "@/app/utils/scoring";
 import { generateResearchFacts } from "@/app/actions/researchAgent";
 import type { AIAssistantContext, CuratedFact, ResearchFinding } from "@/app/types";
@@ -60,8 +62,23 @@ import type { AIAssistantContext, CuratedFact, ResearchFinding } from "@/app/typ
 // (the original's own internal logout only reset patient-side state that
 // no longer exists at this level).
 /* eslint-disable @typescript-eslint/no-explicit-any -- untyped by design, matching the original's loose style until this side gets its own refactor pass */
+
+const REST_TIME_PRESETS = [30, 60, 90, 120];
+
+// admin_tags (ADMIN_TAGS ids) used to have its own separate multi-select in
+// the builder form, drawing from the exact same ADMIN_TAGS list as the
+// categories picker — a genuine duplicate UI, not just visually similar
+// (confirmed with Roei). Rather than dropping admin_tags (still used
+// elsewhere for filtering: libExerciseTagFilter, assignExerciseTagFilter,
+// builderSearchFilter, the exercise-card lock-icon badges), it's now derived
+// automatically from the categories selection at save time — same
+// underlying ADMIN_TAGS taxonomy, just label vs id, so existing filters keep
+// working with zero extra admin input.
+const deriveAdminTagIds = (categoryLabels: string[]): string[] =>
+  categoryLabels.map((label) => ADMIN_TAGS.find((t) => t.label === label)?.id).filter((id): id is string => Boolean(id));
+
 export default function LegacyAdminApp() {
-  const { handleLogout } = useAuth();
+  const { handleLogout, lang } = useAuth();
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [adminTab, setAdminTab] = useState("builder");
@@ -100,15 +117,20 @@ export default function LegacyAdminApp() {
 
   const [crmFilter, setCrmFilter] = useState("all");
 
-  const [exTitle, setExTitle] = useState("");
-  const [exCategory, setExCategory] = useState("קליסטניקס");
+  const [exNameHe, setExNameHe] = useState("");
+  const [exNameEn, setExNameEn] = useState("");
+  const [exNameDisplayPreference, setExNameDisplayPreference] = useState<"en" | "he" | "both">("en");
+  const [exCategories, setExCategories] = useState<string[]>([]);
+  const [exDifficultyLevel, setExDifficultyLevel] = useState("");
   const [exDesc, setExDesc] = useState("");
   const [exGifUrl, setExGifUrl] = useState("");
   const [exSecondaryGifUrl, setExSecondaryGifUrl] = useState("");
   const [exPrimaryMuscle, setExPrimaryMuscle] = useState("");
   const [exSecondaryMuscles, setExSecondaryMuscles] = useState<string[]>([]);
+  const [exPrimeMovers, setExPrimeMovers] = useState<string[]>([]);
+  const [exSynergists, setExSynergists] = useState<string[]>([]);
   const [exMistake, setExMistake] = useState("");
-  const [exAdminTags, setExAdminTags] = useState<string[]>([]);
+  const [exPatientCues, setExPatientCues] = useState("");
   const [exEasierVersionId, setExEasierVersionId] = useState("");
   const [exHarderVersionId, setExHarderVersionId] = useState("");
 
@@ -131,14 +153,19 @@ export default function LegacyAdminApp() {
 
   const [editingExId, setEditingExId] = useState<string | null>(null);
   const [editExForm, setEditExForm] = useState({
-    title: "",
-    category: "",
+    name_he: "",
+    name_en: "",
+    name_display_preference: "en" as "en" | "he" | "both",
+    categories: [] as string[],
+    difficulty_level: "",
     gif_url: "",
     secondary_gif_url: "",
     target_muscle: "",
     secondary_muscles: [] as string[],
-    admin_tags: [] as string[],
+    prime_movers: [] as string[],
+    synergists: [] as string[],
     common_mistake: "",
+    patient_cues: "",
     description: "",
     internal_notes: "",
     easier_version_id: "",
@@ -217,7 +244,7 @@ export default function LegacyAdminApp() {
     const weekPlan = builderPlan[builderSelectedWeek] || {};
     const currentExercises = Object.values(weekPlan)
       .flat()
-      .map((ex: any) => ({ title: ex.title, block: ex.block || "A", sets: ex.sets, reps: ex.reps }));
+      .map((ex: any) => ({ title: getExerciseName(ex, lang), block: ex.block || "A", sets: ex.sets, reps: ex.reps }));
     return {
       patientName: assignedPatient?.full_name,
       patientType: assignedPatient?.patient_type,
@@ -347,19 +374,26 @@ export default function LegacyAdminApp() {
 
   const handleExerciseSubmit = async (e: any) => {
     e.preventDefault();
+    if (!exNameHe.trim() && !exNameEn.trim()) return alert("חובה להזין שם תרגיל בעברית או באנגלית (לפחות אחד)");
     const { data, error } = await supabase
       .from("exercises")
       .insert([
         {
-          title: exTitle,
-          category: exCategory,
+          name_he: exNameHe || null,
+          name_en: exNameEn || null,
+          name_display_preference: exNameDisplayPreference,
+          categories: exCategories,
+          difficulty_level: exDifficultyLevel || null,
           description: exDesc,
           gif_url: exGifUrl || null,
           secondary_gif_url: exSecondaryGifUrl || null,
           target_muscle: exPrimaryMuscle,
           secondary_muscles: exSecondaryMuscles.join(","),
-          admin_tags: exAdminTags.join(","),
+          prime_movers: exPrimeMovers,
+          synergists: exSynergists,
+          admin_tags: deriveAdminTagIds(exCategories).join(","),
           common_mistake: exMistake,
+          patient_cues: exPatientCues,
           easier_version_id: exEasierVersionId || null,
           harder_version_id: exHarderVersionId || null,
         },
@@ -379,14 +413,20 @@ export default function LegacyAdminApp() {
     await syncReciprocalLink(data.id, null, exEasierVersionId, "harder_version_id");
     await syncReciprocalLink(data.id, null, exHarderVersionId, "easier_version_id");
     alert("תרגיל נוצר!");
-    setExTitle("");
+    setExNameHe("");
+    setExNameEn("");
+    setExNameDisplayPreference("en");
+    setExCategories([]);
+    setExDifficultyLevel("");
     setExDesc("");
     setExGifUrl("");
     setExSecondaryGifUrl("");
     setExPrimaryMuscle("");
     setExSecondaryMuscles([]);
-    setExAdminTags([]);
+    setExPrimeMovers([]);
+    setExSynergists([]);
     setExMistake("");
+    setExPatientCues("");
     setExInternalNotes("");
     setExEasierVersionId("");
     setExHarderVersionId("");
@@ -402,26 +442,31 @@ export default function LegacyAdminApp() {
     else setExSecondaryMuscles((prev) => (prev.includes(id) ? prev.filter((m) => m !== id) : [...prev, id]));
   };
 
-  const toggleAdminTag = (id: string, isEditing: boolean = false) => {
+  const toggleExerciseCategory = (id: string, isEditing: boolean = false) => {
     if (isEditing)
       setEditExForm((prev) => ({
         ...prev,
-        admin_tags: prev.admin_tags.includes(id) ? prev.admin_tags.filter((m) => m !== id) : [...prev.admin_tags, id],
+        categories: prev.categories.includes(id) ? prev.categories.filter((c) => c !== id) : [...prev.categories, id],
       }));
-    else setExAdminTags((prev) => (prev.includes(id) ? prev.filter((m) => m !== id) : [...prev, id]));
+    else setExCategories((prev) => (prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]));
   };
 
   const handleStartEditEx = (ex: any) => {
     setEditingExId(ex.id);
     setEditExForm({
-      title: String(ex.title || ""),
-      category: String(ex.category || ""),
+      name_he: String(ex.name_he || ""),
+      name_en: String(ex.name_en || ""),
+      name_display_preference: ex.name_display_preference || "en",
+      categories: ex.categories || [],
+      difficulty_level: String(ex.difficulty_level || ""),
       gif_url: String(ex.gif_url || ""),
       secondary_gif_url: String(ex.secondary_gif_url || ""),
       target_muscle: String(ex.target_muscle || ""),
       secondary_muscles: ex.secondary_muscles ? String(ex.secondary_muscles).split(",") : [],
-      admin_tags: ex.admin_tags ? String(ex.admin_tags).split(",") : [],
+      prime_movers: ex.prime_movers || [],
+      synergists: ex.synergists || [],
       common_mistake: String(ex.common_mistake || ""),
+      patient_cues: String(ex.patient_cues || ""),
       description: String(ex.description || ""),
       internal_notes: internalNotesByExerciseId[ex.id] || "",
       easier_version_id: String(ex.easier_version_id || ""),
@@ -430,19 +475,26 @@ export default function LegacyAdminApp() {
   };
 
   const handleSaveEditEx = async (id: string) => {
+    if (!editExForm.name_he.trim() && !editExForm.name_en.trim()) return alert("חובה להזין שם תרגיל בעברית או באנגלית (לפחות אחד)");
     const original = exercises.find((e) => e.id === id);
     const { error } = await supabase
       .from("exercises")
       .update({
-        title: editExForm.title,
-        category: editExForm.category,
+        name_he: editExForm.name_he || null,
+        name_en: editExForm.name_en || null,
+        name_display_preference: editExForm.name_display_preference,
+        categories: editExForm.categories,
+        difficulty_level: editExForm.difficulty_level || null,
         description: editExForm.description,
         gif_url: editExForm.gif_url || null,
         secondary_gif_url: editExForm.secondary_gif_url || null,
         target_muscle: editExForm.target_muscle,
         secondary_muscles: editExForm.secondary_muscles.join(","),
-        admin_tags: editExForm.admin_tags.join(","),
+        prime_movers: editExForm.prime_movers,
+        synergists: editExForm.synergists,
+        admin_tags: deriveAdminTagIds(editExForm.categories).join(","),
         common_mistake: editExForm.common_mistake,
+        patient_cues: editExForm.patient_cues,
         easier_version_id: editExForm.easier_version_id || null,
         harder_version_id: editExForm.harder_version_id || null,
       })
@@ -562,7 +614,7 @@ export default function LegacyAdminApp() {
           ...prev,
           [builderSelectedWeek]: {
             ...currentWeekBlocks,
-            [dayId]: [...currentWeekBlocks[dayId], { ...ex, temp_id: Math.random().toString(), sets: 3, reps: 10, rir: null, is_time: false, block: "A" }],
+            [dayId]: [...currentWeekBlocks[dayId], { ...ex, temp_id: Math.random().toString(), sets: 3, reps: 10, rir: null, is_time: false, block: "A", rest_time_seconds: 60 }],
           },
         };
       });
@@ -609,7 +661,7 @@ export default function LegacyAdminApp() {
             // still a text column — if this loaded protocol later gets assigned
             // directly to a patient, saveBuilderPlan writes these straight into
             // patient_exercises, now an integer column.
-            newPlan[w][day].push({ ...ex, temp_id: Math.random().toString(), sets: Number(pe.sets) || 0, reps: Number(pe.reps) || 0, rir: pe.rir, is_time: pe.is_time, block: pe.block || "A" });
+            newPlan[w][day].push({ ...ex, temp_id: Math.random().toString(), sets: Number(pe.sets) || 0, reps: Number(pe.reps) || 0, rir: pe.rir, is_time: pe.is_time, block: pe.block || "A", rest_time_seconds: pe.rest_time_seconds ?? 60 });
           }
         });
         return newPlan;
@@ -627,20 +679,20 @@ export default function LegacyAdminApp() {
     setTimeout(() => {
       const prompt = aiPrompt.toLowerCase();
       let matched = [...exercises];
-      if (prompt.includes("שיקום") || prompt.includes("rehab")) matched = matched.filter((e) => e.admin_tags?.includes("rehab") || e.category === "שיקום תנועתי");
-      else if (prompt.includes("כוח") || prompt.includes("מכון")) matched = matched.filter((e) => e.admin_tags?.includes("gym") || e.category === "מכון כושר");
-      else if (prompt.includes("מוביליטי") || prompt.includes("מתיחות")) matched = matched.filter((e) => e.admin_tags?.includes("mobility") || e.category === "מוביליטי ויוגה");
+      if (prompt.includes("שיקום") || prompt.includes("rehab")) matched = matched.filter((e) => e.admin_tags?.includes("rehab") || e.categories?.includes("שיקום תנועתי"));
+      else if (prompt.includes("כוח") || prompt.includes("מכון")) matched = matched.filter((e) => e.admin_tags?.includes("gym") || e.categories?.includes("מכון כושר"));
+      else if (prompt.includes("מוביליטי") || prompt.includes("מתיחות")) matched = matched.filter((e) => e.admin_tags?.includes("mobility") || e.categories?.includes("מוביליטי ויוגה"));
       matched = matched.sort(() => 0.5 - Math.random()).slice(0, 4);
 
       const draftDays: Record<string, any[]> = getInitialDays();
       if (matched.length > 0) {
-        draftDays["0"] = matched.slice(0, 2).map((ex) => ({ ...ex, temp_id: Math.random().toString(), sets: 3, reps: 10, rir: 2, is_time: false, block: "A" }));
-        draftDays["2"] = matched.slice(2, 4).map((ex) => ({ ...ex, temp_id: Math.random().toString(), sets: 3, reps: 10, rir: 2, is_time: false, block: "A" }));
+        draftDays["0"] = matched.slice(0, 2).map((ex) => ({ ...ex, temp_id: Math.random().toString(), sets: 3, reps: 10, rir: 2, is_time: false, block: "A", rest_time_seconds: 60 }));
+        draftDays["2"] = matched.slice(2, 4).map((ex) => ({ ...ex, temp_id: Math.random().toString(), sets: 3, reps: 10, rir: 2, is_time: false, block: "A", rest_time_seconds: 60 }));
       } else {
         draftDays["0"] = exercises
           .sort(() => 0.5 - Math.random())
           .slice(0, 3)
-          .map((ex) => ({ ...ex, temp_id: Math.random().toString(), sets: 3, reps: 10, rir: 2, is_time: false, block: "A" }));
+          .map((ex) => ({ ...ex, temp_id: Math.random().toString(), sets: 3, reps: 10, rir: 2, is_time: false, block: "A", rest_time_seconds: 60 }));
       }
 
       setBuilderPlan((prev) => ({ ...prev, [builderSelectedWeek]: draftDays }));
@@ -667,11 +719,12 @@ export default function LegacyAdminApp() {
       Object.keys(builderPlan).forEach((w) => {
         Object.keys(builderPlan[w as any]).forEach((dayId) => {
           builderPlan[w as any][dayId].forEach((ex) => {
-            inserts.push({ package_id: pkg.id, exercise_id: ex.id, block: ex.block || "A", sets: ex.sets, reps: ex.reps, rir: ex.rir, is_time: ex.is_time, week: parseInt(w), scheduled_days: dayId });
+            inserts.push({ package_id: pkg.id, exercise_id: ex.id, block: ex.block || "A", sets: ex.sets, reps: ex.reps, rir: ex.rir, is_time: ex.is_time, week: parseInt(w), scheduled_days: dayId, rest_time_seconds: ex.rest_time_seconds || 60 });
           });
         });
       });
-      await supabase.from("package_exercises").insert(inserts);
+      const { error: peErr } = await supabase.from("package_exercises").insert(inserts);
+      if (peErr) return alert("שגיאה בשמירת תרגילי התבנית: " + peErr.message);
       alert("התבנית נשמרה במאגר!");
       setBuilderProtocolName("");
       setBuilderProtocolDesc("");
@@ -698,6 +751,7 @@ export default function LegacyAdminApp() {
             notes: "",
             scheduled_days: dayId,
             week: parseInt(w),
+            rest_time_seconds: ex.rest_time_seconds || 60,
           });
         });
       });
@@ -1137,7 +1191,7 @@ export default function LegacyAdminApp() {
                 </div>
                 <div className="flex-1 overflow-y-auto p-3.5 space-y-2.5">
                   {filteredExercisesForBuilder.map((ex) => {
-                    const style = ADMIN_CATEGORY_STYLES[ex.category] ?? DEFAULT_ADMIN_CATEGORY_STYLE;
+                    const style = ADMIN_CATEGORY_STYLES[ex.categories?.[0]] ?? DEFAULT_ADMIN_CATEGORY_STYLE;
                     return (
                       <div
                         key={ex.id}
@@ -1150,9 +1204,9 @@ export default function LegacyAdminApp() {
                         </div>
                         <div className="w-[38px] h-[38px] rounded-[10px] shrink-0" style={{ background: `linear-gradient(150deg, ${style.glow}, #1c1c1e)` }}></div>
                         <div className="min-w-0">
-                          <h4 className="font-extrabold text-white text-xs leading-tight truncate">{ex.title}</h4>
+                          <h4 className="font-extrabold text-white text-xs leading-tight truncate">{getExerciseName(ex, lang)}</h4>
                           <span className="text-[9px] font-extrabold px-2 py-0.5 rounded-full mt-1 inline-block" style={{ color: style.text, background: style.bg }}>
-                            {ex.category}
+                            {(ex.categories || []).join(" / ")}
                           </span>
                         </div>
                       </div>
@@ -1272,7 +1326,7 @@ export default function LegacyAdminApp() {
                           <div className="space-y-2">
                             {currentDayItems.map((ex: any) => (
                               <div key={ex.temp_id} className="bg-[#161311] p-2.5 rounded-2xl border border-stone-800 flex flex-wrap items-center gap-2.5">
-                                <h5 className="font-extrabold text-white text-[13px] flex-1 min-w-[120px] line-clamp-1">{ex.title}</h5>
+                                <h5 className="font-extrabold text-white text-[13px] flex-1 min-w-[120px] line-clamp-1">{getExerciseName(ex, lang)}</h5>
 
                                 <div className="flex items-center gap-1.5 bg-stone-950 p-1.5 rounded-xl border border-stone-800">
                                   <span className="text-stone-500 text-[10px] font-bold uppercase ml-1">בלוק</span>
@@ -1310,6 +1364,27 @@ export default function LegacyAdminApp() {
                                     </button>
                                   </span>
                                 </div>
+                                <div className="flex items-center gap-1 bg-stone-950 p-1.5 rounded-xl border border-stone-800">
+                                  <Clock size={12} className="text-stone-600 shrink-0" />
+                                  {REST_TIME_PRESETS.map((secs) => (
+                                    <button
+                                      key={secs}
+                                      onClick={() => updateBuilderExercise(day.id, ex.temp_id, "rest_time_seconds", secs)}
+                                      className={`px-1.5 py-1 rounded-lg text-[10px] font-bold transition-colors ${
+                                        (ex.rest_time_seconds ?? 60) === secs ? "bg-teal-500 text-stone-950" : "text-stone-400 hover:text-white"
+                                      }`}
+                                    >
+                                      {secs}
+                                    </button>
+                                  ))}
+                                  <input
+                                    type="number"
+                                    value={REST_TIME_PRESETS.includes(ex.rest_time_seconds ?? 60) ? "" : (ex.rest_time_seconds ?? "")}
+                                    onChange={(e) => updateBuilderExercise(day.id, ex.temp_id, "rest_time_seconds", e.target.value ? parseInt(e.target.value) : 60)}
+                                    placeholder="אחר"
+                                    className="w-9 text-center bg-transparent outline-none font-bold text-[10px] text-white placeholder:text-stone-600"
+                                  />
+                                </div>
                                 <button onClick={() => removeBuilderExercise(day.id, ex.temp_id)} className="p-2 text-red-400 hover:bg-red-500/10 rounded-xl transition-colors">
                                   <Trash2 size={16} />
                                 </button>
@@ -1337,6 +1412,8 @@ export default function LegacyAdminApp() {
           </div>
         )}
 
+        {adminTab === "program_library" && <ProgramLibraryTab packages={packages} exercises={exercises} patients={patients} onRefresh={fetchAdminData} />}
+
         {adminTab === "exercises" && (
           <div className="max-w-6xl mx-auto animate-in fade-in">
             <header className="mb-10 hidden md:block">
@@ -1348,22 +1425,75 @@ export default function LegacyAdminApp() {
               <form onSubmit={handleExerciseSubmit} className="flex flex-col gap-6">
                 <div className="flex flex-col md:flex-row gap-6">
                   <div className="flex-1">
-                    <label className="block text-[10px] font-extrabold text-stone-500 mb-2 uppercase tracking-wider">שם תרגיל</label>
+                    <label className="block text-[10px] font-extrabold text-stone-500 mb-2 uppercase tracking-wider">שם תרגיל (עברית, אופציונלי)</label>
                     <input
                       type="text"
-                      value={exTitle}
-                      onChange={(e) => setExTitle(e.target.value)}
+                      value={exNameHe}
+                      onChange={(e) => setExNameHe(e.target.value)}
                       placeholder="לדוגמה: פשיטת ברך במכונה"
                       className="w-full border-b-2 border-stone-800 p-2 bg-transparent text-white placeholder:text-stone-600 focus:border-teal-500 focus:ring-1 focus:ring-teal-500/30 outline-none"
-                      required
                     />
                   </div>
                   <div className="flex-1">
-                    <label className="block text-[10px] font-extrabold text-stone-500 mb-2 uppercase tracking-wider">קטגוריה</label>
-                    <select value={exCategory} onChange={(e) => setExCategory(e.target.value)} className="w-full border-b-2 border-stone-800 p-2 bg-transparent text-white font-bold focus:border-teal-500 focus:ring-1 focus:ring-teal-500/30 outline-none">
-                      {ADMIN_TAGS.map((tag) => (
-                        <option key={tag.id} value={tag.label} className="bg-[#1c1c1e]">
-                          {tag.label}
+                    <label className="block text-[10px] font-extrabold text-stone-500 mb-2 uppercase tracking-wider">שם תרגיל (אנגלית, אופציונלי)</label>
+                    <input
+                      type="text"
+                      value={exNameEn}
+                      onChange={(e) => setExNameEn(e.target.value)}
+                      placeholder="e.g. Leg Extension"
+                      className="w-full border-b-2 border-stone-800 p-2 bg-transparent text-white placeholder:text-stone-600 focus:border-teal-500 focus:ring-1 focus:ring-teal-500/30 outline-none text-left"
+                      dir="ltr"
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <label className="block text-[10px] font-extrabold text-stone-500 mb-2 uppercase tracking-wider">שם מוצג כברירת מחדל</label>
+                    <select
+                      value={exNameDisplayPreference}
+                      onChange={(e) => setExNameDisplayPreference(e.target.value as "en" | "he" | "both")}
+                      className="w-full border-b-2 border-stone-800 p-2 bg-transparent text-white font-bold focus:border-teal-500 focus:ring-1 focus:ring-teal-500/30 outline-none"
+                    >
+                      {NAME_DISPLAY_PREFERENCES.map((p) => (
+                        <option key={p.id} value={p.id} className="bg-[#1c1c1e]">
+                          {p.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <div className="flex flex-col md:flex-row gap-6">
+                  <div className="flex-[2]">
+                    <label className="block text-[10px] font-extrabold text-stone-500 mb-2 uppercase tracking-wider">קטגוריות (ניתן לבחור כמה)</label>
+                    <div className="flex flex-wrap gap-2">
+                      {ADMIN_TAGS.map((tag) => {
+                        const isSelected = exCategories.includes(tag.label);
+                        return (
+                          <button
+                            key={tag.id}
+                            type="button"
+                            onClick={() => toggleExerciseCategory(tag.label)}
+                            className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all border ${
+                              isSelected ? "bg-teal-500 text-stone-950 border-teal-400 shadow-sm" : "bg-stone-950 text-stone-300 border-stone-800 hover:bg-stone-900"
+                            }`}
+                          >
+                            {tag.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  <div className="flex-1">
+                    <label className="block text-[10px] font-extrabold text-stone-500 mb-2 uppercase tracking-wider">רמת קושי</label>
+                    <select
+                      value={exDifficultyLevel}
+                      onChange={(e) => setExDifficultyLevel(e.target.value)}
+                      className="w-full border-b-2 border-stone-800 p-2 bg-transparent text-white font-bold focus:border-teal-500 focus:ring-1 focus:ring-teal-500/30 outline-none"
+                    >
+                      <option value="" className="bg-[#1c1c1e]">
+                        -- לא צוין --
+                      </option>
+                      {DIFFICULTY_LEVELS.map((d) => (
+                        <option key={d.id} value={d.id} className="bg-[#1c1c1e]">
+                          {d.label}
                         </option>
                       ))}
                     </select>
@@ -1446,6 +1576,20 @@ export default function LegacyAdminApp() {
                   </div>
                 </div>
 
+                <div>
+                  <label className="block text-sm font-bold text-teal-400 mb-2 flex items-center gap-2">
+                    <Target size={18} /> מפת שרירים (Heatmap)
+                  </label>
+                  <MusclePicker
+                    primeMovers={exPrimeMovers}
+                    synergists={exSynergists}
+                    onChange={({ primeMovers, synergists }) => {
+                      setExPrimeMovers(primeMovers);
+                      setExSynergists(synergists);
+                    }}
+                  />
+                </div>
+
                 <div className="bg-indigo-500/[0.06] p-5 rounded-2xl border border-indigo-500/20 flex flex-col md:flex-row gap-6">
                   <div className="flex-1">
                     <label className="block text-sm font-bold text-indigo-400 mb-2 flex items-center gap-2">
@@ -1461,7 +1605,7 @@ export default function LegacyAdminApp() {
                       </option>
                       {exercises.map((ex) => (
                         <option key={ex.id} value={ex.id} className="bg-[#1c1c1e]">
-                          {ex.title}
+                          {getExerciseName(ex, lang)}
                         </option>
                       ))}
                     </select>
@@ -1480,33 +1624,10 @@ export default function LegacyAdminApp() {
                       </option>
                       {exercises.map((ex) => (
                         <option key={ex.id} value={ex.id} className="bg-[#1c1c1e]">
-                          {ex.title}
+                          {getExerciseName(ex, lang)}
                         </option>
                       ))}
                     </select>
-                  </div>
-                </div>
-
-                <div className="bg-stone-950 p-5 rounded-2xl border border-stone-800">
-                  <label className="block text-sm font-bold text-stone-400 mb-3 flex items-center gap-2">
-                    <Lock size={16} /> תגיות סינון פנימיות (לאדמין בלבד)
-                  </label>
-                  <div className="flex flex-wrap gap-2">
-                    {ADMIN_TAGS.map((tag) => {
-                      const isSelected = exAdminTags.includes(tag.id);
-                      return (
-                        <button
-                          key={tag.id}
-                          type="button"
-                          onClick={() => toggleAdminTag(tag.id)}
-                          className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all border ${
-                            isSelected ? "bg-white text-stone-950 border-white shadow-sm" : "bg-[#1c1c1e] text-stone-400 border-stone-800 hover:bg-stone-800"
-                          }`}
-                        >
-                          {tag.label}
-                        </button>
-                      );
-                    })}
                   </div>
                 </div>
 
@@ -1518,26 +1639,46 @@ export default function LegacyAdminApp() {
                     value={exInternalNotes}
                     onChange={(e) => setExInternalNotes(e.target.value)}
                     placeholder="הערות קליניות, שיקולים פנימיים וכו'"
-                    className="w-full border-b-2 border-stone-800 p-2 bg-transparent text-white placeholder:text-stone-600 focus:border-teal-500 focus:ring-1 focus:ring-teal-500/30 outline-none"
-                    rows={2}
+                    className="w-full min-h-[120px] border-b-2 border-stone-800 p-2 bg-transparent text-white placeholder:text-stone-600 focus:border-teal-500 focus:ring-1 focus:ring-teal-500/30 outline-none"
+                    rows={4}
                   />
+                </div>
+
+                <div className="bg-emerald-500/[0.06] p-5 rounded-2xl border border-emerald-500/20">
+                  <label className="block text-sm font-bold text-emerald-400 mb-2 flex items-center gap-2">
+                    <Check size={18} /> דגשים קליניים (Clinical Cues, אופציונלי)
+                  </label>
+                  <textarea
+                    value={exPatientCues}
+                    onChange={(e) => setExPatientCues(e.target.value)}
+                    placeholder={"שורה אחת לכל דגש, לדוגמה:\nשמור על גב ישר\nנשוף בזמן המאמץ"}
+                    className="w-full min-h-[120px] border-b-2 border-emerald-500/30 p-2 bg-transparent text-white placeholder:text-stone-600 focus:border-emerald-400 outline-none"
+                    rows={4}
+                  />
+                  <p className="text-[10px] text-emerald-500/80 mt-2 font-medium">* כל שורה תוצג למטופל עם ✅ בתחילתה.</p>
                 </div>
 
                 <div className="bg-red-500/[0.06] p-5 rounded-2xl border border-red-500/20">
                   <label className="block text-sm font-bold text-red-400 mb-2 flex items-center gap-2">
-                    <AlertTriangle size={18} /> אזהרה / טעות נפוצה (אופציונלי)
+                    <AlertTriangle size={18} /> טעויות נפוצות (אופציונלי)
                   </label>
-                  <input
-                    type="text"
+                  <textarea
                     value={exMistake}
                     onChange={(e) => setExMistake(e.target.value)}
-                    placeholder="למשל: אל תיתן לברך לקרוס פנימה"
-                    className="w-full border-b-2 border-red-500/30 p-2 bg-transparent text-white placeholder:text-stone-600 focus:border-red-400 outline-none"
+                    placeholder={"שורה אחת לכל טעות, לדוגמה:\nאל תיתן לברך לקרוס פנימה\nאל תנעל מרפקים בקצה התנועה"}
+                    className="w-full min-h-[120px] border-b-2 border-red-500/30 p-2 bg-transparent text-white placeholder:text-stone-600 focus:border-red-400 outline-none"
+                    rows={4}
                   />
+                  <p className="text-[10px] text-red-500/80 mt-2 font-medium">* כל שורה תוצג למטופל עם ❌ בתחילתה.</p>
                 </div>
                 <div>
-                  <label className="block text-[10px] font-extrabold text-stone-500 mb-2 uppercase tracking-wider">דגשים קליניים (אופציונלי)</label>
-                  <textarea value={exDesc} onChange={(e) => setExDesc(e.target.value)} className="w-full border-b-2 border-stone-800 p-2 bg-transparent text-white focus:border-teal-500 focus:ring-1 focus:ring-teal-500/30 outline-none" rows={2} />
+                  <label className="block text-[10px] font-extrabold text-stone-500 mb-2 uppercase tracking-wider">תיאור / הנחיות ביצוע (אופציונלי)</label>
+                  <textarea
+                    value={exDesc}
+                    onChange={(e) => setExDesc(e.target.value)}
+                    className="w-full min-h-[120px] border-b-2 border-stone-800 p-2 bg-transparent text-white focus:border-teal-500 focus:ring-1 focus:ring-teal-500/30 outline-none"
+                    rows={4}
+                  />
                 </div>
                 <button type="submit" className="bg-teal-500 text-stone-950 px-10 py-3.5 rounded-2xl font-black w-full md:w-fit self-end hover:bg-teal-400 transition-colors">
                   שמור במאגר
@@ -1579,7 +1720,7 @@ export default function LegacyAdminApp() {
                 </div>
               )}
               {filteredLibraryExercises.map((ex) => {
-                const style = ADMIN_CATEGORY_STYLES[ex.category] ?? DEFAULT_ADMIN_CATEGORY_STYLE;
+                const style = ADMIN_CATEGORY_STYLES[ex.categories?.[0]] ?? DEFAULT_ADMIN_CATEGORY_STYLE;
                 return (
                   <div key={ex.id} className="bg-[#1c1c1e] rounded-3xl border border-stone-800 overflow-hidden flex flex-col group relative">
                     <div className="h-[150px] relative overflow-hidden" style={{ background: `linear-gradient(150deg, ${style.glow}, #1c1c1e 75%)` }}>
@@ -1589,24 +1730,85 @@ export default function LegacyAdminApp() {
                           {ex.gif_url.toLowerCase().includes(".mp4") || ex.gif_url.toLowerCase().includes(".webm") ? (
                             <video src={ex.gif_url} autoPlay muted playsInline loop className="max-w-full max-h-full rounded-xl bg-white/95 object-contain p-1.5 shadow-lg group-hover:scale-105 transition-transform duration-500" />
                           ) : (
-                            <img src={ex.gif_url} alt={ex.title} className="max-w-full max-h-full rounded-xl bg-white/95 object-contain p-1.5 shadow-lg group-hover:scale-105 transition-transform duration-500" />
+                            <img src={ex.gif_url} alt={getExerciseName(ex, lang)} className="max-w-full max-h-full rounded-xl bg-white/95 object-contain p-1.5 shadow-lg group-hover:scale-105 transition-transform duration-500" />
                           )}
                         </div>
                       ) : (
                         <div className="absolute inset-0 flex items-center justify-center text-stone-500 text-xs font-bold">אין מדיה</div>
                       )}
-                      <div className="absolute top-3.5 right-3.5 bg-white/95 text-stone-950 text-[11px] font-extrabold px-3 py-1.5 rounded-full">{ex.category}</div>
+                      <div className="absolute top-3.5 right-3.5 bg-white/95 text-stone-950 text-[11px] font-extrabold px-3 py-1.5 rounded-full">{(ex.categories || []).join(" / ")}</div>
                     </div>
                     <div className="p-5 flex-1 flex flex-col">
                       {editingExId === ex.id ? (
                         <div className="flex flex-col gap-3">
                           <input
                             type="text"
-                            value={editExForm.title}
-                            onChange={(e) => setEditExForm({ ...editExForm, title: e.target.value })}
+                            value={editExForm.name_he}
+                            onChange={(e) => setEditExForm({ ...editExForm, name_he: e.target.value })}
                             className="border-b border-stone-700 bg-transparent text-white font-bold outline-none"
-                            placeholder="שם תרגיל"
+                            placeholder="שם תרגיל (עברית)"
                           />
+                          <input
+                            type="text"
+                            value={editExForm.name_en}
+                            onChange={(e) => setEditExForm({ ...editExForm, name_en: e.target.value })}
+                            className="border-b border-stone-700 bg-transparent text-white font-bold outline-none text-left"
+                            dir="ltr"
+                            placeholder="Exercise name (English, optional)"
+                          />
+
+                          <div>
+                            <label className="text-[9px] font-extrabold text-stone-500 mb-1 uppercase tracking-wider block">שם מוצג כברירת מחדל</label>
+                            <select
+                              value={editExForm.name_display_preference}
+                              onChange={(e) => setEditExForm({ ...editExForm, name_display_preference: e.target.value as "en" | "he" | "both" })}
+                              className="w-full border-b border-stone-700 bg-transparent text-white p-1 text-xs outline-none"
+                            >
+                              {NAME_DISPLAY_PREFERENCES.map((p) => (
+                                <option key={p.id} value={p.id} className="bg-[#1c1c1e]">
+                                  {p.label}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+
+                          <div>
+                            <label className="text-[9px] font-extrabold text-stone-500 mb-1 uppercase tracking-wider block">קטגוריות</label>
+                            <div className="flex flex-wrap gap-1">
+                              {ADMIN_TAGS.map((tag) => {
+                                const isSelected = editExForm.categories.includes(tag.label);
+                                return (
+                                  <button
+                                    key={tag.id}
+                                    type="button"
+                                    onClick={() => toggleExerciseCategory(tag.label, true)}
+                                    className={`text-[10px] px-2 py-1 rounded-md border border-stone-700 ${isSelected ? "bg-teal-500 text-stone-950 border-teal-400" : "bg-stone-950 text-stone-400"}`}
+                                  >
+                                    {tag.label}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+
+                          <div>
+                            <label className="text-[9px] font-extrabold text-stone-500 mb-1 uppercase tracking-wider block">רמת קושי</label>
+                            <select
+                              value={editExForm.difficulty_level}
+                              onChange={(e) => setEditExForm({ ...editExForm, difficulty_level: e.target.value })}
+                              className="w-full border-b border-stone-700 bg-transparent text-white p-1 text-xs outline-none"
+                            >
+                              <option value="" className="bg-[#1c1c1e]">
+                                -- לא צוין --
+                              </option>
+                              {DIFFICULTY_LEVELS.map((d) => (
+                                <option key={d.id} value={d.id} className="bg-[#1c1c1e]">
+                                  {d.label}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+
                           <input
                             type="url"
                             value={editExForm.gif_url}
@@ -1672,19 +1874,14 @@ export default function LegacyAdminApp() {
                           </div>
 
                           <div className="mt-2 pt-2 border-t border-stone-800">
-                            <label className="text-[10px] font-bold text-stone-500 mb-1 flex items-center gap-1">
-                              <Lock size={10} /> תגיות פנימיות
+                            <label className="text-[10px] font-bold text-teal-400 mb-1 flex items-center gap-1">
+                              <Target size={10} /> מפת שרירים (Heatmap)
                             </label>
-                            <div className="flex flex-wrap gap-1">
-                              {ADMIN_TAGS.map((tag) => {
-                                const isSelected = editExForm.admin_tags.includes(tag.id);
-                                return (
-                                  <button key={tag.id} type="button" onClick={() => toggleAdminTag(tag.id, true)} className={`text-[10px] px-2 py-1 rounded-md border border-stone-700 ${isSelected ? "bg-white text-stone-950" : "bg-stone-950 text-stone-400"}`}>
-                                    {tag.label}
-                                  </button>
-                                );
-                              })}
-                            </div>
+                            <MusclePicker
+                              primeMovers={editExForm.prime_movers}
+                              synergists={editExForm.synergists}
+                              onChange={({ primeMovers, synergists }) => setEditExForm((prev) => ({ ...prev, prime_movers: primeMovers, synergists }))}
+                            />
                           </div>
 
                           <div className="mt-2 pt-2 border-t border-stone-800 flex flex-col gap-2">
@@ -1704,7 +1901,7 @@ export default function LegacyAdminApp() {
                                   .filter((e) => e.id !== ex.id)
                                   .map((e) => (
                                     <option key={e.id} value={e.id} className="bg-[#1c1c1e]">
-                                      {e.title}
+                                      {getExerciseName(e, lang)}
                                     </option>
                                   ))}
                               </select>
@@ -1725,24 +1922,38 @@ export default function LegacyAdminApp() {
                                   .filter((e) => e.id !== ex.id)
                                   .map((e) => (
                                     <option key={e.id} value={e.id} className="bg-[#1c1c1e]">
-                                      {e.title}
+                                      {getExerciseName(e, lang)}
                                     </option>
                                   ))}
                               </select>
                             </div>
                           </div>
-                          <input
-                            type="text"
-                            value={editExForm.common_mistake}
-                            onChange={(e) => setEditExForm({ ...editExForm, common_mistake: e.target.value })}
-                            className="border-b border-red-500/30 bg-transparent text-white text-xs mt-2 outline-none"
-                            placeholder="דגשים חשובים"
-                          />
+                          <div>
+                            <label className="text-[9px] font-extrabold text-emerald-500 mb-1 uppercase tracking-wider block">דגשים קליניים (שורה לכל דגש, ✅)</label>
+                            <textarea
+                              value={editExForm.patient_cues}
+                              onChange={(e) => setEditExForm({ ...editExForm, patient_cues: e.target.value })}
+                              className="w-full min-h-[120px] border border-emerald-700/40 bg-transparent text-white rounded-lg p-2 text-xs outline-none"
+                              placeholder={"שמור על גב ישר\nנשוף בזמן המאמץ"}
+                              rows={4}
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[9px] font-extrabold text-red-500 mb-1 uppercase tracking-wider block">טעויות נפוצות (שורה לכל טעות, ❌)</label>
+                            <textarea
+                              value={editExForm.common_mistake}
+                              onChange={(e) => setEditExForm({ ...editExForm, common_mistake: e.target.value })}
+                              className="w-full min-h-[120px] border border-red-500/30 bg-transparent text-white rounded-lg p-2 text-xs outline-none"
+                              placeholder={"אל תיתן לברך לקרוס פנימה"}
+                              rows={4}
+                            />
+                          </div>
                           <textarea
                             value={editExForm.description}
                             onChange={(e) => setEditExForm({ ...editExForm, description: e.target.value })}
-                            className="border border-stone-700 bg-transparent text-white rounded-lg p-2 text-xs mt-2 outline-none"
-                            placeholder="דגשים לביצוע"
+                            className="w-full min-h-[120px] border border-stone-700 bg-transparent text-white rounded-lg p-2 text-xs mt-2 outline-none"
+                            placeholder="תיאור / הנחיות ביצוע"
+                            rows={4}
                           />
                           <div className="mt-2 pt-2 border-t border-stone-800">
                             <label className="text-[10px] font-bold text-stone-500 mb-1 flex items-center gap-1">
@@ -1751,8 +1962,9 @@ export default function LegacyAdminApp() {
                             <textarea
                               value={editExForm.internal_notes}
                               onChange={(e) => setEditExForm({ ...editExForm, internal_notes: e.target.value })}
-                              className="w-full border border-stone-700 bg-transparent text-white rounded-lg p-2 text-xs outline-none"
+                              className="w-full min-h-[120px] border border-stone-700 bg-transparent text-white rounded-lg p-2 text-xs outline-none"
                               placeholder="הערות קליניות, שיקולים פנימיים וכו'"
+                              rows={4}
                             />
                           </div>
                           <div className="flex gap-2 mt-2">
@@ -1766,7 +1978,7 @@ export default function LegacyAdminApp() {
                         </div>
                       ) : (
                         <>
-                          <h3 className="text-[15px] font-extrabold text-white mb-2">{ex.title}</h3>
+                          <h3 className="text-[15px] font-extrabold text-white mb-2">{getExerciseName(ex, lang)}</h3>
 
                           {ex.admin_tags && (
                             <div className="flex flex-wrap gap-1 mb-2.5">
@@ -1782,24 +1994,40 @@ export default function LegacyAdminApp() {
                             </div>
                           )}
 
+                          {ex.difficulty_level && (
+                            <p className="text-[11px] font-bold text-amber-400 mb-1.5 flex items-center gap-1.5">
+                              {DIFFICULTY_LEVELS.find((d) => d.id === ex.difficulty_level)?.label || ex.difficulty_level}
+                            </p>
+                          )}
                           {ex.target_muscle && (
                             <p className="text-[11px] font-bold text-teal-400 mb-1.5 flex items-center gap-1.5">
                               <Target size={11} /> מרכזי: {AVAILABLE_MUSCLES.find((m) => m.id === ex.target_muscle)?.label || ex.target_muscle}
                             </p>
                           )}
-                          {ex.common_mistake && (
-                            <p className="text-[11px] font-bold text-red-400 mb-1.5 flex items-center gap-1.5">
-                              <AlertTriangle size={11} /> יש אזהרת ביצוע
+                          {formatCueLines(ex.patient_cues, "✅").map((line, i) => (
+                            <p key={`cue-${i}`} className="text-[11px] font-bold text-emerald-400 mb-1 leading-relaxed">
+                              {line}
                             </p>
-                          )}
+                          ))}
+                          {formatCueLines(ex.common_mistake, "❌").map((line, i) => (
+                            <p key={`mistake-${i}`} className="text-[11px] font-bold text-red-400 mb-1 leading-relaxed">
+                              {line}
+                            </p>
+                          ))}
                           {ex.easier_version_id && (
                             <p className="text-[11px] font-bold text-indigo-400 mb-1.5 flex items-center gap-1.5">
-                              <TrendingDown size={11} /> קל יותר: {exercises.find((e) => e.id === ex.easier_version_id)?.title || "—"}
+                              <TrendingDown size={11} /> קל יותר: {(() => {
+                                const linked = exercises.find((e) => e.id === ex.easier_version_id);
+                                return linked ? getExerciseName(linked, lang) : "—";
+                              })()}
                             </p>
                           )}
                           {ex.harder_version_id && (
                             <p className="text-[11px] font-bold text-indigo-400 mb-1.5 flex items-center gap-1.5">
-                              <TrendingUp size={11} /> קשה יותר: {exercises.find((e) => e.id === ex.harder_version_id)?.title || "—"}
+                              <TrendingUp size={11} /> קשה יותר: {(() => {
+                                const linked = exercises.find((e) => e.id === ex.harder_version_id);
+                                return linked ? getExerciseName(linked, lang) : "—";
+                              })()}
                             </p>
                           )}
                           <p className="text-[13px] text-stone-500 font-medium leading-relaxed mt-1 flex-1">{ex.description}</p>
@@ -1884,7 +2112,7 @@ export default function LegacyAdminApp() {
                       </option>
                       {filteredExercisesForAssign.map((e) => (
                         <option key={e.id} value={e.id} className="bg-stone-950">
-                          {e.title}
+                          {getExerciseName(e, lang)}
                         </option>
                       ))}
                     </select>
@@ -1995,8 +2223,8 @@ export default function LegacyAdminApp() {
                   {managePatientExercises.map((assign) => (
                     <div key={assign.id} className="border border-stone-800 p-5 rounded-2xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4 hover:border-stone-700 transition-colors bg-stone-950/50">
                       <div className="flex-1 w-full">
-                        <h4 className="text-lg font-black text-white">{assign.exercise?.title}</h4>
-                        <p className="text-sm font-bold text-teal-400 mb-2">{assign.exercise?.category}</p>
+                        <h4 className="text-lg font-black text-white">{assign.exercise && getExerciseName(assign.exercise, lang)}</h4>
+                        <p className="text-sm font-bold text-teal-400 mb-2">{(assign.exercise?.categories || []).join(" / ")}</p>
 
                         {editingAssignId === assign.id ? (
                           <div className="flex flex-col gap-3 mt-4 bg-[#1c1c1e] p-4 rounded-xl border border-stone-800">
@@ -2201,9 +2429,18 @@ export default function LegacyAdminApp() {
                       return (
                         <div key={finding.paperUrl} className="bg-[#1c1c1e] rounded-[1.75rem] border border-stone-800 p-6 flex flex-col gap-4">
                           <div>
-                            <span className="inline-flex items-center gap-1.5 bg-emerald-500/10 text-emerald-400 text-[10px] font-extrabold px-3 py-1.5 rounded-full border border-emerald-500/20">
-                              <Sparkles size={11} /> הידעת?
-                            </span>
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              <span className="inline-flex items-center gap-1.5 bg-emerald-500/10 text-emerald-400 text-[10px] font-extrabold px-3 py-1.5 rounded-full border border-emerald-500/20">
+                                <Sparkles size={11} /> הידעת?
+                              </span>
+                              {/* Evidence tier the search ranking already computed (see
+                                  classifyEvidence/EVIDENCE_LABEL_HE in researchAgent.ts) —
+                                  shown here so the admin can see at a glance why this
+                                  paper ranked where it did before publishing it. */}
+                              <span className="inline-flex items-center bg-stone-950 text-stone-400 text-[10px] font-bold px-3 py-1.5 rounded-full border border-stone-800">
+                                {finding.citationLabelHe}
+                              </span>
+                            </div>
                             <p className="text-white font-bold text-[15px] leading-relaxed mt-3">{finding.didYouKnowHe}</p>
                           </div>
                           <p className="text-stone-400 text-[13px] leading-relaxed flex-1">{finding.summaryHe}</p>

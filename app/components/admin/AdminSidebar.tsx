@@ -1,6 +1,6 @@
 "use client";
 
-import { Activity, BookOpen, ClipboardList, Image as ImageIcon, LogOut, Menu, Settings, Users, Video, Wand2, X } from "lucide-react";
+import { Activity, BookOpen, ClipboardList, Image as ImageIcon, Library, LogOut, Menu, Settings, Users, Video, Wand2, X } from "lucide-react";
 
 interface AdminSidebarProps {
   adminTab: string;
@@ -16,6 +16,7 @@ const NAV_ITEMS: { id: string; label: string; icon: typeof Activity }[] = [
   { id: "crm", label: "ניהול תיקים (CRM)", icon: Users },
   { id: "exercises", label: "ספריית תרגילים", icon: ImageIcon },
   { id: "builder", label: "בונה חכם & פרוטוקולים", icon: Wand2 },
+  { id: "program_library", label: "ספריית תוכניות", icon: Library },
   { id: "assign", label: "שיוך ידני", icon: ClipboardList },
   { id: "manage_plans", label: "עריכת תוכניות", icon: Settings },
   { id: "research", label: "מחקר ועדכוני הידעת", icon: BookOpen },

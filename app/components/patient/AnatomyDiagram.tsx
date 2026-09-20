@@ -1,20 +1,26 @@
 "use client";
 
-import { FRONT_MUSCLES, BACK_MUSCLES } from "body-muscles";
+import { CUSTOM_ANATOMY_REGIONS } from "@/app/components/patient/anatomy/customAnatomyRegions";
 import { ANATOMY_TIER_COLORS, MUSCLE_TO_ANATOMY_REGIONS } from "@/app/constants/catalog";
 
 type Tier = "primary" | "secondary";
 type View = "front" | "back";
 
-// FRONT_MUSCLES and BACK_MUSCLES keep their original coordinates from a
-// single shared coordinate space (the library's own side-by-side combined
-// diagram) rather than each being independently normalized to start at
-// (0,0) — front content spans roughly x:0-31.5, back roughly x:36.5-68.5,
-// both y:0-92.5 (measured directly off the path data, not assumed). Using
-// one "0 0 35 93" viewBox for both — the natural-looking guess — silently
-// clips the entire back view off-canvas. Each view gets its own viewBox
-// matching where its content actually lives.
-const VIEW_BOX: Record<View, string> = { front: "-1 -1 34 95", back: "35 -1 35 95" };
+// Dev Mode: active whenever this isn't a production build. Lets you click
+// any region in the diagram (in either usage — the exercise-info sheet or
+// PlanTab's hero) and see its id/view/center logged to the console, which
+// is how MUSCLE_TO_ANATOMY_REGIONS in catalog.ts gets filled in — there's
+// no other way to identify which region is which, since the source SVG is
+// an image trace with no per-muscle ids or labels. Also makes the diagram
+// render even with nothing highlighted (production hides it in that case),
+// since you need to see all 116 regions to click through them.
+const isDevMode = process.env.NODE_ENV !== "production";
+
+// The two figures (front, back) sit side by side in one shared 1342x894
+// canvas in the source file — these are their measured bounding boxes
+// (via getBBox() in a real browser, not estimated), each padded by ~10-20
+// units so nothing touches the SVG edge.
+const VIEW_BOX: Record<View, string> = { front: "140 10 445 875", back: "746 8 440 873" };
 
 // One clean medical-chart look everywhere: solid white base fill, precise
 // stone-800 stroke outlines. No "translucent/glass" treatment on any
@@ -24,6 +30,10 @@ const VIEW_BOX: Record<View, string> = { front: "-1 -1 34 95", back: "35 -1 35 9
 // photo instead).
 const BASE_FILL = "#ffffff";
 const STROKE_COLOR = "#292524"; // stone-800
+// Tuned for this source's much larger coordinate space (viewBox ~445 units
+// wide) — the previous body-muscles-based version used 0.25 for a ~35-unit
+// viewBox; the equivalent visual weight here is roughly 13x that.
+const STROKE_WIDTH = 3.2;
 
 // Both variants render the exact same diagram (same fill/stroke/tier
 // colors) — the only difference is the container chrome around it. "card":
@@ -41,13 +51,14 @@ interface AnatomyDiagramProps {
   className?: string;
 }
 
-// Resolves our AVAILABLE_MUSCLES ids to this view's highlighted
-// body-muscles-library region ids. Secondary is applied first so a muscle
+// Resolves our AVAILABLE_MUSCLES ids to this view's highlighted region ids
+// (see MUSCLE_TO_ANATOMY_REGIONS in catalog.ts — currently empty, waiting
+// to be filled in via Dev Mode). Secondary is applied first so a muscle
 // tagged as both (shouldn't normally happen — the admin form excludes the
 // primary pick from the secondary list, but this defends anyway) keeps only
 // its primary, stronger color.
-function buildHighlightMap(primaryMuscles: string[], secondaryMuscles: string[], view: View): Map<string, Tier> {
-  const map = new Map<string, Tier>();
+function buildHighlightMap(primaryMuscles: string[], secondaryMuscles: string[], view: View): Map<number, Tier> {
+  const map = new Map<number, Tier>();
   for (const id of secondaryMuscles) {
     const region = MUSCLE_TO_ANATOMY_REGIONS[id];
     if (region?.view === view) region.ids.forEach((rid) => map.set(rid, "secondary"));
@@ -59,39 +70,59 @@ function buildHighlightMap(primaryMuscles: string[], secondaryMuscles: string[],
   return map;
 }
 
-// Renders every region body-muscles ships for this view — not just the
-// highlighted ones — so the rest of the silhouette (head, hands, spine,
-// anything outside our own muscle vocabulary) still draws as a clean
-// line-art outline instead of leaving gaps in the body shape. `w-full
-// h-auto` plus the per-view viewBox above is what makes this scale cleanly
-// at any size (44px in PlanTab's hero, 130px in the exercise-info sheet)
-// without clipping or losing line detail — the viewBox, not the rendered
-// pixel size, defines what portion of the coordinate space is visible, and
-// stroke width is defined in that same coordinate space so it stays
-// proportionally crisp at any scale rather than needing per-size tuning.
-function AnatomyView({ view, highlights }: { view: View; highlights: Map<string, Tier> }) {
-  const regions = view === "front" ? FRONT_MUSCLES : BACK_MUSCLES;
+// Renders every region for this view — not just the highlighted ones — so
+// the rest of the silhouette still draws as a clean line-art outline
+// instead of leaving gaps in the body shape. `w-full h-auto` plus the
+// per-view viewBox above is what makes this scale cleanly at any size (44px
+// in PlanTab's hero, 130px in the exercise-info sheet) without clipping or
+// losing line detail — the viewBox, not the rendered pixel size, defines
+// what portion of the coordinate space is visible, and stroke width is
+// defined in that same coordinate space so it stays proportionally crisp at
+// any scale rather than needing per-size tuning.
+function AnatomyView({ view, highlights }: { view: View; highlights: Map<number, Tier> }) {
+  const regions = CUSTOM_ANATOMY_REGIONS.filter((r) => r.view === view);
   return (
-    <svg viewBox={VIEW_BOX[view]} className="w-full h-auto" aria-hidden="true">
+    <svg viewBox={VIEW_BOX[view]} className="w-full h-auto" aria-hidden={!isDevMode}>
       {regions.map((region) => {
         const tier = highlights.get(region.id);
         const fill = tier === "primary" ? ANATOMY_TIER_COLORS.primary : tier === "secondary" ? ANATOMY_TIER_COLORS.secondary : BASE_FILL;
-        return <path key={region.id} d={region.path} fill={fill} stroke={STROKE_COLOR} strokeWidth={0.25} strokeLinejoin="round" />;
+        return (
+          <path
+            key={region.id}
+            d={region.d}
+            fill={fill}
+            stroke={STROKE_COLOR}
+            strokeWidth={STROKE_WIDTH}
+            strokeLinejoin="round"
+            {...(isDevMode
+              ? {
+                  onClick: () => console.log(`[AnatomyDiagram] ${view} region #${region.id} (center ${region.cx}, ${region.cy})`),
+                  style: { cursor: "pointer" },
+                }
+              : {})}
+          />
+        );
       })}
     </svg>
   );
 }
 
-// Detailed front+back anatomical line-art muscle map — replaces the old
-// react-body-highlighter-based diagram (blocky ~21-region vocabulary, dark
-// theme) with the `body-muscles` package's 70+-region dataset, rendered
-// directly as our own <path> elements so every region's fill is under our
-// own light-theme, multi-tier control rather than the package's own
-// (intensity-scale, dark-friendly) runtime styling.
+// Detailed front+back anatomical line-art muscle map, built from a custom-
+// commissioned SVG (app/components/patient/anatomy/customAnatomyRegions.ts)
+// rather than a library — see that file's header comment for what "region"
+// means here (extraction order, not anatomy) and MUSCLE_TO_ANATOMY_REGIONS
+// in catalog.ts for the (currently empty, in-progress) muscle-id mapping.
+// Used both by the exercise-info sheet ("card" variant) and PlanTab's
+// hero-photo overlay ("overlay" variant).
 export default function AnatomyDiagram({ primaryMuscles, secondaryMuscles = [], variant = "card", size, className }: AnatomyDiagramProps) {
   const frontHighlights = buildHighlightMap(primaryMuscles, secondaryMuscles, "front");
   const backHighlights = buildHighlightMap(primaryMuscles, secondaryMuscles, "back");
-  if (frontHighlights.size === 0 && backHighlights.size === 0) return null;
+  const hasHighlights = frontHighlights.size > 0 || backHighlights.size > 0;
+  // Production stays hidden until a muscle actually resolves to a mapped
+  // region (same as before). Dev Mode always renders — you need to see all
+  // 116 regions to click through them and build that mapping in the first
+  // place, so it can't wait on the mapping already being done.
+  if (!hasHighlights && !isDevMode) return null;
 
   const viewWrapperStyle = size ? { width: `${size}px` } : undefined;
   const viewWrapperClassName = size ? undefined : "flex-1 max-w-[130px]";

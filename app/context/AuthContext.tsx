@@ -5,7 +5,7 @@ import { supabase } from "@/app/lib/supabase";
 import { TRANSLATIONS } from "@/app/constants/translations";
 import type { Lang, Patient, ViewName } from "@/app/types";
 
-interface AuthContextValue {
+export interface AuthContextValue {
   lang: Lang;
   setLang: (lang: Lang) => void;
   t: (typeof TRANSLATIONS)["he"];
@@ -16,7 +16,12 @@ interface AuthContextValue {
   handleLogout: () => void;
 }
 
-const AuthContext = createContext<AuthContextValue | undefined>(undefined);
+// Exported (not just AuthProvider/useAuth) so the admin Program Library's
+// Run/Test simulator can nest a local <AuthContext.Provider> with a
+// synthetic patient around a real WorkoutPlayer instance — every hook in the
+// patient tree reads loggedInPatient via useAuth(), so scoping an override
+// to that subtree is the only way to preview a program without a real login.
+export const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 // Global identity/session state — the pieces of state that would otherwise
 // need prop-drilling into nearly every component (marketing, patient, admin).

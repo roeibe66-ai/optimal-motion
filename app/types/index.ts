@@ -26,31 +26,57 @@ export interface Patient {
   created_at?: string;
 }
 
+export type DifficultyLevel = "beginner" | "intermediate" | "advanced" | "clinical";
+
+// Which name(s) getExerciseName() shows for this exercise, independent of the
+// viewer's own UI language — an explicit authorial override, not a fallback.
+export type NameDisplayPreference = "en" | "he" | "both";
+
 export interface Exercise {
   id: string;
-  title: string;
-  category: string;
+  // Replaces the old single `title` column. Both are optional now (an
+  // exercise can be entered in just one language) — always read through
+  // getExerciseName(exercise, lang) (app/utils/format.ts) rather than these
+  // directly; it resolves name_display_preference and the empty-field/
+  // lang-not-ready fallbacks for you.
+  name_he?: string;
+  name_en?: string;
+  name_display_preference: NameDisplayPreference;
+  categories: string[]; // was a single `category` string; an exercise can now belong to more than one
+  difficulty_level?: DifficultyLevel | null;
   description?: string;
   gif_url?: string;
   secondary_gif_url?: string | null; // optional second camera angle; toggled between in WorkoutPlayer's active-exercise view
   target_muscle?: string; // AVAILABLE_MUSCLES id (app/constants/catalog.ts) - not react-body-highlighter, which only backs the separate pain-area check-in
   secondary_muscles?: string; // comma-separated AVAILABLE_MUSCLES ids
   admin_tags?: string; // comma-separated ADMIN_TAGS ids
-  common_mistake?: string;
+  common_mistake?: string; // plain text, one point per line — UI splits on \n and prefixes each with ❌, DB stays plain
+  patient_cues?: string; // "Clinical Cues": plain text, one point per line — UI splits on \n and prefixes each with ✅, DB stays plain
   easier_version_id?: string | null; // exercises.id of the regression (e.g. Banded Pull-up for Pull-up)
   harder_version_id?: string | null; // exercises.id of the progression (e.g. Pull-up for Banded Pull-up)
+  // AVAILABLE_MUSCLES ids (app/constants/catalog.ts), real arrays this time —
+  // unlike target_muscle/secondary_muscles above, which pack multiple ids
+  // into one comma-separated string. Rendered by AnatomyHeatmap via
+  // muscleMapping.ts, which resolves each id to real SVG path ids.
+  prime_movers?: string[];
+  synergists?: string[];
 }
+
+export type PackageStatus = "draft" | "published";
 
 export interface Package {
   id: string;
   title: string;
   description?: string;
+  status: PackageStatus;
+  created_at?: string;
 }
 
 export interface PackageExercise {
   id: string;
   package_id: string;
   exercise_id: string;
+  exercise?: Exercise; // joined client-side after fetch, not a DB column
   block: string;
   sets: number;
   reps: number;
@@ -58,6 +84,14 @@ export interface PackageExercise {
   is_time: boolean;
   week: number;
   scheduled_days: string; // single DAYS_OF_WEEK id
+  rest_time_seconds: number;
+  // Live since 20260901084753_patient_and_package_exercises_tempo, but no
+  // builder UI sets them yet — read-only fields so the PDF export can
+  // display tempo when a row happens to have it, without claiming the
+  // builder can edit it.
+  tempo_eccentric?: number | null;
+  tempo_pause?: number | null;
+  tempo_concentric?: number | null;
 }
 
 export interface PatientExercise {
@@ -73,6 +107,7 @@ export interface PatientExercise {
   is_time: boolean;
   week: number;
   scheduled_days?: string | null; // comma-separated DAYS_OF_WEEK ids, or null for "every day"
+  rest_time_seconds: number;
 }
 
 export interface SessionPerformanceEntry {
@@ -103,6 +138,7 @@ export interface BuilderExercise extends Exercise {
   rir: number | null;
   is_time: boolean;
   block: string;
+  rest_time_seconds: number;
 }
 
 export type BuilderDayPlan = Record<string, BuilderExercise[]>; // keyed by DAYS_OF_WEEK id
@@ -127,6 +163,14 @@ export interface ResearchFinding {
   year: number | null;
   summaryHe: string;
   didYouKnowHe: string;
+  // Both computed deterministically in researchAgent.ts from the paper's
+  // publication-type/keyword signals (the same ones its evidence-hierarchy
+  // ranking used) — not LLM-generated, so they can't drift from what
+  // actually determined the paper's rank. evidenceLabelHe is the bare label
+  // ("סקירה שיטתית"); citationLabelHe is the ready-to-display tag
+  // ("מקור: סקירה שיטתית, 2023").
+  evidenceLabelHe: string;
+  citationLabelHe: string;
 }
 
 // A ResearchFinding the admin has approved and published — the curated_facts

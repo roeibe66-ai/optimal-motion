@@ -62,4 +62,34 @@ already is. If this pattern shows up in more exercises, it's worth revisiting wh
 `target_muscle` should just become multi-select in the admin form instead of being worked
 around.
 
+## 2026-09-17 — `tempo_eccentric`/`tempo_pause`/`tempo_concentric` have columns but no UI ever sets them
+
+**What happened:** `package_exercises` and `patient_exercises` have had `tempo_eccentric`/
+`tempo_pause`/`tempo_concentric` (nullable int) since `20260901084753_patient_and_package_
+exercises_tempo`, but no admin builder control (protocol or direct-assign) has ever written
+to them — every row has them `null`. Surfaced while building the Program Library's PDF
+export, which was asked to display Tempo: it now renders "—" for every real program, since
+there's no way to actually set a value yet.
+**Why:** the tempo columns were migrated ahead of the UI that was supposed to use them, and
+nothing since has closed that gap.
+**Rule:** don't assume a column existing means a feature is wired end-to-end — check for a
+UI control that writes to it, not just the migration that added it. Adding a tempo
+sets/reps-style input to the builder (mirroring `rest_time_seconds`'s pills) is the actual
+fix, still open.
+
+## 2026-09-18 — Admin builder's "Clinical Cues" field actually wrote to `description`
+
+**What happened:** the exercise builder form had a textarea labeled "דגשים קליניים (אופציונלי)"
+("Clinical Cues") that was bound to `exDesc`/`description` — not to `exercises.patient_cues`,
+a column that's existed since the same migration as `common_mistake` but had zero UI wired to
+it anywhere. So "Clinical Cues" entered by an admin actually landed in the exercise's general
+description text (shown to patients under "ביצוע נכון"/Correct Execution in
+`ExerciseInfoModal`), while `patient_cues` stayed permanently empty.
+**Why:** likely a copy-paste/relabel slip at some point — the label text was updated but the
+bound state/column wasn't.
+**Rule:** when a form label and its bound field name disagree, trust neither blindly — check
+the column that label is supposed to map to actually has a real writer, the same way the
+tempo entry above got caught. Fixed here by giving `patient_cues` its own real textarea
+(rendered with a ✅ prefix per line) and relabeling the old one "תיאור / הנחיות ביצוע".
+
 <!-- Add new entries above this line, newest first is fine but not required. -->

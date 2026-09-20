@@ -20,7 +20,10 @@ export const AVAILABLE_MUSCLES = [
   { id: "brachialis", label: "ברכיאליס" }, { id: "forearm-flexors", label: "כופפי אמה" }, { id: "forearm-extensors", label: "פושטי אמה" },
   { id: "transverse-abdominis", label: "שריר בטן רוחבי" },
   { id: "hip-flexors", label: "כופפי ירך" }, { id: "glute-medius", label: "ישבן תיכון" },
-  { id: "soleus", label: "סוליאוס" }, { id: "tibialis-anterior", label: "טיביאליס קדמי" }, { id: "peroneus-longus", label: "פרונאוס לונגוס" }
+  { id: "soleus", label: "סוליאוס" }, { id: "tibialis-anterior", label: "טיביאליס קדמי" }, { id: "peroneus-longus", label: "פרונאוס לונגוס" },
+  // Added for the anatomy heatmap's 2026-09-20 overlay.svg re-export, which
+  // added erector_spine/lower_erector_spine paths (see muscleMapping.ts).
+  { id: "erector-spinae", label: "זוקפי הגב" }
 ];
 
 // Purely for grouping the (now 30-entry) muscle picker in the admin form by
@@ -32,7 +35,7 @@ export const AVAILABLE_MUSCLES = [
 export const MUSCLE_REGIONS: { id: string; label: string; muscleIds: string[] }[] = [
   { id: "chest", label: "חזה", muscleIds: ["chest", "serratus-anterior"] },
   { id: "shoulders", label: "כתפיים", muscleIds: ["front-deltoids", "side-deltoids", "back-deltoids", "rotator-cuff"] },
-  { id: "back", label: "גב", muscleIds: ["upper-back", "lower-back", "lats", "trapezius", "rhomboids"] },
+  { id: "back", label: "גב", muscleIds: ["upper-back", "lower-back", "lats", "trapezius", "rhomboids", "erector-spinae"] },
   { id: "arms", label: "זרועות", muscleIds: ["biceps", "triceps", "brachialis", "forearm-flexors", "forearm-extensors"] },
   { id: "core", label: "בטן וליבה", muscleIds: ["abs", "obliques", "transverse-abdominis"] },
   { id: "legs", label: "רגליים וירכיים", muscleIds: ["quadriceps", "hamstring", "gluteal", "glute-medius", "adductors", "abductors", "hip-flexors", "calves", "soleus", "tibialis-anterior", "peroneus-longus"] },
@@ -139,6 +142,23 @@ export const ADMIN_TAGS: { id: string; label: string; icon: IconComponent; desc:
   { id: "rehab", label: "שיקום", icon: HeartPulse, desc: "קליני בלבד - פתוח למטופלים תחת השגחה" }
 ];
 
+// exercises.name_display_preference (NameDisplayPreference, app/types/index.ts)
+// — shown in the admin builder's display-name dropdown.
+export const NAME_DISPLAY_PREFERENCES: { id: "en" | "he" | "both"; label: string }[] = [
+  { id: "en", label: "אנגלית" },
+  { id: "he", label: "עברית" },
+  { id: "both", label: "שתיהן" },
+];
+
+// exercises.difficulty_level (DifficultyLevel, app/types/index.ts) — shown in
+// the admin builder's difficulty dropdown.
+export const DIFFICULTY_LEVELS: { id: "beginner" | "intermediate" | "advanced" | "clinical"; label: string }[] = [
+  { id: "beginner", label: "מתחיל" },
+  { id: "intermediate", label: "בינוני" },
+  { id: "advanced", label: "מתקדם" },
+  { id: "clinical", label: "קליני" },
+];
+
 export const CATEGORY_IMAGES: Record<string, string> = {
   "קליסטניקס": "https://images.unsplash.com/photo-1598971639058-fab354c622d2?auto=format&fit=crop&w=800&q=80",
   "מכון כושר": "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=800&q=80",
@@ -240,44 +260,25 @@ export function toBodyModelMuscles(ids: string[]): string[] {
 // `highlightedColors[frequency - 1]` indexing (see ExerciseMuscleMap.tsx).
 export const MUSCLE_MAP_TIER_COLORS = ["#fecaca", "#dc2626"];
 
-// AnatomyDiagram (the detailed line-art front/back muscle map that replaced
-// react-body-highlighter in ExerciseMuscleMap) draws its paths from the
-// `body-muscles` npm package's FRONT_MUSCLES/BACK_MUSCLES data — 70+
-// individually-addressable regions, split left/right, split by sub-head
-// where the anatomy actually has one (traps upper/mid/lower, lats
-// upper/mid/lower, triceps long/lateral, hamstrings medial/lateral, calves
-// gastroc-medial/gastroc-lateral/soleus). That's a much finer vocabulary
-// than react-body-highlighter's ~21 fixed regions, so most of our 30
-// AVAILABLE_MUSCLES now map to *something* real — but not all of them:
-// rotator-cuff, rhomboids, brachialis, transverse-abdominis, hip abductors,
-// and peroneus-longus still have no distinct region in this library either.
-// Same rule as before: a muscle with no entry here is dropped from the
-// diagram rather than approximated to a nearby region. Every entry's ids
-// belong to a single view — no muscle is visible from both front and back.
-export const MUSCLE_TO_ANATOMY_REGIONS: Record<string, { view: "front" | "back"; ids: string[] }> = {
-  chest: { view: "front", ids: ["chest-upper-left", "chest-lower-left", "chest-upper-right", "chest-lower-right"] },
-  "front-deltoids": { view: "front", ids: ["shoulder-front-left", "shoulder-front-right"] },
-  "side-deltoids": { view: "front", ids: ["shoulder-side-left", "shoulder-side-right"] },
-  "back-deltoids": { view: "back", ids: ["deltoid-rear-left", "deltoid-rear-right"] },
-  biceps: { view: "front", ids: ["biceps-left", "biceps-right"] },
-  triceps: { view: "back", ids: ["triceps-long-left", "triceps-lateral-left", "triceps-long-right", "triceps-lateral-right"] },
-  "forearm-flexors": { view: "back", ids: ["forearm-flexors-left", "forearm-flexors-right"] },
-  "forearm-extensors": { view: "back", ids: ["forearm-extensors-left", "forearm-extensors-right"] },
-  "lower-back": { view: "back", ids: ["lower-back-erectors-left", "lower-back-ql-left", "lower-back-erectors-right", "lower-back-ql-right"] },
-  abs: { view: "front", ids: ["abs-upper-left", "abs-upper-right", "abs-lower-right", "abs-lower-left"] },
-  obliques: { view: "front", ids: ["obliques-left", "obliques-right"] },
-  gluteal: { view: "back", ids: ["gluteus-maximus-left", "gluteus-maximus-right"] },
-  "glute-medius": { view: "back", ids: ["gluteus-medius-left", "gluteus-medius-right"] },
-  quadriceps: { view: "front", ids: ["quads-left", "quads-right"] },
-  hamstring: { view: "back", ids: ["hamstrings-medial-left", "hamstrings-lateral-left", "hamstrings-medial-right", "hamstrings-lateral-right"] },
-  calves: { view: "back", ids: ["calves-gastroc-medial-left", "calves-gastroc-lateral-left", "calves-gastroc-medial-right", "calves-gastroc-lateral-right"] },
-  adductors: { view: "front", ids: ["adductors-left", "adductors-right"] },
-  "serratus-anterior": { view: "front", ids: ["serratus-anterior-left", "serratus-anterior-right"] },
-  lats: { view: "back", ids: ["lats-upper-left", "lats-mid-left", "lats-lower-left", "lats-upper-right", "lats-mid-right", "lats-lower-right"] },
-  trapezius: { view: "back", ids: ["traps-upper-left", "traps-mid-left", "traps-lower-left", "traps-upper-right", "traps-mid-right", "traps-lower-right"] },
-  "hip-flexors": { view: "front", ids: ["hip-flexor-left", "hip-flexor-right"] },
-  soleus: { view: "back", ids: ["calves-soleus-left", "calves-soleus-right"] },
-  "tibialis-anterior": { view: "front", ids: ["tibialis-anterior-left", "tibialis-anterior-right"] },
+// AnatomyDiagram now draws from a custom-commissioned SVG (see
+// app/components/patient/anatomy/customAnatomyRegions.ts) instead of the
+// `body-muscles` package (removed as a dependency — nothing else used it).
+// That source is an image-trace export: it has exactly 2 giant compound
+// paths, not one path per muscle, so CUSTOM_ANATOMY_REGIONS was built by
+// splitting those compound paths on their subpath boundaries — 116 regions,
+// numbered by extraction order, with NO inherent anatomical labels. Some
+// regions are genuinely single-muscle-sized (e.g. one whole quad); others
+// are much bigger fused blobs (e.g. the entire front torso — chest+abs+
+// neck together, since the source line art never draws a boundary between
+// them that closes off separate shapes). AnatomyDiagram's Dev Mode
+// (NODE_ENV !== "production") click-logs each region's id/view/center so
+// this table can be filled in by hand — click around locally, note which
+// AVAILABLE_MUSCLES id maps to which region id(s), and add rows below. A
+// region that's actually 3 fused muscles has to be mapped to whichever one
+// AVAILABLE_MUSCLES id makes sense (or left out) — there's no way to
+// recover a finer boundary the source file never drew.
+export const MUSCLE_TO_ANATOMY_REGIONS: Record<string, { view: "front" | "back"; ids: number[] }> = {
+  // TODO: fill in via AnatomyDiagram's Dev Mode click-to-console.log.
 };
 
 // Emerald rather than the red/pink this app's pain-area check-in already

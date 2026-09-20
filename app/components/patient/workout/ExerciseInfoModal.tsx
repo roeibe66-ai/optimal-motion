@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, CheckCircle, Info, TrendingUp } from "lucide-react";
+import { ClipboardList, Info, TrendingUp } from "lucide-react";
 import {
   CartesianGrid,
   Line,
@@ -14,6 +14,8 @@ import { useAuth } from "@/app/context/AuthContext";
 import type { Exercise } from "@/app/types";
 import Modal from "@/app/components/ui/Modal";
 import ExerciseMuscleMap from "@/app/components/patient/ExerciseMuscleMap";
+import AnatomyHeatmap from "@/app/components/AnatomyHeatmap";
+import { formatCueLines, getExerciseName } from "@/app/utils/format";
 
 interface ExerciseHistoryPoint {
   date: string;
@@ -32,39 +34,58 @@ interface ExerciseInfoModalProps {
 // caller (it needs workout_logs + patient_type, which live outside this
 // component's scope) and passed in already shaped for the chart.
 export default function ExerciseInfoModal({ exercise, historyData, onClose }: ExerciseInfoModalProps) {
-  const { t } = useAuth();
+  const { lang } = useAuth();
 
-  const hasMistake = !!exercise.common_mistake;
+  // Cue lines first, mistake lines immediately after — one merged list, one
+  // card ("הנחiות"/Instructions), rather than the two separately-colored
+  // cards this used to be. The ✅/❌ prefix on each line (from formatCueLines)
+  // is what signals positive vs. negative now, not card color.
+  const instructionLines = [...formatCueLines(exercise.patient_cues, "✅"), ...formatCueLines(exercise.common_mistake, "❌")];
   const hasDescription = !!exercise.description && exercise.description.trim() !== "" && exercise.description.trim() !== ".";
   const hasHistory = historyData.length > 0;
 
+  // prime_movers/synergists (the new heatmap tagging) take priority when an
+  // exercise has been tagged with them; exercises only tagged the old way
+  // (target_muscle/secondary_muscles) still fall back to ExerciseMuscleMap's
+  // AnatomyDiagram rather than rendering an empty heatmap.
+  const primeMovers = exercise.prime_movers ?? [];
+  const synergists = exercise.synergists ?? [];
+  const hasHeatmapData = primeMovers.length > 0 || synergists.length > 0;
+
   return (
     <Modal onClose={onClose} title="מידע לתרגיל" icon={<Info size={20} className="text-teal-500" />}>
-      <h4 className="font-black text-lg mb-3">{exercise.title}</h4>
-      <ExerciseMuscleMap exercise={exercise} />
+      <h4 className="font-black text-xl tracking-tight mb-4">{getExerciseName(exercise, lang)}</h4>
 
-      {hasMistake && (
-        <div className="p-4 rounded-2xl border mb-4 bg-red-900/20 border-red-900/50">
-          <h4 className="font-bold text-red-500 mb-1 text-xs flex items-center gap-1.5">
-            <AlertTriangle size={14} /> {t.warning}
-          </h4>
-          <p className="text-red-200 font-medium text-sm leading-relaxed">{exercise.common_mistake}</p>
+      {hasHeatmapData ? (
+        <div className="mb-5 max-w-xs mx-auto">
+          <AnatomyHeatmap primeMovers={primeMovers} synergists={synergists} />
+        </div>
+      ) : (
+        <div className="mb-5">
+          <ExerciseMuscleMap exercise={exercise} />
         </div>
       )}
 
-      {hasDescription && (
-        <div className="mb-4">
-          <h4 className="font-bold text-teal-500 text-xs tracking-widest mb-1.5 flex items-center gap-1.5">
-            <CheckCircle size={14} /> {t.correct_execution}
-          </h4>
-          <p className="bg-stone-900 border-stone-800 text-stone-300 leading-relaxed text-sm font-medium p-4 rounded-xl border">
-            {exercise.description}
-          </p>
+      {hasDescription && <p className="text-stone-300 leading-relaxed text-[15px] font-medium mb-6">{exercise.description}</p>}
+
+      {instructionLines.length > 0 && (
+        <div className="rounded-2xl border border-stone-800 bg-gradient-to-b from-white/[0.03] to-transparent mb-6 overflow-hidden">
+          <div className="flex items-center gap-2 px-5 pt-4 pb-3 border-b border-stone-800/80">
+            <ClipboardList size={15} className="text-emerald-500" />
+            <h4 className="font-bold text-[13px] tracking-wide text-stone-200">הנחיות</h4>
+          </div>
+          <div className="px-5 py-4 space-y-2.5">
+            {instructionLines.map((line, i) => (
+              <p key={i} className="text-stone-300 text-sm font-medium leading-relaxed">
+                {line}
+              </p>
+            ))}
+          </div>
         </div>
       )}
 
       {hasHistory && (
-        <div className="mt-6 pt-6 border-t border-stone-800">
+        <div className="mt-2 pt-6 border-t border-stone-800">
           <h4 className="font-bold text-sm mb-4 flex items-center gap-2">
             <TrendingUp size={16} className="text-teal-500" /> היסטוריית ביצועים (מקסימום לאימון)
           </h4>
@@ -84,7 +105,7 @@ export default function ExerciseInfoModal({ exercise, historyData, onClose }: Ex
         </div>
       )}
 
-      {!hasMistake && !hasDescription && !hasHistory && (
+      {instructionLines.length === 0 && !hasDescription && !hasHistory && (
         <div className="text-center text-stone-500 font-medium p-4">אין דגשים או היסטוריה לתרגיל זה.</div>
       )}
     </Modal>

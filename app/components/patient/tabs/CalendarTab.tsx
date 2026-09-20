@@ -111,7 +111,7 @@ export default function CalendarTab({ patientExercises, workoutLogs, patientId, 
     selectedWeek !== null && selectedDayId !== null
       ? patientExercises.filter((pe) => (pe.week || 1) === selectedWeek && matchesScheduledDay(pe, selectedDayId))
       : [];
-  const selectedDayCategories = Array.from(new Set(selectedDayExercises.map((pe) => pe.exercise.category)));
+  const selectedDayCategories = Array.from(new Set(selectedDayExercises.flatMap((pe) => pe.exercise.categories)));
 
   return (
     <div className="animate-in fade-in duration-500">
@@ -160,7 +160,7 @@ export default function CalendarTab({ patientExercises, workoutLogs, patientId, 
           const scheduledCategories =
             week === null
               ? []
-              : Array.from(new Set(patientExercises.filter((pe) => (pe.week || 1) === week && matchesScheduledDay(pe, dayId)).map((pe) => pe.exercise.category)));
+              : Array.from(new Set(patientExercises.filter((pe) => (pe.week || 1) === week && matchesScheduledDay(pe, dayId)).flatMap((pe) => pe.exercise.categories)));
           const isCompleted = completedDateKeys.has(toDateKey(date));
           const isClickable = scheduledCategories.length > 0 && week !== null;
           const isSelected = selectedDate !== null && isSameDay(date, selectedDate);
@@ -238,7 +238,7 @@ export default function CalendarTab({ patientExercises, workoutLogs, patientId, 
           <div className="flex flex-col gap-2">
             {selectedDayCategories.map((cat) => {
               const style = ADMIN_CATEGORY_STYLES[cat] ?? DEFAULT_ADMIN_CATEGORY_STYLE;
-              const catExercises = selectedDayExercises.filter((pe) => pe.exercise.category === cat);
+              const catExercises = selectedDayExercises.filter((pe) => pe.exercise.categories.includes(cat));
               const thumbUrl = catExercises.find((pe) => pe.exercise.gif_url && !/\.(mp4|webm)$/i.test(pe.exercise.gif_url))?.exercise.gif_url;
 
               return (

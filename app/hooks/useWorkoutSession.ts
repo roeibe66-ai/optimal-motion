@@ -4,6 +4,7 @@ import { useEffect, useState, type TouchEvent } from "react";
 import { supabase } from "@/app/lib/supabase";
 import { useAuth } from "@/app/context/AuthContext";
 import type { HapticType } from "@/app/hooks/useHaptics";
+import { getExerciseName } from "@/app/utils/format";
 import type { Exercise, PatientExercise, SessionPerformanceEntry, WorkoutLog } from "@/app/types";
 
 // A PatientExercise as it's actually consumed here: already joined with its
@@ -22,6 +23,7 @@ export interface SessionExercise {
   rir: number | null;
   is_time: boolean;
   block: string;
+  rest_time_seconds: number;
 }
 
 // The pre-workout pain check-in (clinical patients only) and the
@@ -49,6 +51,12 @@ interface UseWorkoutSessionParams {
   onExitDiyMode: () => void; // owned by the future useDiyBuilder hook
   triggerHaptic: (type: HapticType) => void;
   onWorkoutLogged: () => void; // refetch patient data/logs after a successful log write
+  // Admin Program Library's Run/Test simulator: drives the exact same
+  // session/UI a real patient gets, but the synthetic patient (id -1) has no
+  // real row to attach writes to. When true, submitFinalFeedback skips both
+  // Supabase inserts and fakes success, so testing a program never creates
+  // real workout_logs/patient_exercises rows.
+  isSimulation?: boolean;
 }
 
 export function useWorkoutSession({
@@ -64,8 +72,9 @@ export function useWorkoutSession({
   onExitDiyMode,
   triggerHaptic,
   onWorkoutLogged,
+  isSimulation = false,
 }: UseWorkoutSessionParams) {
-  const { loggedInPatient } = useAuth();
+  const { loggedInPatient, lang } = useAuth();
 
   const [isWorkoutMode, setIsWorkoutMode] = useState(false);
   const [showPreWorkout, setShowPreWorkout] = useState(false);
@@ -118,10 +127,10 @@ export function useWorkoutSession({
   // The category picker on the Plan tab's overview screen — every distinct
   // category assigned in the currently-selected week (regardless of the
   // day/category filters below, which only narrow the active workout).
-  const patientCategories = Array.from(new Set(weekFilteredPatientExercises.map((pe) => pe.exercise.category)));
+  const patientCategories = Array.from(new Set(weekFilteredPatientExercises.flatMap((pe) => pe.exercise.categories)));
 
   const displayedExercises = weekFilteredPatientExercises.filter((pe) => {
-    if (pe.exercise.category !== selectedCategory && !isDiyMode) return false;
+    if (!isDiyMode && (!selectedCategory || !pe.exercise.categories.includes(selectedCategory))) return false;
     if (selectedDayFilter === "all") return true;
     if (!pe.scheduled_days || pe.scheduled_days.trim() === "") return true;
     return pe.scheduled_days.split(",").includes(selectedDayFilter);
@@ -133,7 +142,7 @@ export function useWorkoutSession({
     diySelectedExercises.forEach((ex, idx) => {
       const blockLetter = String.fromCharCode(65 + idx);
       blocksMap[blockLetter] = [
-        { id: `diy_${idx}`, exercise: ex, sets: 3, reps: 10, rir: null, is_time: false, block: blockLetter },
+        { id: `diy_${idx}`, exercise: ex, sets: 3, reps: 10, rir: null, is_time: false, block: blockLetter, rest_time_seconds: 60 },
       ];
     });
   } else {
@@ -230,14 +239,15 @@ export function useWorkoutSession({
       // handleContinueSuperset runs), same as the real rest screen does at
       // the end of a full round.
       setIsSupersetCheck(true);
-    } else if (currentBlockSet < maxSetsInBlock) {
+    } else if (currentBlockSet < maxSetsInBlock || activeBlockIdx < blocksKeys.length - 1) {
+      // The rest duration is the finishing exercise's own configured
+      // restTimeSeconds (builder-adjustable, defaults to 60) — used both
+      // between sets of the same exercise and between blocks, rather than
+      // the previous hardcoded 60/90 split.
+      const rest = activeAssign?.rest_time_seconds ?? 60;
       setIsResting(true);
-      setRestTimer(60);
-      setRestTimerTotal(60);
-    } else if (activeBlockIdx < blocksKeys.length - 1) {
-      setIsResting(true);
-      setRestTimer(90);
-      setRestTimerTotal(90);
+      setRestTimer(rest);
+      setRestTimerTotal(rest);
     } else {
       triggerHaptic("success");
       setWorkoutFinished(true);
@@ -299,7 +309,7 @@ export function useWorkoutSession({
   useEffect(() => {
     if (isWorkoutMode && "mediaSession" in navigator && displayedExercise) {
       navigator.mediaSession.metadata = new MediaMetadata({
-        title: displayedExercise.title,
+        title: getExerciseName(displayedExercise, lang),
         artist: `סט ${currentBlockSet} מתוך ${maxSetsInBlock}`,
         album: "OptimalMotion",
         artwork: [{ src: "/icon.png", sizes: "512x512", type: "image/png" }],
@@ -510,6 +520,16 @@ export function useWorkoutSession({
 
   const submitFinalFeedback = async (postPain: number | null = null) => {
     if (!loggedInPatient) return;
+
+    if (isSimulation) {
+      // Admin Run/Test: skip both writes below entirely — the synthetic
+      // patient (id -1) has no real row, and a real patient's data must
+      // never be touched by an admin testing a program's flow/UI.
+      triggerHaptic("success");
+      setFeedbackPhase("done");
+      setSelectedPainAreas([]);
+      return;
+    }
 
     if (isDiyMode) {
       if (confirm("האם לשמור את האימון שבנית כחלק קבוע מהתוכנית השבועית שלך?")) {

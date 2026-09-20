@@ -6,7 +6,7 @@ import { useAuth } from "@/app/context/AuthContext";
 import ExerciseInfoModal from "@/app/components/patient/workout/ExerciseInfoModal";
 import PreWorkoutFlow from "@/app/components/patient/PreWorkoutFlow";
 import WorkoutFinishFlow from "@/app/components/patient/workout/WorkoutFinishFlow";
-import { formatTime } from "@/app/utils/format";
+import { formatTime, getExerciseName } from "@/app/utils/format";
 import type { HapticType } from "@/app/hooks/useHaptics";
 import type { useWorkoutSession } from "@/app/hooks/useWorkoutSession";
 
@@ -148,7 +148,7 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
           </div>
 
           <div className="text-center">
-            <h2 className="text-2xl md:text-3xl font-black italic text-stone-900 tracking-tight">{ex?.title}</h2>
+            <h2 className="text-2xl md:text-3xl font-black italic text-stone-900 tracking-tight">{ex && getExerciseName(ex, lang)}</h2>
             <p className="text-stone-500 text-sm font-bold mt-1 tabular-nums">
               סט {session.currentBlockSet} / {session.maxSetsInBlock}
             </p>
@@ -224,7 +224,7 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
                     isVideo ? (
                       <video src={currentUrl} autoPlay muted playsInline loop className="w-full h-full object-cover" />
                     ) : (
-                      <img src={currentUrl} alt={ex?.title || "Exercise media"} className="w-full h-full object-cover" />
+                      <img src={currentUrl} alt={ex ? getExerciseName(ex, lang) : "Exercise media"} className="w-full h-full object-cover" />
                     )
                   ) : (
                     // Adapted to this screen's light theme rather than the
@@ -390,7 +390,7 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
                 <span className="text-stone-500 text-sm font-bold tabular-nums">
                   סט {session.currentBlockSet + 1} מתוך {session.maxSetsInBlock}
                 </span>
-                <h3 className="text-xl font-black text-stone-900">{ex?.title}</h3>
+                <h3 className="text-xl font-black text-stone-900">{ex && getExerciseName(ex, lang)}</h3>
               </div>
             ) : next ? (
               <div className="flex flex-col items-center gap-1.5">
@@ -400,7 +400,7 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
                   onClick={() => session.setViewingExInfo(next.exercise)}
                   className="flex items-center gap-1.5 active:scale-95 transition-transform duration-150 ease-out"
                 >
-                  <h3 className="text-xl font-black text-stone-900">{next.exercise.title}</h3>
+                  <h3 className="text-xl font-black text-stone-900">{getExerciseName(next.exercise, lang)}</h3>
                   <Info size={14} className="text-stone-400" />
                 </button>
               </div>

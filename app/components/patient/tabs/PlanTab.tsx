@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/app/context/AuthContext";
 import { getTrackAccess } from "@/app/utils/premium";
+import { getExerciseName } from "@/app/utils/format";
 import { AVAILABLE_MUSCLES, DEFAULT_TRACK_GLOW, TRACK_GLOW_TINTS } from "@/app/constants/catalog";
 import type { AIAssistantContext, CuratedFact, Exercise, WorkoutLog } from "@/app/types";
 import type { HydratedPatientExercise, SessionExercise } from "@/app/hooks/useWorkoutSession";
@@ -121,7 +122,7 @@ export default function PlanTab({
   onStartWorkout,
   curatedFacts,
 }: PlanTabProps) {
-  const { loggedInPatient } = useAuth();
+  const { loggedInPatient, lang } = useAuth();
 
   // Grounds the patient coach chat in this patient's real plan and recent
   // sessions — the same week's assigned exercises shown below, plus their
@@ -131,7 +132,7 @@ export default function PlanTab({
     patientName: loggedInPatient?.full_name,
     patientType: loggedInPatient?.patient_type,
     currentExercises: weekFilteredExercises.map((pe) => ({
-      title: pe.exercise.title,
+      title: getExerciseName(pe.exercise, lang),
       block: pe.block || "A",
       sets: Number(pe.sets) || 0,
       reps: Number(pe.reps) || 0,
@@ -177,7 +178,7 @@ export default function PlanTab({
     let todayMuscleIds: string[] = [];
     if (todayCat) {
       const todayCategoryExercises = weekFilteredExercises.filter((pe) => {
-        if (pe.exercise.category !== todayCat) return false;
+        if (!pe.exercise.categories.includes(todayCat)) return false;
         if (selectedDayFilter === "all") return true;
         if (!pe.scheduled_days || pe.scheduled_days.trim() === "") return true;
         return pe.scheduled_days.split(",").includes(selectedDayFilter);
@@ -483,7 +484,7 @@ export default function PlanTab({
 
           const equipSet = new Set<string>();
           displayedExercises.forEach((a) => {
-            const str = (a.exercise?.title + " " + a.exercise?.description).toLowerCase();
+            const str = `${a.exercise?.name_he ?? ""} ${a.exercise?.name_en ?? ""} ${a.exercise?.description ?? ""}`.toLowerCase();
             if (str.includes("מתח") || str.includes("pull up") || str.includes("pull-up")) equipSet.add("מתח");
             if (str.includes("מקבילים") || str.includes("dip")) equipSet.add("מקבילים");
             if (str.includes("טבעות") || str.includes("ring")) equipSet.add("טבעות");
@@ -546,7 +547,7 @@ export default function PlanTab({
                             assignment.exercise.gif_url.toLowerCase().includes(".mp4") || assignment.exercise.gif_url.toLowerCase().includes(".webm") ? (
                               <video src={assignment.exercise.gif_url} className="w-full h-full object-cover" />
                             ) : (
-                              <img src={assignment.exercise.gif_url} alt={assignment.exercise.title} className="w-full h-full object-cover" />
+                              <img src={assignment.exercise.gif_url} alt={getExerciseName(assignment.exercise, lang)} className="w-full h-full object-cover" />
                             )
                           ) : (
                             <div className="w-full h-full bg-stone-800"></div>
@@ -557,7 +558,7 @@ export default function PlanTab({
                             {assignment.sets} סטים x {assignment.is_time ? `${assignment.reps}"` : `${assignment.reps} חזרות`}
                             {assignment.rir && <span className="bg-stone-700 text-stone-300 px-1.5 py-0.5 rounded text-[8px] ml-1">RIR {assignment.rir}</span>}
                           </div>
-                          <h4 className="text-white font-bold truncate">{assignment.exercise.title}</h4>
+                          <h4 className="text-white font-bold truncate">{getExerciseName(assignment.exercise, lang)}</h4>
                         </div>
                         <ChevronLeft size={16} className="text-stone-500 group-hover:text-white transition-colors rotate-180" />
                       </div>

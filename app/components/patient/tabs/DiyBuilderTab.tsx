@@ -13,6 +13,8 @@ import {
   EQUIPMENT_LIST,
   MUSCLE_TO_BODY_PARTS,
 } from "@/app/constants/catalog";
+import { useAuth } from "@/app/context/AuthContext";
+import { getExerciseName } from "@/app/utils/format";
 import type { Exercise } from "@/app/types";
 
 interface DiyBuilderTabProps {
@@ -69,20 +71,23 @@ export default function DiyBuilderTab({
   isEditingSavedWorkout,
   onCancelEditSavedWorkout,
 }: DiyBuilderTabProps) {
+  const { lang } = useAuth();
+
   // Category chips are derived from whatever values actually exist in the
   // live catalog (not hardcoded to the mockup's 4), so an exercise tagged
   // with a category outside that set (e.g. a legacy value) still gets a
   // working filter chip instead of becoming unreachable — it just falls
   // back to DEFAULT_DIY_CATEGORY_STYLE's neutral color.
-  const availableCategories = Array.from(new Set(exerciseCatalog.map((ex) => ex.category).filter(Boolean)));
+  const availableCategories = Array.from(new Set(exerciseCatalog.flatMap((ex) => ex.categories).filter(Boolean)));
 
   const availableExercises = exerciseCatalog.filter((ex) => {
     const matchMuscle = diyMuscleFilter === "all" || ex.target_muscle === diyMuscleFilter;
+    const exName = getExerciseName(ex, lang);
     const matchEquip =
       diyEquipFilter === "all" ||
       (ex.description && ex.description.includes(EQUIPMENT_LIST.find((e) => e.id === diyEquipFilter)?.label || "")) ||
-      (ex.title && ex.title.includes(EQUIPMENT_LIST.find((e) => e.id === diyEquipFilter)?.label || ""));
-    const matchCategory = diyCategoryFilter === "all" || ex.category === diyCategoryFilter;
+      exName.includes(EQUIPMENT_LIST.find((e) => e.id === diyEquipFilter)?.label || "");
+    const matchCategory = diyCategoryFilter === "all" || ex.categories.includes(diyCategoryFilter);
     const matchBodyPart =
       diyBodyPartFilter === "all" ||
       (ex.target_muscle ? MUSCLE_TO_BODY_PARTS[ex.target_muscle] : undefined)?.includes(diyBodyPartFilter);
@@ -247,12 +252,12 @@ export default function DiyBuilderTab({
                   ex.gif_url.toLowerCase().includes(".mp4") || ex.gif_url.toLowerCase().includes(".webm") ? (
                     <video src={ex.gif_url} className="w-9 h-9 rounded-[10px] bg-stone-100 object-contain" />
                   ) : (
-                    <img src={ex.gif_url} alt={ex.title} className="w-9 h-9 rounded-[10px] bg-stone-100 object-contain p-0.5" />
+                    <img src={ex.gif_url} alt={getExerciseName(ex, lang)} className="w-9 h-9 rounded-[10px] bg-stone-100 object-contain p-0.5" />
                   )
                 ) : (
                   <div className="w-9 h-9 rounded-[10px] bg-stone-100" />
                 )}
-                <span className="text-[11px] font-bold text-stone-700 truncate w-full">{ex.title}</span>
+                <span className="text-[11px] font-bold text-stone-700 truncate w-full">{getExerciseName(ex, lang)}</span>
               </div>
             ))}
           </div>
@@ -309,7 +314,7 @@ export default function DiyBuilderTab({
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5">
         {availableExercises.map((ex) => {
-          const style = DIY_CATEGORY_STYLES[ex.category] ?? DEFAULT_DIY_CATEGORY_STYLE;
+          const style = DIY_CATEGORY_STYLES[ex.categories[0]] ?? DEFAULT_DIY_CATEGORY_STYLE;
           return (
             <div key={ex.id} className="bg-[#1c1c1e] rounded-[1.25rem] p-3 border border-stone-800 flex items-center justify-between gap-3 hover:border-stone-700 transition-colors">
               <div className="flex items-center gap-3 w-full overflow-hidden">
@@ -317,14 +322,14 @@ export default function DiyBuilderTab({
                   ex.gif_url.toLowerCase().includes(".mp4") || ex.gif_url.toLowerCase().includes(".webm") ? (
                     <video src={ex.gif_url} className="w-[52px] h-[52px] rounded-2xl bg-black object-contain shrink-0" />
                   ) : (
-                    <img src={ex.gif_url} alt={ex.title} className="w-[52px] h-[52px] rounded-2xl bg-white object-contain shrink-0 p-1" />
+                    <img src={ex.gif_url} alt={getExerciseName(ex, lang)} className="w-[52px] h-[52px] rounded-2xl bg-white object-contain shrink-0 p-1" />
                   )
                 ) : (
                   <div className="w-[52px] h-[52px] rounded-2xl bg-stone-800 shrink-0" />
                 )}
 
                 <div className="overflow-hidden">
-                  <h4 className="font-extrabold text-white text-[13px] truncate">{ex.title}</h4>
+                  <h4 className="font-extrabold text-white text-[13px] truncate">{getExerciseName(ex, lang)}</h4>
                   <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                     <span className="text-[11px] text-stone-400 truncate">{AVAILABLE_MUSCLES.find((m) => m.id === ex.target_muscle)?.label}</span>
                     <span className="w-[3px] h-[3px] rounded-full bg-stone-700 shrink-0"></span>
@@ -332,7 +337,7 @@ export default function DiyBuilderTab({
                       className="text-[10px] font-extrabold px-2 py-0.5 rounded-full whitespace-nowrap"
                       style={{ background: style.bg, color: style.text }}
                     >
-                      {ex.category}
+                      {ex.categories.join(" / ")}
                     </span>
                     {(() => {
                       const bodyPartId = getPrimaryBodyPart(ex.target_muscle);

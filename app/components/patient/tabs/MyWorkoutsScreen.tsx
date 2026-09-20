@@ -79,7 +79,9 @@ export default function MyWorkoutsScreen({ savedWorkouts, exerciseCatalog, onBac
                 .filter((ex): ex is Exercise => !!ex);
 
               const categoryCounts = hydrated.reduce<Record<string, number>>((acc, ex) => {
-                acc[ex.category] = (acc[ex.category] ?? 0) + 1;
+                ex.categories.forEach((cat) => {
+                  acc[cat] = (acc[cat] ?? 0) + 1;
+                });
                 return acc;
               }, {});
 
