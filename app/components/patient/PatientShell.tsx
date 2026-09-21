@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { AlertCircle, CalendarDays, Crown, Dumbbell, Home as HomeIcon, User } from "lucide-react";
+import { AlertCircle, CalendarDays, Crown, Dumbbell, Home as HomeIcon } from "lucide-react";
 import { useAuth } from "@/app/context/AuthContext";
 import { useHaptics } from "@/app/hooks/useHaptics";
 import { useReminders } from "@/app/hooks/useReminders";
@@ -10,7 +10,6 @@ import { useCuratedFacts } from "@/app/hooks/useCuratedFacts";
 import { usePlanSelection } from "@/app/hooks/usePlanSelection";
 import { useWorkoutSession } from "@/app/hooks/useWorkoutSession";
 import { useSavedWorkouts } from "@/app/hooks/useSavedWorkouts";
-import { getUserRank } from "@/app/utils/scoring";
 import WorkoutPlayer from "@/app/components/patient/workout/WorkoutPlayer";
 import ExerciseInfoModal from "@/app/components/patient/workout/ExerciseInfoModal";
 import PlanTab from "@/app/components/patient/tabs/PlanTab";
@@ -34,10 +33,6 @@ export default function PatientShell() {
   const { loggedInPatient } = useAuth();
 
   const [patientTab, setPatientTab] = useState<PatientTab>("plan");
-  // Lazy init (computed once) rather than calling Date.now() in the render
-  // body, which the compiler flags as an impure call — same pattern used in
-  // ProfileTab's fallback join date.
-  const [greetingHour] = useState(() => new Date().getHours());
   const [showMyWorkouts, setShowMyWorkouts] = useState(false);
   const [editingSavedWorkoutId, setEditingSavedWorkoutId] = useState<string | null>(null);
 
@@ -64,10 +59,6 @@ export default function PatientShell() {
   });
 
   if (!loggedInPatient) return null;
-
-  const greeting = greetingHour < 5 ? "לילה טוב" : greetingHour < 12 ? "בוקר טוב" : greetingHour < 18 ? "צהריים טובים" : "ערב טוב";
-  const firstName = loggedInPatient.full_name.split(" ")[0];
-  const headerRank = getUserRank(patientData.workoutLogs.filter((l) => l.patient_id === loggedInPatient.id).length);
 
   // Bottom-nav tab switches always exit DIY mode; the header avatar button
   // and the Premium tab's "go to plan" button don't — preserved exactly as
@@ -132,29 +123,6 @@ export default function PatientShell() {
           <ExerciseInfoModal exercise={session.viewingExInfo} historyData={session.exHistoryData} onClose={() => session.setViewingExInfo(null)} />
         )}
 
-        <header className="bg-white/70 backdrop-blur-md border-b border-stone-100 py-4 px-6 sticky top-0 z-40 print:hidden">
-          <div className="max-w-5xl mx-auto flex justify-between items-center">
-            <div className="flex items-center gap-3">
-              <button onClick={() => setPatientTab("plan")} className="w-11 h-11 bg-amber-500 text-stone-950 rounded-2xl flex items-center justify-center font-bold text-lg shadow-sm hover:bg-amber-400 hover:scale-105 transition-all">
-                {loggedInPatient.full_name.charAt(0)}
-              </button>
-              <div>
-                <h1 className="font-black text-stone-900 text-[15px]">
-                  {greeting}, {firstName}
-                </h1>
-                <p className="text-[11px] text-stone-500 font-semibold flex items-center gap-1.5 mt-0.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-stone-300"></span>
-                  {/* getUserRank's colors are now light-mode-safe (fixed
-                      alongside ProfileTab's own light-mode pass), so this
-                      can use the real per-rank hue again instead of a fixed
-                      stand-in color. */}
-                  דרגה: <span className={`font-bold ${headerRank.color}`}>{headerRank.name}</span>
-                </p>
-              </div>
-            </div>
-          </div>
-        </header>
-
         {/* BOTTOM NAVIGATION BAR */}
         <nav className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-md border-t border-stone-100 z-50 print:hidden pb-safe">
           <div className="flex justify-around items-center h-16 max-w-5xl mx-auto px-2">
@@ -182,14 +150,30 @@ export default function PatientShell() {
               </button>
             )}
 
+            {/* Carries the identity marker the old top header's avatar used
+                to show (first-letter circle) — moved here rather than kept
+                as a separate button, since this tab already does the same
+                job (open the account/profile screen). */}
             <button onClick={() => switchTab("profile")} className={`flex flex-col items-center justify-center w-16 h-full gap-1 transition-colors ${patientTab === "profile" ? "text-emerald-800" : "text-stone-400 hover:text-stone-600"}`}>
-              <User size={22} className={patientTab === "profile" ? "fill-emerald-800/15" : ""} />
+              <span
+                className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold transition-colors ${
+                  patientTab === "profile" ? "bg-emerald-800 text-white" : "bg-amber-500 text-stone-950"
+                }`}
+              >
+                {loggedInPatient.full_name.charAt(0)}
+              </span>
               <span className="text-[10px] font-bold">פרופיל</span>
             </button>
           </div>
         </nav>
 
-        <main className="max-w-5xl mx-auto p-4 md:p-8 mt-4 relative z-0">
+        {/* No more sticky header above this — the dashboard's own giant
+            "היי [שם]" hero (PlanTab) is meant to be the first thing on the
+            page, so this only pads for the device's own notch/status bar
+            (env(safe-area-inset-top)), not for chrome that no longer
+            exists. max(1rem, ...) keeps a sane minimum on non-notched
+            screens instead of sitting flush against the viewport edge. */}
+        <main className="max-w-5xl mx-auto px-4 md:px-8 pb-4 md:pb-8 pt-[max(1rem,env(safe-area-inset-top))] relative z-0">
           {loggedInPatient.patient_type === "fitness" && loggedInPatient.email_verified === false && (
             <div className="print:hidden mb-6">
               <div className="bg-amber-50 border border-amber-100 p-4 rounded-2xl flex items-start gap-4 shadow-[0_8px_30px_rgb(0,0,0,0.04)] animate-in fade-in slide-in-from-top-4">
@@ -220,8 +204,6 @@ export default function PatientShell() {
           {patientTab === "diy" && !showMyWorkouts && (
             <DiyBuilderTab
               exerciseCatalog={patientData.exerciseCatalog}
-              diyMuscleFilter={planSelection.diyMuscleFilter}
-              setDiyMuscleFilter={planSelection.setDiyMuscleFilter}
               diyEquipFilter={planSelection.diyEquipFilter}
               setDiyEquipFilter={planSelection.setDiyEquipFilter}
               diyCategoryFilter={planSelection.diyCategoryFilter}

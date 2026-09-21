@@ -24,12 +24,7 @@ function muscleLabel(id: string): string {
 // approximated). The text legend below always lists every tagged muscle by
 // its real Hebrew name, including ones the diagram itself couldn't draw, so
 // nothing tagged is silently lost from the exercise's info screen — only
-// from the picture. AnatomyDiagram's own card is deliberately light
-// (bg-stone-50, dark-gray strokes) even though this sits inside the still-
-// dark ExerciseInfoModal — that contrast is intentional, not a leftover:
-// the diagram is the one thing on this screen meant to read like a printed
-// clinical chart, not console chrome, so the legend below it keeps the
-// modal's existing light-on-dark text rather than flipping to dark text.
+// from the picture.
 export default function ExerciseMuscleMap({ exercise }: ExerciseMuscleMapProps) {
   // target_muscle is typed/labeled everywhere as a single muscle, but real
   // data doesn't always respect that (found live: "chin up" has
@@ -52,13 +47,13 @@ export default function ExerciseMuscleMap({ exercise }: ExerciseMuscleMapProps) 
       <AnatomyDiagram primaryMuscles={primaryIds} secondaryMuscles={secondaryIds} />
       <div className="flex flex-wrap gap-x-4 gap-y-1.5 mt-2.5 text-[11px] font-bold">
         {primaryIds.length > 0 && (
-          <span className="flex items-center gap-1.5 text-stone-300">
+          <span className="flex items-center gap-1.5 text-stone-700">
             <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: ANATOMY_TIER_COLORS.primary }} />
             {primaryIds.map(muscleLabel).join(", ")}
           </span>
         )}
         {secondaryIds.length > 0 && (
-          <span className="flex items-center gap-1.5 text-stone-400">
+          <span className="flex items-center gap-1.5 text-stone-500">
             <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: ANATOMY_TIER_COLORS.secondary }} />
             {secondaryIds.map(muscleLabel).join(", ")}
           </span>

@@ -2006,12 +2006,12 @@ export default function LegacyAdminApp() {
                           )}
                           {formatCueLines(ex.patient_cues, "✅").map((line, i) => (
                             <p key={`cue-${i}`} className="text-[11px] font-bold text-emerald-400 mb-1 leading-relaxed">
-                              {line}
+                              {line.emoji} {line.text}
                             </p>
                           ))}
                           {formatCueLines(ex.common_mistake, "❌").map((line, i) => (
                             <p key={`mistake-${i}`} className="text-[11px] font-bold text-red-400 mb-1 leading-relaxed">
-                              {line}
+                              {line.emoji} {line.text}
                             </p>
                           ))}
                           {ex.easier_version_id && (

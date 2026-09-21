@@ -1,13 +1,15 @@
 "use client";
 
 import type { Dispatch, SetStateAction } from "react";
-import { Bookmark, ChevronDown, Folder, Plus, X } from "lucide-react";
+import { Bookmark, ChevronDown, ChevronRight, Folder, Plus, X } from "lucide-react";
 import {
   AVAILABLE_MUSCLES,
   BODY_PART_GROUPS,
   BODY_PART_STYLES,
+  CATEGORY_IMAGES,
   DAYS_OF_WEEK,
   DEFAULT_BODY_PART_STYLE,
+  DEFAULT_COURSE_IMG,
   DEFAULT_DIY_CATEGORY_STYLE,
   DIY_CATEGORY_STYLES,
   EQUIPMENT_LIST,
@@ -19,14 +21,12 @@ import type { Exercise } from "@/app/types";
 
 interface DiyBuilderTabProps {
   exerciseCatalog: Exercise[];
-  diyMuscleFilter: string;
-  setDiyMuscleFilter: (value: string) => void;
   diyEquipFilter: string;
   setDiyEquipFilter: (value: string) => void;
-  diyCategoryFilter: string;
-  setDiyCategoryFilter: (value: string) => void;
-  diyBodyPartFilter: string;
-  setDiyBodyPartFilter: (value: string) => void;
+  diyCategoryFilter: string | null;
+  setDiyCategoryFilter: (value: string | null) => void;
+  diyBodyPartFilter: string | null;
+  setDiyBodyPartFilter: (value: string | null) => void;
   diySelectedExercises: Exercise[];
   setDiySelectedExercises: Dispatch<SetStateAction<Exercise[]>>;
   diyScheduleDay: string;
@@ -40,19 +40,38 @@ interface DiyBuilderTabProps {
   onCancelEditSavedWorkout: () => void;
 }
 
-// The "build your own workout" picker: filter the catalog by muscle/
-// equipment, collect exercises, then hand off to the session as a DIY workout.
+// The special first accordion tab: browse by body region across the whole
+// catalog, with no category narrowing — distinct from the tabs below it,
+// which are real values out of exercise.categories. Never shown to the user
+// as a raw id (always rendered through TOP_LEVEL_TABS' own label).
+const MUSCLE_GROUPS_TAB_ID = "__muscle_groups__";
+
+const matchesEquip = (ex: Exercise, exName: string, equipFilter: string) =>
+  equipFilter === "all" ||
+  (ex.description && ex.description.includes(EQUIPMENT_LIST.find((e) => e.id === equipFilter)?.label || "")) ||
+  exName.includes(EQUIPMENT_LIST.find((e) => e.id === equipFilter)?.label || "");
+
+const matchesCategory = (ex: Exercise, categoryId: string) => categoryId === MUSCLE_GROUPS_TAB_ID || ex.categories.includes(categoryId);
+
+const matchesRegion = (ex: Exercise, regionId: string) => (ex.target_muscle ? MUSCLE_TO_BODY_PARTS[ex.target_muscle] : undefined)?.includes(regionId) ?? false;
+
+// The "build your own workout" picker: a vertical accordion of top-level
+// tabs (browse-everything "קבוצות שרירים" plus one per real exercise
+// category), each expanding into a body-region sub-list before finally
+// showing exercise cards — replaces the old flat horizontal chip filters
+// (muscle/equipment/category/body-part all at once), which got cluttered
+// fast and didn't scale past a handful of categories.
 //
-// FIXED: this used to also gate on `!loggedInPatient?.premium_tracks`, which
-// is falsy for an *empty string* too — new fitness patients register with
-// `premium_tracks: ""`, so that filter hid every exercise for them. The
-// gate it was guarding for (`hasAccess`) was hardcoded `true` and never
-// actually restricted anything, so for this MVP the catalog is simply
-// shown in full, filtered only by the muscle/equipment pickers below.
+// FIXED (kept from the original): this used to also gate on
+// `!loggedInPatient?.premium_tracks`, which is falsy for an *empty string*
+// too — new fitness patients register with `premium_tracks: ""`, so that
+// filter hid every exercise for them. The gate it was guarding for
+// (`hasAccess`) was hardcoded `true` and never actually restricted
+// anything, so for this MVP the catalog is simply shown in full, filtered
+// only by the equipment picker and the accordion's own category/region
+// narrowing.
 export default function DiyBuilderTab({
   exerciseCatalog,
-  diyMuscleFilter,
-  setDiyMuscleFilter,
   diyEquipFilter,
   setDiyEquipFilter,
   diyCategoryFilter,
@@ -73,32 +92,30 @@ export default function DiyBuilderTab({
 }: DiyBuilderTabProps) {
   const { lang } = useAuth();
 
-  // Category chips are derived from whatever values actually exist in the
-  // live catalog (not hardcoded to the mockup's 4), so an exercise tagged
-  // with a category outside that set (e.g. a legacy value) still gets a
-  // working filter chip instead of becoming unreachable — it just falls
-  // back to DEFAULT_DIY_CATEGORY_STYLE's neutral color.
+  // Category tabs are derived from whatever values actually exist in the
+  // live catalog (not hardcoded), so an exercise tagged with a category
+  // outside that set still gets a working tab instead of becoming
+  // unreachable — it just falls back to DEFAULT_DIY_CATEGORY_STYLE's
+  // neutral color and DEFAULT_COURSE_IMG's header image.
   const availableCategories = Array.from(new Set(exerciseCatalog.flatMap((ex) => ex.categories).filter(Boolean)));
+  const topLevelTabs = [
+    { id: MUSCLE_GROUPS_TAB_ID, label: "קבוצות שרירים", image: DEFAULT_COURSE_IMG },
+    ...availableCategories.map((cat) => ({ id: cat, label: cat, image: CATEGORY_IMAGES[cat] ?? DEFAULT_COURSE_IMG })),
+  ];
 
-  const availableExercises = exerciseCatalog.filter((ex) => {
-    const matchMuscle = diyMuscleFilter === "all" || ex.target_muscle === diyMuscleFilter;
-    const exName = getExerciseName(ex, lang);
-    const matchEquip =
-      diyEquipFilter === "all" ||
-      (ex.description && ex.description.includes(EQUIPMENT_LIST.find((e) => e.id === diyEquipFilter)?.label || "")) ||
-      exName.includes(EQUIPMENT_LIST.find((e) => e.id === diyEquipFilter)?.label || "");
-    const matchCategory = diyCategoryFilter === "all" || ex.categories.includes(diyCategoryFilter);
-    const matchBodyPart =
-      diyBodyPartFilter === "all" ||
-      (ex.target_muscle ? MUSCLE_TO_BODY_PARTS[ex.target_muscle] : undefined)?.includes(diyBodyPartFilter);
-
-    return matchMuscle && matchEquip && matchCategory && matchBodyPart;
-  });
+  const toggleTab = (tabId: string) => {
+    if (diyCategoryFilter === tabId) {
+      setDiyCategoryFilter(null);
+    } else {
+      setDiyCategoryFilter(tabId);
+      setDiyBodyPartFilter(null);
+    }
+  };
 
   // The card only ever shows one body-part pill - the most specific tag a
-  // muscle has (chest/shoulders/arms/core/legs), falling back to the
-  // upper-/lower-body umbrella only for muscles with no more specific tag
-  // (e.g. lats, trapezius). No muscle data at all -> no tag, per spec.
+  // muscle has (chest/back/shoulders/arms/core/legs), falling back to the
+  // upper-/lower-body umbrella only for muscles with no more specific tag.
+  // No muscle data at all -> no tag, per spec.
   const getPrimaryBodyPart = (targetMuscle?: string) => {
     if (!targetMuscle) return undefined;
     const parts = MUSCLE_TO_BODY_PARTS[targetMuscle];
@@ -115,114 +132,36 @@ export default function DiyBuilderTab({
         </div>
         <button
           onClick={onOpenMyWorkouts}
-          className="shrink-0 mt-0.5 flex items-center gap-1.5 bg-[#1c1c1e] border border-stone-800 text-stone-300 font-bold text-[11px] px-3 py-2.5 rounded-full whitespace-nowrap hover:border-stone-700 transition-colors"
+          className="shrink-0 mt-0.5 flex items-center gap-1.5 bg-white/70 backdrop-blur-md border border-stone-200 text-stone-600 font-bold text-[11px] px-3 py-2.5 rounded-full whitespace-nowrap hover:border-stone-300 transition-colors shadow-sm"
         >
-          <Folder size={14} className="text-teal-400" />
+          <Folder size={14} className="text-emerald-700" />
           האימונים שלי
         </button>
       </div>
 
-      {/* Filters for DIY */}
-      <div className="flex gap-2 overflow-x-auto no-scrollbar pb-4 mb-2">
-        <div className="relative shrink-0">
-          <select
-            value={diyMuscleFilter}
-            onChange={(e) => setDiyMuscleFilter(e.target.value)}
-            className="appearance-none bg-[#1c1c1e] border border-stone-800 text-stone-300 rounded-full pl-8 pr-4 py-2.5 outline-none font-bold text-xs focus:border-teal-500 focus:ring-1 focus:ring-teal-500/30"
-          >
-            <option value="all">כל השרירים</option>
-            {AVAILABLE_MUSCLES.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.label}
-              </option>
-            ))}
-          </select>
-          <ChevronDown size={13} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-stone-500" />
-        </div>
-
-        <div className="relative shrink-0">
-          <select
-            value={diyEquipFilter}
-            onChange={(e) => setDiyEquipFilter(e.target.value)}
-            className="appearance-none bg-[#1c1c1e] border border-stone-800 text-stone-300 rounded-full pl-8 pr-4 py-2.5 outline-none font-bold text-xs focus:border-teal-500 focus:ring-1 focus:ring-teal-500/30"
-          >
-            <option value="all">כל הציוד</option>
-            {EQUIPMENT_LIST.map((eq) => (
-              <option key={eq.id} value={eq.id}>
-                {eq.label}
-              </option>
-            ))}
-          </select>
-          <ChevronDown size={13} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-stone-500" />
-        </div>
-      </div>
-
-      {/* Category filter chips */}
-      <div className="flex gap-2 overflow-x-auto no-scrollbar pb-4 mb-4">
-        <button
-          onClick={() => setDiyCategoryFilter("all")}
-          className={`shrink-0 whitespace-nowrap font-black text-xs px-4 py-2 rounded-full transition-colors ${
-            diyCategoryFilter === "all" ? "bg-teal-500 text-stone-950" : "bg-[#1c1c1e] border border-stone-800 text-stone-400"
-          }`}
+      {/* Equipment — the one filter that isn't a category/body-region
+          concept, so it stays a simple standalone control above the
+          accordion rather than folded into it. */}
+      <div className="relative shrink-0 mb-5 w-fit">
+        <select
+          value={diyEquipFilter}
+          onChange={(e) => setDiyEquipFilter(e.target.value)}
+          className="appearance-none bg-white/70 backdrop-blur-md border border-stone-200 text-stone-700 rounded-full pl-9 pr-4 py-2.5 outline-none font-bold text-xs focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600/30 shadow-sm"
         >
-          הכל
-        </button>
-        {availableCategories.map((cat) => {
-          const style = DIY_CATEGORY_STYLES[cat] ?? DEFAULT_DIY_CATEGORY_STYLE;
-          const isSelected = diyCategoryFilter === cat;
-          return (
-            <button
-              key={cat}
-              onClick={() => setDiyCategoryFilter(cat)}
-              className="shrink-0 whitespace-nowrap font-extrabold text-xs px-4 py-2 rounded-full transition-colors"
-              style={
-                isSelected
-                  ? { background: style.solid, color: "#ffffff" }
-                  : { background: style.bg, border: `1px solid ${style.border}`, color: style.text }
-              }
-            >
-              {cat}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Body-part filter chips - anatomical target, separate from and
-          composes with the workout-style category filter above (e.g.
-          "Strength" + "Legs" narrows to both). */}
-      <div className="flex gap-2 overflow-x-auto no-scrollbar pb-4 mb-4">
-        <button
-          onClick={() => setDiyBodyPartFilter("all")}
-          className={`shrink-0 whitespace-nowrap font-black text-xs px-4 py-2 rounded-full transition-colors ${
-            diyBodyPartFilter === "all" ? "bg-teal-500 text-stone-950" : "bg-[#1c1c1e] border border-stone-800 text-stone-400"
-          }`}
-        >
-          כל האזורים
-        </button>
-        {BODY_PART_GROUPS.map((part) => {
-          const style = BODY_PART_STYLES[part.id] ?? DEFAULT_BODY_PART_STYLE;
-          const isSelected = diyBodyPartFilter === part.id;
-          return (
-            <button
-              key={part.id}
-              onClick={() => setDiyBodyPartFilter(part.id)}
-              className="shrink-0 whitespace-nowrap font-extrabold text-xs px-4 py-2 rounded-full transition-colors"
-              style={
-                isSelected
-                  ? { background: style.solid, color: "#ffffff" }
-                  : { background: style.bg, border: `1px solid ${style.border}`, color: style.text }
-              }
-            >
-              {part.label}
-            </button>
-          );
-        })}
+          <option value="all">כל הציוד</option>
+          {EQUIPMENT_LIST.map((eq) => (
+            <option key={eq.id} value={eq.id}>
+              {eq.label}
+            </option>
+          ))}
+        </select>
+        <ChevronDown size={13} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" />
       </div>
 
       {diySelectedExercises.length > 0 && (
-        <div className="bg-teal-50 border border-teal-100 p-4 rounded-3xl mb-8 flex flex-col gap-3.5 sticky top-20 z-30 backdrop-blur-xl shadow-[0_8px_30px_rgb(0,0,0,0.06)]">
+        <div className="bg-emerald-50 border border-emerald-100 p-4 rounded-3xl mb-8 flex flex-col gap-3.5 sticky top-4 z-30 backdrop-blur-xl shadow-[0_8px_30px_rgb(0,0,0,0.06)]">
           <div className="flex justify-between items-center">
-            <h4 className="font-extrabold text-teal-700 text-[13px]">
+            <h4 className="font-extrabold text-emerald-800 text-[13px]">
               {isEditingSavedWorkout ? "עריכת אימון שמור" : "האימון שייבנה"} ({diySelectedExercises.length} תרגילים)
             </h4>
             <div className="flex items-center gap-3">
@@ -264,14 +203,14 @@ export default function DiyBuilderTab({
 
           <div className="grid grid-cols-2 gap-2.5">
             <div>
-              <label htmlFor="diy-schedule-day" className="block text-[10px] font-extrabold text-teal-700 uppercase mb-1.5">
+              <label htmlFor="diy-schedule-day" className="block text-[10px] font-extrabold text-emerald-800 uppercase mb-1.5">
                 יום בשבוע
               </label>
               <select
                 id="diy-schedule-day"
                 value={diyScheduleDay}
                 onChange={(e) => setDiyScheduleDay(e.target.value)}
-                className="w-full bg-white border border-stone-200 text-stone-900 p-2.5 rounded-xl text-xs font-bold outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500/30"
+                className="w-full bg-white border border-stone-200 text-stone-900 p-2.5 rounded-xl text-xs font-bold outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600/30"
               >
                 {DAYS_OF_WEEK.map((d) => (
                   <option key={d.id} value={d.id}>
@@ -281,7 +220,7 @@ export default function DiyBuilderTab({
               </select>
             </div>
             <div>
-              <label htmlFor="diy-workout-name" className="block text-[10px] font-extrabold text-teal-700 uppercase mb-1.5">
+              <label htmlFor="diy-workout-name" className="block text-[10px] font-extrabold text-emerald-800 uppercase mb-1.5">
                 שם האימון
               </label>
               <input
@@ -289,7 +228,7 @@ export default function DiyBuilderTab({
                 type="text"
                 value={diyWorkoutName}
                 onChange={(e) => setDiyWorkoutName(e.target.value)}
-                className="w-full bg-white border border-stone-200 text-stone-900 p-2.5 rounded-xl text-xs font-bold outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500/30"
+                className="w-full bg-white border border-stone-200 text-stone-900 p-2.5 rounded-xl text-xs font-bold outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600/30"
               />
             </div>
           </div>
@@ -297,14 +236,14 @@ export default function DiyBuilderTab({
           <div className="flex gap-2.5">
             <button
               onClick={onSaveDiyWorkout}
-              className="flex-1 bg-white border-[1.5px] border-teal-600/40 text-teal-700 font-extrabold text-[13px] py-3.5 rounded-2xl flex items-center justify-center gap-1.5 hover:bg-teal-50 transition-colors"
+              className="flex-1 bg-white border-[1.5px] border-emerald-700/40 text-emerald-800 font-extrabold text-[13px] py-3.5 rounded-2xl flex items-center justify-center gap-1.5 hover:bg-emerald-50 transition-colors"
             >
               <Bookmark size={15} />
               {isEditingSavedWorkout ? "עדכן אימון" : "שמור אימון"}
             </button>
             <button
               onClick={onStartDiyWorkoutNow}
-              className="flex-[1.5] bg-teal-500 text-stone-950 font-black text-sm py-3.5 rounded-2xl hover:bg-teal-400 transition-colors shadow-lg"
+              className="flex-[1.5] bg-emerald-800 text-white font-black text-sm py-3.5 rounded-2xl hover:bg-emerald-900 transition-colors shadow-lg"
             >
               התחל אימון עכשיו
             </button>
@@ -312,56 +251,151 @@ export default function DiyBuilderTab({
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5">
-        {availableExercises.map((ex) => {
-          const style = DIY_CATEGORY_STYLES[ex.categories[0]] ?? DEFAULT_DIY_CATEGORY_STYLE;
-          return (
-            <div key={ex.id} className="bg-[#1c1c1e] rounded-[1.25rem] p-3 border border-stone-800 flex items-center justify-between gap-3 hover:border-stone-700 transition-colors">
-              <div className="flex items-center gap-3 w-full overflow-hidden">
-                {ex.gif_url ? (
-                  ex.gif_url.toLowerCase().includes(".mp4") || ex.gif_url.toLowerCase().includes(".webm") ? (
-                    <video src={ex.gif_url} className="w-[52px] h-[52px] rounded-2xl bg-black object-contain shrink-0" />
-                  ) : (
-                    <img src={ex.gif_url} alt={getExerciseName(ex, lang)} className="w-[52px] h-[52px] rounded-2xl bg-white object-contain shrink-0 p-1" />
-                  )
-                ) : (
-                  <div className="w-[52px] h-[52px] rounded-2xl bg-stone-800 shrink-0" />
-                )}
+      {/* Accordion stack — glassmorphism cards, one per top-level tab.
+          Expand/collapse and the header-image fade both animate via plain
+          CSS transitions (grid-template-rows for height, opacity+width for
+          the image) rather than a JS animation library — this app has no
+          Framer Motion dependency, and the effect doesn't need one. */}
+      <div className="flex flex-col gap-3.5">
+        {topLevelTabs.map((tab) => {
+          const isExpanded = diyCategoryFilter === tab.id;
+          const tabStyle = tab.id === MUSCLE_GROUPS_TAB_ID ? null : DIY_CATEGORY_STYLES[tab.id] ?? DEFAULT_DIY_CATEGORY_STYLE;
+          const selectedRegion = isExpanded ? diyBodyPartFilter : null;
 
+          return (
+            <div key={tab.id} className="rounded-[1.75rem] overflow-hidden bg-white/60 backdrop-blur-lg border border-white/40 shadow-sm">
+              <button onClick={() => toggleTab(tab.id)} className="w-full flex items-center gap-3 p-5 text-start">
+                {tabStyle && <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: tabStyle.solid }} />}
+                <span className="flex-1 font-black text-lg text-stone-900 truncate">{tab.label}</span>
+
+                {/* Dynamic header image — grows in from 0 width with a fade,
+                    cropped cleanly inside its own rounded thumbnail rather
+                    than bleeding across the card. */}
+                <div
+                  className={`shrink-0 overflow-hidden rounded-2xl shadow-md transition-all duration-500 ease-out ${
+                    isExpanded ? "w-14 h-14 opacity-100" : "w-0 h-14 opacity-0"
+                  }`}
+                >
+                  <img src={tab.image} alt="" className="w-14 h-14 object-cover" />
+                </div>
+
+                <ChevronDown size={18} className={`shrink-0 text-stone-500 transition-transform duration-300 ease-out ${isExpanded ? "rotate-180" : ""}`} />
+              </button>
+
+              <div className={`grid transition-[grid-template-rows] duration-300 ease-out ${isExpanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}>
                 <div className="overflow-hidden">
-                  <h4 className="font-extrabold text-white text-[13px] truncate">{getExerciseName(ex, lang)}</h4>
-                  <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-                    <span className="text-[11px] text-stone-400 truncate">{AVAILABLE_MUSCLES.find((m) => m.id === ex.target_muscle)?.label}</span>
-                    <span className="w-[3px] h-[3px] rounded-full bg-stone-700 shrink-0"></span>
-                    <span
-                      className="text-[10px] font-extrabold px-2 py-0.5 rounded-full whitespace-nowrap"
-                      style={{ background: style.bg, color: style.text }}
-                    >
-                      {ex.categories.join(" / ")}
-                    </span>
-                    {(() => {
-                      const bodyPartId = getPrimaryBodyPart(ex.target_muscle);
-                      if (!bodyPartId) return null;
-                      const bodyPartStyle = BODY_PART_STYLES[bodyPartId] ?? DEFAULT_BODY_PART_STYLE;
-                      const bodyPartLabel = BODY_PART_GROUPS.find((p) => p.id === bodyPartId)?.label;
-                      return (
-                        <span
-                          className="text-[10px] font-extrabold px-2 py-0.5 rounded-full whitespace-nowrap"
-                          style={{ background: bodyPartStyle.bg, color: bodyPartStyle.text }}
+                  <div className="px-5 pb-5">
+                    {selectedRegion === null ? (
+                      // Sub-category regions — broad body areas, not individual
+                      // muscles, each with a live count so an empty region
+                      // never shows up as a dead end.
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                        {BODY_PART_GROUPS.map((region) => {
+                          const count = exerciseCatalog.filter((ex) => {
+                            const exName = getExerciseName(ex, lang);
+                            return matchesCategory(ex, tab.id) && matchesEquip(ex, exName, diyEquipFilter) && matchesRegion(ex, region.id);
+                          }).length;
+                          if (count === 0) return null;
+                          const regionStyle = BODY_PART_STYLES[region.id] ?? DEFAULT_BODY_PART_STYLE;
+                          return (
+                            <button
+                              key={region.id}
+                              onClick={() => setDiyBodyPartFilter(region.id)}
+                              className="flex flex-col items-start gap-1 rounded-2xl p-3.5 bg-white/70 border border-white/60 hover:bg-white transition-colors text-start"
+                            >
+                              <span className="font-extrabold text-sm" style={{ color: regionStyle.text }}>
+                                {region.label}
+                              </span>
+                              <span className="text-[11px] font-bold text-stone-500">{count} תרגילים</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div>
+                        <button
+                          onClick={() => setDiyBodyPartFilter(null)}
+                          className="flex items-center gap-1 text-xs font-bold text-stone-500 hover:text-stone-800 mb-3.5 transition-colors"
                         >
-                          {bodyPartLabel}
-                        </span>
-                      );
-                    })()}
+                          <ChevronRight size={14} />
+                          {BODY_PART_GROUPS.find((r) => r.id === selectedRegion)?.label ?? selectedRegion}
+                        </button>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                          {exerciseCatalog
+                            .filter((ex) => {
+                              const exName = getExerciseName(ex, lang);
+                              return (
+                                matchesCategory(ex, tab.id) && matchesEquip(ex, exName, diyEquipFilter) && matchesRegion(ex, selectedRegion)
+                              );
+                            })
+                            .map((ex) => {
+                              const style = DIY_CATEGORY_STYLES[ex.categories[0]] ?? DEFAULT_DIY_CATEGORY_STYLE;
+                              return (
+                                <div
+                                  key={ex.id}
+                                  className="bg-white rounded-[1.25rem] p-3 border border-stone-100 shadow-sm flex items-center justify-between gap-3 hover:border-stone-200 transition-colors"
+                                >
+                                  <div className="flex items-center gap-3 w-full overflow-hidden">
+                                    {ex.gif_url ? (
+                                      ex.gif_url.toLowerCase().includes(".mp4") || ex.gif_url.toLowerCase().includes(".webm") ? (
+                                        <video src={ex.gif_url} className="w-[52px] h-[52px] rounded-2xl bg-stone-100 object-contain shrink-0" />
+                                      ) : (
+                                        <img
+                                          src={ex.gif_url}
+                                          alt={getExerciseName(ex, lang)}
+                                          className="w-[52px] h-[52px] rounded-2xl bg-stone-50 object-contain shrink-0 p-1"
+                                        />
+                                      )
+                                    ) : (
+                                      <div className="w-[52px] h-[52px] rounded-2xl bg-stone-100 shrink-0" />
+                                    )}
+
+                                    <div className="overflow-hidden">
+                                      <h4 className="font-extrabold text-stone-900 text-[13px] truncate">{getExerciseName(ex, lang)}</h4>
+                                      <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                                        <span className="text-[11px] text-stone-500 truncate">
+                                          {AVAILABLE_MUSCLES.find((m) => m.id === ex.target_muscle)?.label}
+                                        </span>
+                                        <span className="w-[3px] h-[3px] rounded-full bg-stone-300 shrink-0"></span>
+                                        <span
+                                          className="text-[10px] font-extrabold px-2 py-0.5 rounded-full whitespace-nowrap"
+                                          style={{ background: style.bg, color: style.text }}
+                                        >
+                                          {ex.categories.join(" / ")}
+                                        </span>
+                                        {(() => {
+                                          const bodyPartId = getPrimaryBodyPart(ex.target_muscle);
+                                          if (!bodyPartId) return null;
+                                          const bodyPartStyle = BODY_PART_STYLES[bodyPartId] ?? DEFAULT_BODY_PART_STYLE;
+                                          const bodyPartLabel = BODY_PART_GROUPS.find((p) => p.id === bodyPartId)?.label;
+                                          return (
+                                            <span
+                                              className="text-[10px] font-extrabold px-2 py-0.5 rounded-full whitespace-nowrap"
+                                              style={{ background: bodyPartStyle.bg, color: bodyPartStyle.text }}
+                                            >
+                                              {bodyPartLabel}
+                                            </span>
+                                          );
+                                        })()}
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <button
+                                    onClick={() => setDiySelectedExercises((prev) => [...prev, ex])}
+                                    className="w-9 h-9 rounded-full bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0 hover:bg-emerald-100 transition-colors"
+                                  >
+                                    <Plus size={18} />
+                                  </button>
+                                </div>
+                              );
+                            })}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
-              <button
-                onClick={() => setDiySelectedExercises((prev) => [...prev, ex])}
-                className="w-9 h-9 rounded-full bg-stone-800 text-teal-400 flex items-center justify-center shrink-0 hover:bg-stone-700 transition-colors"
-              >
-                <Plus size={18} />
-              </button>
             </div>
           );
         })}

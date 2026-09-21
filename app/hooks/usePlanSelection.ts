@@ -16,10 +16,14 @@ export function usePlanSelection(patientExercises: HydratedPatientExercise[]) {
 
   const [isDiyMode, setIsDiyMode] = useState(false);
   const [diySelectedExercises, setDiySelectedExercises] = useState<Exercise[]>([]);
-  const [diyMuscleFilter, setDiyMuscleFilter] = useState("all");
   const [diyEquipFilter, setDiyEquipFilter] = useState("all");
-  const [diyCategoryFilter, setDiyCategoryFilter] = useState("all");
-  const [diyBodyPartFilter, setDiyBodyPartFilter] = useState("all");
+  // DiyBuilderTab's accordion navigation: which top-level category tab is
+  // expanded (null = all collapsed) and, within it, which body-region
+  // sub-list entry is selected (null = still showing the region list, not
+  // exercise cards yet). Not filters in the old sense — there's no "all"
+  // state anymore, since the accordion always narrows one level at a time.
+  const [diyCategoryFilter, setDiyCategoryFilter] = useState<string | null>(null);
+  const [diyBodyPartFilter, setDiyBodyPartFilter] = useState<string | null>(null);
   const [diyScheduleDay, setDiyScheduleDay] = useState(new Date().getDay().toString());
   const [diyWorkoutName, setDiyWorkoutName] = useState("אימון מותאם אישית");
 
@@ -48,8 +52,6 @@ export function usePlanSelection(patientExercises: HydratedPatientExercise[]) {
     setIsDiyMode,
     diySelectedExercises,
     setDiySelectedExercises,
-    diyMuscleFilter,
-    setDiyMuscleFilter,
     diyEquipFilter,
     setDiyEquipFilter,
     diyCategoryFilter,

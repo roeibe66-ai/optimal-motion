@@ -29,16 +29,53 @@ export function getExerciseName(exercise: Pick<Exercise, "name_he" | "name_en" |
   return he || en;
 }
 
+export interface CueLine {
+  emoji: "✅" | "❌";
+  text: string;
+}
+
 // "Clinical Cues" (patient_cues) and "Common Mistakes" (common_mistake) are
-// stored as plain text, one point per line — the ✅/❌ prefix is injected
-// here at render time, never persisted, so the DB stays plain and portable.
-export function formatCueLines(text: string | null | undefined, emoji: "✅" | "❌"): string[] {
+// stored as plain text, one point per line — the ✅/❌ marker is attached
+// here at render time (never persisted, so the DB stays plain and portable),
+// kept separate from the line text rather than prepended into one string so
+// a caller can lay the emoji out as its own fixed-width bullet instead of it
+// running inline with wrapped text.
+export function formatCueLines(text: string | null | undefined, emoji: "✅" | "❌"): CueLine[] {
   if (!text) return [];
   return text
     .split("\n")
     .map((line) => line.trim())
     .filter((line) => line.length > 0)
-    .map((line) => `${emoji} ${line}`);
+    .map((line) => ({ emoji, text: line }));
+}
+
+export interface WorkoutMuscleAggregation {
+  primeMovers: string[];
+  synergists: string[];
+}
+
+// Feeds AnatomyHeatmap for a whole workout (e.g. the dashboard's daily
+// workout card) rather than a single exercise: walks every block and every
+// exercise assignment in that block, collecting each exercise's
+// prime_movers/synergists into one deduplicated pair of arrays representing
+// the day's total muscle engagement. Accepts the same
+// Record<blockId, assignment[]> shape useWorkoutSession's blocksMap already
+// uses, so callers that have grouped-by-block data can pass it straight
+// through, and callers with a flat list can group it into one block first.
+export function getWorkoutMuscleAggregation(
+  blocksMap: Record<string, { exercise: Pick<Exercise, "prime_movers" | "synergists"> }[]>
+): WorkoutMuscleAggregation {
+  const primeMovers = new Set<string>();
+  const synergists = new Set<string>();
+
+  Object.values(blocksMap).forEach((blockAssignments) => {
+    blockAssignments.forEach(({ exercise }) => {
+      (exercise.prime_movers ?? []).forEach((m) => primeMovers.add(m));
+      (exercise.synergists ?? []).forEach((m) => synergists.add(m));
+    });
+  });
+
+  return { primeMovers: Array.from(primeMovers), synergists: Array.from(synergists) };
 }
 
 export const formatTime = (seconds: number) => {

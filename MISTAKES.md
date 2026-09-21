@@ -92,4 +92,24 @@ the column that label is supposed to map to actually has a real writer, the same
 tempo entry above got caught. Fixed here by giving `patient_cues` its own real textarea
 (rendered with a ✅ prefix per line) and relabeling the old one "תיאור / הנחיות ביצוע".
 
+## 2026-09-21 — `pt-safe`/`pb-safe` classes don't do anything — no such utility exists
+
+**What happened:** `WorkoutPlayer.tsx` and `PatientShell.tsx`'s bottom nav use `pt-safe`/
+`pb-safe` classes expecting them to pad for `env(safe-area-inset-*)` (notch/home-indicator).
+Neither is a real Tailwind utility, and this project defines no custom one (no
+`tailwind.config`, and `globals.css` has no `@utility pt-safe`/`pb-safe`) — so every one of
+those classes has been a silent no-op the whole time. It happened to look fine anyway because
+each spot also carries a normal padding class alongside it (e.g. `pt-safe px-5 md:px-8 pt-5`)
+that was doing the actual visible spacing, masking the fact that the safe-area half was dead.
+One correctly-working example already exists for comparison:
+`PatientCoachSheet.tsx`'s `pb-[max(1rem,env(safe-area-inset-bottom))]`.
+**Why:** likely copied from a different project/template that did define these utilities, and
+never verified against this project's own Tailwind setup.
+**Rule:** don't trust a "safe"-looking utility class name at face value — grep for where it's
+actually defined before relying on it for real device behavior (notches, home indicators)
+that's easy to not notice missing in a desktop browser. Fixed only at the one call site this
+session actually touched (`PatientShell.tsx`'s `<main>`, using the same working
+`pt-[max(1rem,env(safe-area-inset-top))]` pattern as `PatientCoachSheet.tsx`) — the
+`WorkoutPlayer.tsx`/bottom-nav instances are still the dead no-op and worth a real fix later.
+
 <!-- Add new entries above this line, newest first is fine but not required. -->

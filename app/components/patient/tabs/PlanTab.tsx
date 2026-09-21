@@ -17,12 +17,12 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/app/context/AuthContext";
 import { getTrackAccess } from "@/app/utils/premium";
-import { getExerciseName } from "@/app/utils/format";
+import { getExerciseName, getWorkoutMuscleAggregation, type WorkoutMuscleAggregation } from "@/app/utils/format";
 import { AVAILABLE_MUSCLES, DEFAULT_TRACK_GLOW, TRACK_GLOW_TINTS } from "@/app/constants/catalog";
 import type { AIAssistantContext, CuratedFact, Exercise, WorkoutLog } from "@/app/types";
 import type { HydratedPatientExercise, SessionExercise } from "@/app/hooks/useWorkoutSession";
 import PatientCoachSheet from "@/app/components/patient/PatientCoachSheet";
-import AnatomyDiagram from "@/app/components/patient/AnatomyDiagram";
+import AnatomyHeatmap from "@/app/components/AnatomyHeatmap";
 
 interface PlanTabProps {
   workoutLogs: WorkoutLog[];
@@ -172,10 +172,10 @@ export default function PlanTab({
     let todayExerciseCount = 0;
     let todayBlockCount = 0;
     let todayEstimatedMinutes = 0;
-    // Real target muscles for today's exercises, fed to the hero's body
-    // diagram overlay below — not decorative, drawn from the same filtered
-    // list as the counts above.
-    let todayMuscleIds: string[] = [];
+    // Combined prime_movers/synergists across every exercise in today's
+    // workout, fed to the hero's heatmap overlay below — not decorative,
+    // drawn from the same filtered list as the counts above.
+    let todayMuscleAggregation: WorkoutMuscleAggregation = { primeMovers: [], synergists: [] };
     if (todayCat) {
       const todayCategoryExercises = weekFilteredExercises.filter((pe) => {
         if (!pe.exercise.categories.includes(todayCat)) return false;
@@ -191,9 +191,14 @@ export default function PlanTab({
       // "3" + "4" === "34"), producing wildly wrong duration estimates.
       const todayTotalSets = todayCategoryExercises.reduce((acc, pe) => acc + (Number(pe.sets) || 0), 0);
       todayEstimatedMinutes = Math.max(10, Math.round(todayTotalSets * 1.5));
-      todayMuscleIds = Array.from(
-        new Set(todayCategoryExercises.map((pe) => pe.exercise.target_muscle).filter((m): m is string => Boolean(m)))
-      );
+
+      const todayBlocksMap: Record<string, typeof todayCategoryExercises> = {};
+      todayCategoryExercises.forEach((pe) => {
+        const b = pe.block || "A";
+        if (!todayBlocksMap[b]) todayBlocksMap[b] = [];
+        todayBlocksMap[b].push(pe);
+      });
+      todayMuscleAggregation = getWorkoutMuscleAggregation(todayBlocksMap);
     }
 
     // Recent-trend sparkline: last 6 logs' RPE, plus their average.
@@ -207,9 +212,21 @@ export default function PlanTab({
     const sparklinePath = sparklinePoints.join(" ");
     const sparklineAreaPath = sparklinePoints.length > 0 ? `0,64 ${sparklinePath} 320,64` : "";
 
+    const firstName = loggedInPatient?.full_name?.split(" ")[0] ?? "";
+
     return (
       <div className="animate-in fade-in duration-700 print:hidden">
         <PatientCoachSheet contextData={patientCoachContext} />
+
+        {/* Premium hero greeting — dominates the top of the dashboard on its
+            own, deliberately not folded into the compact sticky header
+            above (PatientShell), which stays a slim nav bar. Massive/
+            uppercase name line against a light-weight italic CTA line for
+            the typographic contrast the redesign called for. */}
+        <div className="pt-2 pb-10 md:pb-14">
+          <p className="text-5xl md:text-6xl font-black uppercase tracking-tight text-stone-900 leading-[0.95]">{firstName ? `היי ${firstName},` : "היי,"}</p>
+          <p className="text-4xl md:text-5xl font-light italic text-stone-400 mt-1">מוכן להתחיל?</p>
+        </div>
 
         {/* Week Switcher */}
         <div className="flex items-center justify-center gap-3 mb-8">
@@ -283,20 +300,21 @@ export default function PlanTab({
               האימון של היום
             </div>
 
-            {/* Muscle-target overlay, left side (RTL: text lives on the
-                right) — same AnatomyDiagram as the exercise-info sheet, same
-                solid-white/stone-800-stroke medical-chart look, in its
-                "overlay" variant: a small opaque white card (not the
-                "card" variant's bigger padded bg-stone-50 panel) so the
-                diagram pops with full contrast against the hero photo
-                behind it, rather than either blending in or looking like a
-                translucent photo effect. size={44} matches the original
-                react-body-highlighter width; AnatomyDiagram's per-view
-                viewBox is what lets that shrink cleanly with no clipping or
-                loss of line detail. */}
-            <div className="absolute top-1/2 left-4 -translate-y-1/2 z-10">
-              <AnatomyDiagram primaryMuscles={todayMuscleIds} variant="overlay" size={44} />
-            </div>
+            {/* Muscle-engagement overlay, left side (RTL: text lives on the
+                right) — same AnatomyHeatmap as the exercise-info sheet, fed
+                the whole day's combined prime_movers/synergists
+                (getWorkoutMuscleAggregation) rather than one exercise's, so
+                it lights up total engagement for the session. A small
+                opaque white card so it pops with full contrast against the
+                hero photo behind it, rather than blending in. Fixed width
+                (AnatomyHeatmap sizes itself via aspect-ratio off that width)
+                is what keeps this a clean thumbnail instead of stretching
+                to fill the overlay. */}
+            {(todayMuscleAggregation.primeMovers.length > 0 || todayMuscleAggregation.synergists.length > 0) && (
+              <div className="absolute top-1/2 left-4 -translate-y-1/2 z-10 w-24 bg-white rounded-2xl p-1.5 shadow-[0_8px_20px_-4px_rgba(0,0,0,0.35)] overflow-hidden">
+                <AnatomyHeatmap primeMovers={todayMuscleAggregation.primeMovers} synergists={todayMuscleAggregation.synergists} />
+              </div>
+            )}
 
             {/* Title + meta, bottom-right (RTL) */}
             <div className="absolute bottom-5 right-5 left-24 z-10 flex flex-col gap-2">
@@ -539,10 +557,10 @@ export default function PlanTab({
                     {blocksMap[blockKey].map((assignment) => (
                       <div
                         key={assignment.id}
-                        className="flex items-center gap-4 group cursor-pointer bg-[#1c1c1c] hover:bg-stone-800 active:scale-[0.98] p-3 rounded-2xl shadow-[0_8px_20px_-6px_rgba(0,0,0,0.35)] transition-all duration-150 ease-out"
+                        className="flex items-center gap-4 group cursor-pointer bg-white hover:bg-stone-50 active:scale-[0.98] p-4 rounded-2xl shadow-sm border border-stone-100 transition-all duration-150 ease-out"
                         onClick={() => onViewExerciseInfo(assignment.exercise)}
                       >
-                        <div className="w-16 h-16 rounded-2xl overflow-hidden bg-stone-800 shrink-0">
+                        <div className="w-16 h-16 rounded-2xl overflow-hidden bg-stone-100 shrink-0">
                           {assignment.exercise.gif_url ? (
                             assignment.exercise.gif_url.toLowerCase().includes(".mp4") || assignment.exercise.gif_url.toLowerCase().includes(".webm") ? (
                               <video src={assignment.exercise.gif_url} className="w-full h-full object-cover" />
@@ -550,17 +568,17 @@ export default function PlanTab({
                               <img src={assignment.exercise.gif_url} alt={getExerciseName(assignment.exercise, lang)} className="w-full h-full object-cover" />
                             )
                           ) : (
-                            <div className="w-full h-full bg-stone-800"></div>
+                            <div className="w-full h-full bg-stone-100"></div>
                           )}
                         </div>
                         <div className="flex-1 overflow-hidden py-1">
-                          <div className="text-stone-400 text-xs font-bold mb-1 flex items-center gap-1">
+                          <div className="text-stone-500 text-xs font-bold mb-1 flex items-center gap-1">
                             {assignment.sets} סטים x {assignment.is_time ? `${assignment.reps}"` : `${assignment.reps} חזרות`}
-                            {assignment.rir && <span className="bg-stone-700 text-stone-300 px-1.5 py-0.5 rounded text-[8px] ml-1">RIR {assignment.rir}</span>}
+                            {assignment.rir && <span className="bg-stone-100 text-stone-600 px-1.5 py-0.5 rounded text-[8px] ml-1">RIR {assignment.rir}</span>}
                           </div>
-                          <h4 className="text-white font-bold truncate">{getExerciseName(assignment.exercise, lang)}</h4>
+                          <h4 className="text-stone-900 font-bold truncate">{getExerciseName(assignment.exercise, lang)}</h4>
                         </div>
-                        <ChevronLeft size={16} className="text-stone-500 group-hover:text-white transition-colors rotate-180" />
+                        <ChevronLeft size={16} className="text-stone-400 group-hover:text-stone-700 transition-colors rotate-180" />
                       </div>
                     ))}
                   </div>

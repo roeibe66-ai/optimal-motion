@@ -50,6 +50,7 @@ export const MUSCLE_REGIONS: { id: string; label: string; muscleIds: string[] }[
 // tags as core (not upper-body); hip-flexors tags as legs only (not core).
 export const BODY_PART_GROUPS: { id: string; label: string }[] = [
   { id: "chest", label: "חזה" },
+  { id: "back", label: "גב" },
   { id: "shoulders", label: "כתפיים" },
   { id: "arms", label: "זרועות" },
   { id: "core", label: "core" },
@@ -70,10 +71,10 @@ export const MUSCLE_TO_BODY_PARTS: Record<string, string[]> = {
   brachialis: ["arms", "upper-body"],
   "forearm-flexors": ["arms", "upper-body"],
   "forearm-extensors": ["arms", "upper-body"],
-  "upper-back": ["upper-body"],
-  lats: ["upper-body"],
-  trapezius: ["upper-body"],
-  rhomboids: ["upper-body"],
+  "upper-back": ["back", "upper-body"],
+  lats: ["back", "upper-body"],
+  trapezius: ["back", "upper-body"],
+  rhomboids: ["back", "upper-body"],
   abs: ["core"],
   obliques: ["core"],
   "transverse-abdominis": ["core"],
@@ -108,6 +109,7 @@ export const MUSCLE_TO_BODY_PARTS: Record<string, string[]> = {
 // calculation, not eyeballed.
 export const BODY_PART_STYLES: Record<string, { text: string; bg: string; border: string; solid: string }> = {
   chest: { text: "#be123c", bg: "rgba(244,63,94,0.12)", border: "rgba(244,63,94,0.3)", solid: "#be123c" },
+  back: { text: "#c2410c", bg: "rgba(249,115,22,0.12)", border: "rgba(249,115,22,0.3)", solid: "#c2410c" },
   shoulders: { text: "#a21caf", bg: "rgba(217,70,239,0.12)", border: "rgba(217,70,239,0.3)", solid: "#a21caf" },
   arms: { text: "#3f6212", bg: "rgba(132,204,22,0.14)", border: "rgba(132,204,22,0.3)", solid: "#4d7c0f" },
   core: { text: "#047857", bg: "rgba(16,185,129,0.12)", border: "rgba(16,185,129,0.3)", solid: "#047857" },
