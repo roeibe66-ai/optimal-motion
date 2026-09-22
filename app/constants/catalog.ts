@@ -121,12 +121,13 @@ export const DEFAULT_BODY_PART_STYLE = { text: "#57534e", bg: "rgba(168,162,158,
 
 export const EQUIPMENT_LIST = [
   { id: "pullup_bar", label: "מתח" },
+  { id: "parallettes", label: "פרלטים" },
   { id: "dip_bar", label: "מקבילים" },
-  { id: "parallettes", label: "פרללס" },
-  { id: "ab_wheel", label: "Ab Wheel" },
   { id: "rings", label: "טבעות" },
   { id: "kettlebell", label: "קטלבל" },
-  { id: "bodyweight", label: "משקל גוף (ללא ציוד)" }
+  { id: "dumbbells", label: "משקולות" },
+  { id: "bodyweight", label: "משקל גוף (ללא ציוד)" },
+  { id: "ab_wheel", label: "Ab Wheel" },
 ];
 
 export const DAYS_OF_WEEK = [

@@ -9,7 +9,7 @@ import type { CuratedFact } from "@/app/types";
 // admin-published curated_facts row. Not per-patient — every patient sees
 // the same set the admin research tab has published, so there's no
 // patient_id filter, just a gate on being authenticated at all (same
-// pattern as usePatientData/useSavedWorkouts: wait for loggedInPatient
+// pattern as usePatientData/useSavedPrograms: wait for loggedInPatient
 // before querying, since curated_facts' RLS policy requires an
 // authenticated session).
 export function useCuratedFacts() {

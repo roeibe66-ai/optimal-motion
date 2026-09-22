@@ -44,6 +44,7 @@ export interface Exercise {
   name_display_preference: NameDisplayPreference;
   categories: string[]; // was a single `category` string; an exercise can now belong to more than one
   difficulty_level?: DifficultyLevel | null;
+  equipment?: string[]; // EQUIPMENT_LIST ids (app/constants/catalog.ts)
   description?: string;
   gif_url?: string;
   secondary_gif_url?: string | null; // optional second camera angle; toggled between in WorkoutPlayer's active-exercise view
@@ -144,12 +145,18 @@ export interface BuilderExercise extends Exercise {
 export type BuilderDayPlan = Record<string, BuilderExercise[]>; // keyed by DAYS_OF_WEEK id
 export type BuilderWeekPlan = Record<number, BuilderDayPlan>; // keyed by week number
 
-export interface SavedWorkout {
+// One ordinal day (Day 1, Day 2, ...) within a saved weekly program — not
+// tied to a calendar weekday, just a builder slot.
+export interface SavedProgramDay {
+  day_number: number;
+  exercise_ids: string[]; // ordered, references exercises.id
+}
+
+export interface SavedProgram {
   id: string;
   patient_id: string;
   name: string;
-  scheduled_day: string | null; // DAYS_OF_WEEK id
-  exercise_ids: string[]; // ordered, references exercises.id
+  days: SavedProgramDay[];
   created_at: string;
 }
 

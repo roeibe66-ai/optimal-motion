@@ -1,13 +1,13 @@
 "use client";
 
-import type { Dispatch, SetStateAction } from "react";
-import { Bookmark, ChevronDown, ChevronRight, Folder, Plus, X } from "lucide-react";
+import { useState, type Dispatch, type SetStateAction } from "react";
+import { Bookmark, Check, ChevronDown, ChevronRight, Folder, Info, Plus, X } from "lucide-react";
+import Toast from "@/app/components/ui/Toast";
 import {
   AVAILABLE_MUSCLES,
   BODY_PART_GROUPS,
   BODY_PART_STYLES,
   CATEGORY_IMAGES,
-  DAYS_OF_WEEK,
   DEFAULT_BODY_PART_STYLE,
   DEFAULT_COURSE_IMG,
   DEFAULT_DIY_CATEGORY_STYLE,
@@ -21,23 +21,29 @@ import type { Exercise } from "@/app/types";
 
 interface DiyBuilderTabProps {
   exerciseCatalog: Exercise[];
+  onViewExerciseInfo: (exercise: Exercise) => void;
   diyEquipFilter: string;
   setDiyEquipFilter: (value: string) => void;
   diyCategoryFilter: string | null;
   setDiyCategoryFilter: (value: string | null) => void;
   diyBodyPartFilter: string | null;
   setDiyBodyPartFilter: (value: string | null) => void;
-  diySelectedExercises: Exercise[];
-  setDiySelectedExercises: Dispatch<SetStateAction<Exercise[]>>;
-  diyScheduleDay: string;
-  setDiyScheduleDay: (value: string) => void;
-  diyWorkoutName: string;
-  setDiyWorkoutName: (value: string) => void;
+  // A full weekly program draft: ordinal builder day (1, 2, 3, ...) ->
+  // that day's exercise list. diyActiveDay is whichever day tab is open;
+  // every "add exercise"/tray action below operates on that one day only.
+  diyExercisesByDay: Record<number, Exercise[]>;
+  setDiyExercisesByDay: Dispatch<SetStateAction<Record<number, Exercise[]>>>;
+  diyActiveDay: number;
+  setDiyActiveDay: (day: number) => void;
+  onAddDiyDay: () => void;
+  onRemoveDiyDay: (day: number) => void;
+  diyProgramName: string;
+  setDiyProgramName: (value: string) => void;
   onStartDiyWorkoutNow: () => void;
   onOpenMyWorkouts: () => void;
-  onSaveDiyWorkout: () => void;
-  isEditingSavedWorkout: boolean;
-  onCancelEditSavedWorkout: () => void;
+  onSaveDiyProgram: () => void | Promise<void>;
+  isEditingSavedProgram: boolean;
+  onCancelEditSavedProgram: () => void;
 }
 
 // The special first accordion tab: browse by body region across the whole
@@ -46,10 +52,7 @@ interface DiyBuilderTabProps {
 // as a raw id (always rendered through TOP_LEVEL_TABS' own label).
 const MUSCLE_GROUPS_TAB_ID = "__muscle_groups__";
 
-const matchesEquip = (ex: Exercise, exName: string, equipFilter: string) =>
-  equipFilter === "all" ||
-  (ex.description && ex.description.includes(EQUIPMENT_LIST.find((e) => e.id === equipFilter)?.label || "")) ||
-  exName.includes(EQUIPMENT_LIST.find((e) => e.id === equipFilter)?.label || "");
+const matchesEquip = (ex: Exercise, equipFilter: string) => equipFilter === "all" || (ex.equipment ?? []).includes(equipFilter);
 
 const matchesCategory = (ex: Exercise, categoryId: string) => categoryId === MUSCLE_GROUPS_TAB_ID || ex.categories.includes(categoryId);
 
@@ -72,25 +75,55 @@ const matchesRegion = (ex: Exercise, regionId: string) => (ex.target_muscle ? MU
 // narrowing.
 export default function DiyBuilderTab({
   exerciseCatalog,
+  onViewExerciseInfo,
   diyEquipFilter,
   setDiyEquipFilter,
   diyCategoryFilter,
   setDiyCategoryFilter,
   diyBodyPartFilter,
   setDiyBodyPartFilter,
-  diySelectedExercises,
-  setDiySelectedExercises,
-  diyScheduleDay,
-  setDiyScheduleDay,
-  diyWorkoutName,
-  setDiyWorkoutName,
+  diyExercisesByDay,
+  setDiyExercisesByDay,
+  diyActiveDay,
+  setDiyActiveDay,
+  onAddDiyDay,
+  onRemoveDiyDay,
+  diyProgramName,
+  setDiyProgramName,
   onStartDiyWorkoutNow,
   onOpenMyWorkouts,
-  onSaveDiyWorkout,
-  isEditingSavedWorkout,
-  onCancelEditSavedWorkout,
+  onSaveDiyProgram,
+  isEditingSavedProgram,
+  onCancelEditSavedProgram,
 }: DiyBuilderTabProps) {
   const { lang } = useAuth();
+  const [isSaving, setIsSaving] = useState(false);
+  const [justSaved, setJustSaved] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const dayNumbers = Object.keys(diyExercisesByDay).map(Number).sort((a, b) => a - b);
+  const activeDayExercises = diyExercisesByDay[diyActiveDay] ?? [];
+  const totalExerciseCount = Object.values(diyExercisesByDay).reduce((acc, exs) => acc + exs.length, 0);
+
+  const addExerciseToActiveDay = (ex: Exercise) => {
+    setDiyExercisesByDay((prev) => ({ ...prev, [diyActiveDay]: [...(prev[diyActiveDay] ?? []), ex] }));
+  };
+
+  const removeExerciseFromActiveDay = (idx: number) => {
+    setDiyExercisesByDay((prev) => ({ ...prev, [diyActiveDay]: (prev[diyActiveDay] ?? []).filter((_, i) => i !== idx) }));
+  };
+
+  const handleSaveClick = async () => {
+    setIsSaving(true);
+    try {
+      await onSaveDiyProgram();
+      setJustSaved(true);
+      setToastMessage(isEditingSavedProgram ? "התוכנית עודכנה בהצלחה!" : "התוכנית נשמרה בהצלחה!");
+      setTimeout(() => setJustSaved(false), 1800);
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   // Category tabs are derived from whatever values actually exist in the
   // live catalog (not hardcoded), so an exercise tagged with a category
@@ -125,17 +158,61 @@ export default function DiyBuilderTab({
 
   return (
     <div className="animate-in fade-in duration-500">
+      {toastMessage && <Toast message={toastMessage} onDismiss={() => setToastMessage(null)} />}
+
       <div className="flex items-start justify-between gap-3 mb-6">
         <div>
-          <h2 className="text-2xl md:text-3xl font-black text-stone-900 tracking-tight mb-1.5">בנה אימון עצמאי</h2>
-          <p className="text-stone-500 text-[13px] md:text-sm">בחר תרגילים מהמאגר הפתוח שלך כדי ליצור אימון מותאם.</p>
+          <h2 className="text-2xl md:text-3xl font-black text-stone-900 tracking-tight mb-1.5">בנה תוכנית שבועית</h2>
+          <p className="text-stone-500 text-[13px] md:text-sm">הוסף ימי אימון ובחר תרגילים לכל יום מהמאגר הפתוח שלך.</p>
         </div>
         <button
           onClick={onOpenMyWorkouts}
           className="shrink-0 mt-0.5 flex items-center gap-1.5 bg-white/70 backdrop-blur-md border border-stone-200 text-stone-600 font-bold text-[11px] px-3 py-2.5 rounded-full whitespace-nowrap hover:border-stone-300 transition-colors shadow-sm"
         >
           <Folder size={14} className="text-emerald-700" />
-          האימונים שלי
+          התוכניות שלי
+        </button>
+      </div>
+
+      {/* Day tabs — always visible, independent of whether the active day
+          has any exercises yet, so a newly-added empty day can still be
+          switched to and filled. A day can only be removed once a second
+          day exists (never leaves the program with zero days). */}
+      <div className="flex items-center gap-2 mb-5 overflow-x-auto no-scrollbar">
+        {dayNumbers.map((day) => {
+          const isActive = diyActiveDay === day;
+          const count = diyExercisesByDay[day]?.length ?? 0;
+          return (
+            <div key={day} className="relative shrink-0">
+              <button
+                onClick={() => setDiyActiveDay(day)}
+                className={`flex items-center gap-1.5 pl-3 pr-4 py-2.5 rounded-full font-extrabold text-xs transition-colors border ${
+                  isActive ? "bg-emerald-800 text-white border-emerald-800" : "bg-white/70 backdrop-blur-md text-stone-600 border-stone-200 hover:border-stone-300"
+                }`}
+              >
+                יום {day}
+                {count > 0 && (
+                  <span className={`text-[10px] rounded-full px-1.5 py-0.5 ${isActive ? "bg-white/20" : "bg-stone-100 text-stone-500"}`}>{count}</span>
+                )}
+              </button>
+              {dayNumbers.length > 1 && (
+                <button
+                  onClick={() => onRemoveDiyDay(day)}
+                  aria-label={`הסר יום ${day}`}
+                  className="absolute -top-1.5 -left-1.5 w-4 h-4 bg-stone-400 hover:bg-red-500 text-white rounded-full flex items-center justify-center shadow-md transition-colors"
+                >
+                  <X size={8} strokeWidth={3} />
+                </button>
+              )}
+            </div>
+          );
+        })}
+        <button
+          onClick={onAddDiyDay}
+          className="shrink-0 flex items-center gap-1 pl-3 pr-3.5 py-2.5 rounded-full font-extrabold text-xs bg-emerald-50 text-emerald-700 border border-dashed border-emerald-300 hover:bg-emerald-100 transition-colors"
+        >
+          <Plus size={14} />
+          הוסף יום
         </button>
       </div>
 
@@ -158,94 +235,89 @@ export default function DiyBuilderTab({
         <ChevronDown size={13} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" />
       </div>
 
-      {diySelectedExercises.length > 0 && (
+      {totalExerciseCount > 0 && (
         <div className="bg-emerald-50 border border-emerald-100 p-4 rounded-3xl mb-8 flex flex-col gap-3.5 sticky top-4 z-30 backdrop-blur-xl shadow-[0_8px_30px_rgb(0,0,0,0.06)]">
           <div className="flex justify-between items-center">
             <h4 className="font-extrabold text-emerald-800 text-[13px]">
-              {isEditingSavedWorkout ? "עריכת אימון שמור" : "האימון שייבנה"} ({diySelectedExercises.length} תרגילים)
+              יום {diyActiveDay} ({activeDayExercises.length} תרגילים)
             </h4>
             <div className="flex items-center gap-3">
-              {isEditingSavedWorkout && (
-                <button onClick={onCancelEditSavedWorkout} className="text-[11px] font-bold text-stone-500 hover:text-stone-700">
+              {isEditingSavedProgram && (
+                <button onClick={onCancelEditSavedProgram} className="text-[11px] font-bold text-stone-500 hover:text-stone-700">
                   ביטול עריכה
                 </button>
               )}
-              <button onClick={() => setDiySelectedExercises([])} className="text-[11px] font-bold text-stone-500 hover:text-stone-700">
-                נקה הכל
-              </button>
-            </div>
-          </div>
-          <div className="flex gap-2.5 overflow-x-auto no-scrollbar">
-            {diySelectedExercises.map((ex, idx) => (
-              <div key={idx} className="bg-white border border-stone-200 rounded-2xl p-2 flex items-center gap-2 min-w-[140px] relative">
+              {activeDayExercises.length > 0 && (
                 <button
-                  onClick={() => setDiySelectedExercises((prev) => prev.filter((_, i) => i !== idx))}
-                  aria-label="הסר תרגיל"
-                  className="absolute -top-3.5 -right-3.5 w-8 h-8 flex items-center justify-center"
+                  onClick={() => setDiyExercisesByDay((prev) => ({ ...prev, [diyActiveDay]: [] }))}
+                  className="text-[11px] font-bold text-stone-500 hover:text-stone-700"
                 >
-                  <span className="w-4 h-4 bg-red-500 text-white rounded-full flex items-center justify-center shadow-md">
-                    <X size={8} strokeWidth={3} />
-                  </span>
+                  נקה יום זה
                 </button>
-                {ex.gif_url ? (
-                  ex.gif_url.toLowerCase().includes(".mp4") || ex.gif_url.toLowerCase().includes(".webm") ? (
-                    <video src={ex.gif_url} className="w-9 h-9 rounded-[10px] bg-stone-100 object-contain" />
-                  ) : (
-                    <img src={ex.gif_url} alt={getExerciseName(ex, lang)} className="w-9 h-9 rounded-[10px] bg-stone-100 object-contain p-0.5" />
-                  )
-                ) : (
-                  <div className="w-9 h-9 rounded-[10px] bg-stone-100" />
-                )}
-                <span className="text-[11px] font-bold text-stone-700 truncate w-full">{getExerciseName(ex, lang)}</span>
-              </div>
-            ))}
+              )}
+            </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-2.5">
-            <div>
-              <label htmlFor="diy-schedule-day" className="block text-[10px] font-extrabold text-emerald-800 uppercase mb-1.5">
-                יום בשבוע
-              </label>
-              <select
-                id="diy-schedule-day"
-                value={diyScheduleDay}
-                onChange={(e) => setDiyScheduleDay(e.target.value)}
-                className="w-full bg-white border border-stone-200 text-stone-900 p-2.5 rounded-xl text-xs font-bold outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600/30"
-              >
-                {DAYS_OF_WEEK.map((d) => (
-                  <option key={d.id} value={d.id}>
-                    {d.label}
-                  </option>
-                ))}
-              </select>
+          {activeDayExercises.length > 0 ? (
+            <div className="flex gap-2.5 overflow-x-auto no-scrollbar">
+              {activeDayExercises.map((ex, idx) => (
+                <div key={idx} className="bg-white border border-stone-200 rounded-2xl p-2 flex items-center gap-2 min-w-[140px] relative">
+                  <button
+                    onClick={() => removeExerciseFromActiveDay(idx)}
+                    aria-label="הסר תרגיל"
+                    className="absolute -top-3.5 -right-3.5 w-8 h-8 flex items-center justify-center"
+                  >
+                    <span className="w-4 h-4 bg-red-500 text-white rounded-full flex items-center justify-center shadow-md">
+                      <X size={8} strokeWidth={3} />
+                    </span>
+                  </button>
+                  {ex.gif_url ? (
+                    ex.gif_url.toLowerCase().includes(".mp4") || ex.gif_url.toLowerCase().includes(".webm") ? (
+                      <video src={ex.gif_url} className="w-9 h-9 rounded-[10px] bg-stone-100 object-contain" />
+                    ) : (
+                      <img src={ex.gif_url} alt={getExerciseName(ex, lang)} className="w-9 h-9 rounded-[10px] bg-stone-100 object-contain p-0.5" />
+                    )
+                  ) : (
+                    <div className="w-9 h-9 rounded-[10px] bg-stone-100" />
+                  )}
+                  <span className="text-[11px] font-bold text-stone-700 truncate w-full">{getExerciseName(ex, lang)}</span>
+                </div>
+              ))}
             </div>
-            <div>
-              <label htmlFor="diy-workout-name" className="block text-[10px] font-extrabold text-emerald-800 uppercase mb-1.5">
-                שם האימון
-              </label>
-              <input
-                id="diy-workout-name"
-                type="text"
-                value={diyWorkoutName}
-                onChange={(e) => setDiyWorkoutName(e.target.value)}
-                className="w-full bg-white border border-stone-200 text-stone-900 p-2.5 rounded-xl text-xs font-bold outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600/30"
-              />
-            </div>
+          ) : (
+            <p className="text-[11px] font-medium text-emerald-800/70">עדיין לא נבחרו תרגילים ליום {diyActiveDay}. בחר תרגילים מהרשימה למטה.</p>
+          )}
+
+          <div>
+            <label htmlFor="diy-program-name" className="block text-[10px] font-extrabold text-emerald-800 uppercase mb-1.5">
+              שם התוכנית
+            </label>
+            <input
+              id="diy-program-name"
+              type="text"
+              value={diyProgramName}
+              onChange={(e) => setDiyProgramName(e.target.value)}
+              className="w-full bg-white border border-stone-200 text-stone-900 p-2.5 rounded-xl text-xs font-bold outline-none focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600/30"
+            />
           </div>
 
           <div className="flex gap-2.5">
             <button
-              onClick={onSaveDiyWorkout}
-              className="flex-1 bg-white border-[1.5px] border-emerald-700/40 text-emerald-800 font-extrabold text-[13px] py-3.5 rounded-2xl flex items-center justify-center gap-1.5 hover:bg-emerald-50 transition-colors"
+              onClick={handleSaveClick}
+              disabled={isSaving}
+              className={`flex-1 border-[1.5px] font-extrabold text-[13px] py-3.5 rounded-2xl flex items-center justify-center gap-1.5 transition-colors disabled:opacity-70 ${
+                justSaved ? "bg-emerald-700 border-emerald-700 text-white" : "bg-white border-emerald-700/40 text-emerald-800 hover:bg-emerald-50"
+              }`}
             >
-              <Bookmark size={15} />
-              {isEditingSavedWorkout ? "עדכן אימון" : "שמור אימון"}
+              {justSaved ? <Check size={15} /> : <Bookmark size={15} />}
+              {justSaved ? "נשמר!" : isEditingSavedProgram ? "עדכן תוכנית" : "שמור תוכנית"}
             </button>
             <button
               onClick={onStartDiyWorkoutNow}
-              className="flex-[1.5] bg-emerald-800 text-white font-black text-sm py-3.5 rounded-2xl hover:bg-emerald-900 transition-colors shadow-lg"
+              disabled={activeDayExercises.length === 0}
+              className="flex-[1.5] bg-emerald-800 text-white font-black text-sm py-3.5 rounded-2xl hover:bg-emerald-900 transition-colors shadow-lg disabled:opacity-40 disabled:pointer-events-none"
             >
-              התחל אימון עכשיו
+              התחל את יום {diyActiveDay} עכשיו
             </button>
           </div>
         </div>
@@ -291,10 +363,9 @@ export default function DiyBuilderTab({
                       // never shows up as a dead end.
                       <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
                         {BODY_PART_GROUPS.map((region) => {
-                          const count = exerciseCatalog.filter((ex) => {
-                            const exName = getExerciseName(ex, lang);
-                            return matchesCategory(ex, tab.id) && matchesEquip(ex, exName, diyEquipFilter) && matchesRegion(ex, region.id);
-                          }).length;
+                          const count = exerciseCatalog.filter(
+                            (ex) => matchesCategory(ex, tab.id) && matchesEquip(ex, diyEquipFilter) && matchesRegion(ex, region.id)
+                          ).length;
                           if (count === 0) return null;
                           const regionStyle = BODY_PART_STYLES[region.id] ?? DEFAULT_BODY_PART_STYLE;
                           return (
@@ -323,12 +394,7 @@ export default function DiyBuilderTab({
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
                           {exerciseCatalog
-                            .filter((ex) => {
-                              const exName = getExerciseName(ex, lang);
-                              return (
-                                matchesCategory(ex, tab.id) && matchesEquip(ex, exName, diyEquipFilter) && matchesRegion(ex, selectedRegion)
-                              );
-                            })
+                            .filter((ex) => matchesCategory(ex, tab.id) && matchesEquip(ex, diyEquipFilter) && matchesRegion(ex, selectedRegion))
                             .map((ex) => {
                               const style = DIY_CATEGORY_STYLES[ex.categories[0]] ?? DEFAULT_DIY_CATEGORY_STYLE;
                               return (
@@ -381,12 +447,22 @@ export default function DiyBuilderTab({
                                       </div>
                                     </div>
                                   </div>
-                                  <button
-                                    onClick={() => setDiySelectedExercises((prev) => [...prev, ex])}
-                                    className="w-9 h-9 rounded-full bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0 hover:bg-emerald-100 transition-colors"
-                                  >
-                                    <Plus size={18} />
-                                  </button>
+                                  <div className="flex items-center gap-1.5 shrink-0">
+                                    <button
+                                      onClick={() => onViewExerciseInfo(ex)}
+                                      aria-label="מידע על התרגיל"
+                                      className="w-9 h-9 rounded-full bg-stone-50 text-stone-500 flex items-center justify-center hover:bg-stone-100 hover:text-stone-700 transition-colors"
+                                    >
+                                      <Info size={16} />
+                                    </button>
+                                    <button
+                                      onClick={() => addExerciseToActiveDay(ex)}
+                                      aria-label="הוסף לאימון"
+                                      className="w-9 h-9 rounded-full bg-emerald-50 text-emerald-700 flex items-center justify-center hover:bg-emerald-100 transition-colors"
+                                    >
+                                      <Plus size={18} />
+                                    </button>
+                                  </div>
                                 </div>
                               );
                             })}

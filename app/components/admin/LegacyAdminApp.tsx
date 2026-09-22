@@ -41,7 +41,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/app/lib/supabase";
 import { useAuth } from "@/app/context/AuthContext";
-import { ADMIN_CATEGORY_STYLES, ADMIN_TAGS, AVAILABLE_MUSCLES, DAYS_OF_WEEK, DEFAULT_ADMIN_CATEGORY_STYLE, DIFFICULTY_LEVELS, NAME_DISPLAY_PREFERENCES, MUSCLE_REGIONS } from "@/app/constants/catalog";
+import { ADMIN_CATEGORY_STYLES, ADMIN_TAGS, AVAILABLE_MUSCLES, DAYS_OF_WEEK, DEFAULT_ADMIN_CATEGORY_STYLE, DIFFICULTY_LEVELS, EQUIPMENT_LIST, NAME_DISPLAY_PREFERENCES, MUSCLE_REGIONS } from "@/app/constants/catalog";
 import AdminSidebar from "@/app/components/admin/AdminSidebar";
 import AdminCoPilotDrawer from "@/app/components/admin/AdminCoPilotDrawer";
 import ProgramLibraryTab from "@/app/components/admin/tabs/ProgramLibraryTab";
@@ -122,6 +122,7 @@ export default function LegacyAdminApp() {
   const [exNameDisplayPreference, setExNameDisplayPreference] = useState<"en" | "he" | "both">("en");
   const [exCategories, setExCategories] = useState<string[]>([]);
   const [exDifficultyLevel, setExDifficultyLevel] = useState("");
+  const [exEquipment, setExEquipment] = useState<string[]>([]);
   const [exDesc, setExDesc] = useState("");
   const [exGifUrl, setExGifUrl] = useState("");
   const [exSecondaryGifUrl, setExSecondaryGifUrl] = useState("");
@@ -158,6 +159,7 @@ export default function LegacyAdminApp() {
     name_display_preference: "en" as "en" | "he" | "both",
     categories: [] as string[],
     difficulty_level: "",
+    equipment: [] as string[],
     gif_url: "",
     secondary_gif_url: "",
     target_muscle: "",
@@ -384,6 +386,7 @@ export default function LegacyAdminApp() {
           name_display_preference: exNameDisplayPreference,
           categories: exCategories,
           difficulty_level: exDifficultyLevel || null,
+          equipment: exEquipment,
           description: exDesc,
           gif_url: exGifUrl || null,
           secondary_gif_url: exSecondaryGifUrl || null,
@@ -418,6 +421,7 @@ export default function LegacyAdminApp() {
     setExNameDisplayPreference("en");
     setExCategories([]);
     setExDifficultyLevel("");
+    setExEquipment([]);
     setExDesc("");
     setExGifUrl("");
     setExSecondaryGifUrl("");
@@ -451,6 +455,15 @@ export default function LegacyAdminApp() {
     else setExCategories((prev) => (prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]));
   };
 
+  const toggleExerciseEquipment = (id: string, isEditing: boolean = false) => {
+    if (isEditing)
+      setEditExForm((prev) => ({
+        ...prev,
+        equipment: prev.equipment.includes(id) ? prev.equipment.filter((eq) => eq !== id) : [...prev.equipment, id],
+      }));
+    else setExEquipment((prev) => (prev.includes(id) ? prev.filter((eq) => eq !== id) : [...prev, id]));
+  };
+
   const handleStartEditEx = (ex: any) => {
     setEditingExId(ex.id);
     setEditExForm({
@@ -459,6 +472,7 @@ export default function LegacyAdminApp() {
       name_display_preference: ex.name_display_preference || "en",
       categories: ex.categories || [],
       difficulty_level: String(ex.difficulty_level || ""),
+      equipment: ex.equipment || [],
       gif_url: String(ex.gif_url || ""),
       secondary_gif_url: String(ex.secondary_gif_url || ""),
       target_muscle: String(ex.target_muscle || ""),
@@ -485,6 +499,7 @@ export default function LegacyAdminApp() {
         name_display_preference: editExForm.name_display_preference,
         categories: editExForm.categories,
         difficulty_level: editExForm.difficulty_level || null,
+        equipment: editExForm.equipment,
         description: editExForm.description,
         gif_url: editExForm.gif_url || null,
         secondary_gif_url: editExForm.secondary_gif_url || null,
@@ -1500,6 +1515,28 @@ export default function LegacyAdminApp() {
                   </div>
                 </div>
                 <div>
+                  <label className="block text-[10px] font-extrabold text-stone-500 mb-2 uppercase tracking-wider flex items-center gap-1.5">
+                    <Dumbbell size={12} /> ציוד נדרש (ניתן לבחור כמה)
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {EQUIPMENT_LIST.map((eq) => {
+                      const isSelected = exEquipment.includes(eq.id);
+                      return (
+                        <button
+                          key={eq.id}
+                          type="button"
+                          onClick={() => toggleExerciseEquipment(eq.id)}
+                          className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all border ${
+                            isSelected ? "bg-teal-500 text-stone-950 border-teal-400 shadow-sm" : "bg-stone-950 text-stone-300 border-stone-800 hover:bg-stone-900"
+                          }`}
+                        >
+                          {eq.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+                <div>
                   <label className="block text-[10px] font-extrabold text-stone-500 mb-2 uppercase tracking-wider">קישור לגיף או תמונה (URL)</label>
                   <input
                     type="url"
@@ -1809,6 +1846,25 @@ export default function LegacyAdminApp() {
                             </select>
                           </div>
 
+                          <div>
+                            <label className="text-[9px] font-extrabold text-stone-500 mb-1 uppercase tracking-wider block">ציוד נדרש</label>
+                            <div className="flex flex-wrap gap-1">
+                              {EQUIPMENT_LIST.map((eq) => {
+                                const isSelected = editExForm.equipment.includes(eq.id);
+                                return (
+                                  <button
+                                    key={eq.id}
+                                    type="button"
+                                    onClick={() => toggleExerciseEquipment(eq.id, true)}
+                                    className={`text-[10px] px-2 py-1 rounded-md border border-stone-700 ${isSelected ? "bg-teal-500 text-stone-950 border-teal-400" : "bg-stone-950 text-stone-400"}`}
+                                  >
+                                    {eq.label}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+
                           <input
                             type="url"
                             value={editExForm.gif_url}
@@ -2003,6 +2059,16 @@ export default function LegacyAdminApp() {
                             <p className="text-[11px] font-bold text-teal-400 mb-1.5 flex items-center gap-1.5">
                               <Target size={11} /> מרכזי: {AVAILABLE_MUSCLES.find((m) => m.id === ex.target_muscle)?.label || ex.target_muscle}
                             </p>
+                          )}
+                          {ex.equipment && ex.equipment.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mb-1.5">
+                              {ex.equipment.map((eqId: string) => (
+                                <span key={eqId} className="bg-stone-950 text-stone-300 px-2 py-0.5 rounded-md text-[10px] font-bold border border-stone-800 flex items-center gap-1">
+                                  <Dumbbell size={9} />
+                                  {EQUIPMENT_LIST.find((e) => e.id === eqId)?.label || eqId}
+                                </span>
+                              ))}
+                            </div>
                           )}
                           {formatCueLines(ex.patient_cues, "✅").map((line, i) => (
                             <p key={`cue-${i}`} className="text-[11px] font-bold text-emerald-400 mb-1 leading-relaxed">

@@ -9,7 +9,7 @@ import { usePatientData } from "@/app/hooks/usePatientData";
 import { useCuratedFacts } from "@/app/hooks/useCuratedFacts";
 import { usePlanSelection } from "@/app/hooks/usePlanSelection";
 import { useWorkoutSession } from "@/app/hooks/useWorkoutSession";
-import { useSavedWorkouts } from "@/app/hooks/useSavedWorkouts";
+import { useSavedPrograms } from "@/app/hooks/useSavedPrograms";
 import WorkoutPlayer from "@/app/components/patient/workout/WorkoutPlayer";
 import ExerciseInfoModal from "@/app/components/patient/workout/ExerciseInfoModal";
 import PlanTab from "@/app/components/patient/tabs/PlanTab";
@@ -18,7 +18,7 @@ import DiyBuilderTab from "@/app/components/patient/tabs/DiyBuilderTab";
 import MyWorkoutsScreen from "@/app/components/patient/tabs/MyWorkoutsScreen";
 import PremiumStoreTab from "@/app/components/patient/tabs/PremiumStoreTab";
 import ProfileTab from "@/app/components/patient/tabs/ProfileTab";
-import type { SavedWorkout } from "@/app/types";
+import type { Exercise, SavedProgram } from "@/app/types";
 
 type PatientTab = "plan" | "calendar" | "diy" | "premium" | "profile";
 
@@ -34,14 +34,19 @@ export default function PatientShell() {
 
   const [patientTab, setPatientTab] = useState<PatientTab>("plan");
   const [showMyWorkouts, setShowMyWorkouts] = useState(false);
-  const [editingSavedWorkoutId, setEditingSavedWorkoutId] = useState<string | null>(null);
+  const [editingSavedProgramId, setEditingSavedProgramId] = useState<string | null>(null);
 
   const { hapticsEnabled, setHapticsEnabled, triggerHaptic } = useHaptics();
   const reminders = useReminders(triggerHaptic);
   const patientData = usePatientData();
   const planSelection = usePlanSelection(patientData.patientExercises);
-  const savedWorkoutsData = useSavedWorkouts();
+  const savedProgramsData = useSavedPrograms();
   const { curatedFacts } = useCuratedFacts();
+
+  // A live session is always one sitting, so it only ever runs the DIY
+  // builder's currently-active day — the rest of the multi-day draft just
+  // sits untouched in planSelection.diyExercisesByDay.
+  const diyActiveDayExercises = planSelection.diyExercisesByDay[planSelection.diyActiveDay] ?? [];
 
   const session = useWorkoutSession({
     patientExercises: patientData.patientExercises,
@@ -51,7 +56,7 @@ export default function PatientShell() {
     selectedCategory: planSelection.selectedCategory,
     selectedDayFilter: planSelection.selectedDayFilter,
     isDiyMode: planSelection.isDiyMode,
-    diySelectedExercises: planSelection.diySelectedExercises,
+    diySelectedExercises: diyActiveDayExercises,
     diyScheduleDay: planSelection.diyScheduleDay,
     onExitDiyMode: planSelection.exitDiyMode,
     triggerHaptic,
@@ -63,11 +68,26 @@ export default function PatientShell() {
   // Bottom-nav tab switches always exit DIY mode; the header avatar button
   // and the Premium tab's "go to plan" button don't — preserved exactly as
   // in the original, not unified.
+  //
+  // Tapping the tab that's already active doesn't switch anything, so it
+  // instead pops that tab's own view stack back to its root screen (the
+  // Home tab's workout detail view, the DIY tab's saved-workouts screen or
+  // expanded accordion) rather than being a no-op.
   const switchTab = (tab: PatientTab) => {
+    if (tab === patientTab) {
+      if (tab === "plan") planSelection.setSelectedCategory(null);
+      if (tab === "diy") {
+        setShowMyWorkouts(false);
+        setEditingSavedProgramId(null);
+        planSelection.setDiyCategoryFilter(null);
+        planSelection.setDiyBodyPartFilter(null);
+      }
+      return;
+    }
     setPatientTab(tab);
     planSelection.setIsDiyMode(false);
     setShowMyWorkouts(false);
-    setEditingSavedWorkoutId(null);
+    setEditingSavedProgramId(null);
   };
 
   // Calendar tab hands off to the existing Plan tab day view rather than
@@ -78,53 +98,72 @@ export default function PatientShell() {
     switchTab("plan");
   };
 
-  // Hydrates a saved workout's ordered exercise_ids against the live catalog,
-  // silently dropping any id that no longer exists (e.g. an exercise deleted
-  // from the catalog since the workout was saved).
-  const hydrateSavedWorkout = (workout: SavedWorkout) =>
-    workout.exercise_ids
-      .map((id) => patientData.exerciseCatalog.find((ex) => ex.id === id))
-      .filter((ex): ex is (typeof patientData.exerciseCatalog)[number] => !!ex);
+  // Hydrates a saved program day's ordered exercise_ids against the live
+  // catalog, silently dropping any id that no longer exists (e.g. an
+  // exercise deleted from the catalog since the program was saved).
+  const hydrateExerciseIds = (exerciseIds: string[]): Exercise[] =>
+    exerciseIds.map((id) => patientData.exerciseCatalog.find((ex) => ex.id === id)).filter((ex): ex is Exercise => !!ex);
 
-  const handleStartSavedWorkout = (workout: SavedWorkout) => {
-    planSelection.setDiySelectedExercises(hydrateSavedWorkout(workout));
-    planSelection.setDiyScheduleDay(workout.scheduled_day || planSelection.diyScheduleDay);
-    planSelection.setDiyWorkoutName(workout.name);
+  // Loading a saved program's specific day to run it right now replaces the
+  // active builder draft with just that one day, same overwrite semantics
+  // the old single-workout version already had.
+  const handleStartSavedProgram = (program: SavedProgram, dayNumber: number) => {
+    const day = program.days.find((d) => d.day_number === dayNumber) ?? program.days[0];
+    if (!day) return;
+    planSelection.setDiyExercisesByDay({ [day.day_number]: hydrateExerciseIds(day.exercise_ids) });
+    planSelection.setDiyActiveDay(day.day_number);
+    planSelection.setDiyProgramName(program.name);
     setShowMyWorkouts(false);
     planSelection.setIsDiyMode(true);
     session.startDiyWorkoutNow();
   };
 
-  const handleEditSavedWorkout = (workout: SavedWorkout) => {
-    planSelection.setDiySelectedExercises(hydrateSavedWorkout(workout));
-    planSelection.setDiyScheduleDay(workout.scheduled_day || planSelection.diyScheduleDay);
-    planSelection.setDiyWorkoutName(workout.name);
-    setEditingSavedWorkoutId(workout.id);
+  // Loading a program to edit it replaces the whole draft with every one of
+  // its days, so the builder opens exactly where the program left off.
+  const handleEditSavedProgram = (program: SavedProgram) => {
+    const hydratedDays = Object.fromEntries(program.days.map((d) => [d.day_number, hydrateExerciseIds(d.exercise_ids)]));
+    planSelection.setDiyExercisesByDay(Object.keys(hydratedDays).length > 0 ? hydratedDays : { 1: [] });
+    planSelection.setDiyActiveDay(program.days[0]?.day_number ?? 1);
+    planSelection.setDiyProgramName(program.name);
+    setEditingSavedProgramId(program.id);
     setShowMyWorkouts(false);
   };
 
-  const handleSaveDiyWorkout = async () => {
-    if (planSelection.diySelectedExercises.length === 0) return;
-    await savedWorkoutsData.saveWorkout({
-      editingId: editingSavedWorkoutId,
-      name: planSelection.diyWorkoutName,
-      scheduledDay: planSelection.diyScheduleDay,
-      exerciseIds: planSelection.diySelectedExercises.map((ex) => ex.id),
+  const handleSaveDiyProgram = async () => {
+    const days = Object.entries(planSelection.diyExercisesByDay)
+      .map(([dayNumber, exercises]) => ({ day_number: Number(dayNumber), exercise_ids: exercises.map((ex) => ex.id) }))
+      .filter((d) => d.exercise_ids.length > 0)
+      .sort((a, b) => a.day_number - b.day_number);
+    if (days.length === 0) return;
+    await savedProgramsData.saveProgram({
+      editingId: editingSavedProgramId,
+      name: planSelection.diyProgramName,
+      days,
     });
-    setEditingSavedWorkoutId(null);
+    setEditingSavedProgramId(null);
   };
 
   return (
     <>
       <WorkoutPlayer session={session} triggerHaptic={triggerHaptic} />
 
-      <div className="min-h-screen bg-[#FDFBF7] text-stone-900 pb-24">
+      {/* Locked to the viewport (fixed inset-0, same full-screen-overlay
+          pattern WorkoutPlayer already uses) so the outer page can never
+          scroll on its own — only `main` below does, via overflow-y-auto.
+          Letting the whole shell scroll as one is what caused the
+          background to drag and the fixed bottom nav to detach/overlap
+          during fast scrolling. */}
+      <div className="fixed inset-0 overflow-hidden bg-[#FDFBF7] text-stone-900 flex flex-col">
         {session.viewingExInfo && (
           <ExerciseInfoModal exercise={session.viewingExInfo} historyData={session.exHistoryData} onClose={() => session.setViewingExInfo(null)} />
         )}
 
-        {/* BOTTOM NAVIGATION BAR */}
-        <nav className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-md border-t border-stone-100 z-50 print:hidden pb-safe">
+        {/* BOTTOM NAVIGATION BAR. pb-safe (used to pad for the home
+            indicator) is a dead no-op class in this project (see
+            MISTAKES.md) — using the same working
+            max(<min>, env(safe-area-inset-bottom)) pattern as
+            PatientCoachSheet instead. */}
+        <nav className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-md border-t border-stone-100 z-50 print:hidden pb-[max(0.5rem,env(safe-area-inset-bottom))]">
           <div className="flex justify-around items-center h-16 max-w-5xl mx-auto px-2">
             <button onClick={() => switchTab("plan")} className={`flex flex-col items-center justify-center w-16 h-full gap-1 transition-colors ${patientTab === "plan" ? "text-emerald-800" : "text-stone-400 hover:text-stone-600"}`}>
               <HomeIcon size={22} className={patientTab === "plan" ? "fill-emerald-800/15" : ""} />
@@ -172,8 +211,12 @@ export default function PatientShell() {
             page, so this only pads for the device's own notch/status bar
             (env(safe-area-inset-top)), not for chrome that no longer
             exists. max(1rem, ...) keeps a sane minimum on non-notched
-            screens instead of sitting flush against the viewport edge. */}
-        <main className="max-w-5xl mx-auto px-4 md:px-8 pb-4 md:pb-8 pt-[max(1rem,env(safe-area-inset-top))] relative z-0">
+            screens instead of sitting flush against the viewport edge.
+            This is the one scrollable region in the shell (flex-1 +
+            overflow-y-auto) — pb-24 plus the fixed nav's own safe-area
+            inset keeps the final content clear of the fixed bottom nav
+            instead of being hidden behind it. */}
+        <main className="flex-1 overflow-y-auto max-w-5xl w-full mx-auto px-4 md:px-8 pb-[calc(6rem+env(safe-area-inset-bottom))] md:pb-24 pt-[max(1rem,env(safe-area-inset-top))] relative z-0">
           {loggedInPatient.patient_type === "fitness" && loggedInPatient.email_verified === false && (
             <div className="print:hidden mb-6">
               <div className="bg-amber-50 border border-amber-100 p-4 rounded-2xl flex items-start gap-4 shadow-[0_8px_30px_rgb(0,0,0,0.04)] animate-in fade-in slide-in-from-top-4">
@@ -192,38 +235,41 @@ export default function PatientShell() {
 
           {patientTab === "diy" && showMyWorkouts && (
             <MyWorkoutsScreen
-              savedWorkouts={savedWorkoutsData.savedWorkouts}
+              savedPrograms={savedProgramsData.savedPrograms}
               exerciseCatalog={patientData.exerciseCatalog}
               onBack={() => setShowMyWorkouts(false)}
-              onStartWorkout={handleStartSavedWorkout}
-              onEditWorkout={handleEditSavedWorkout}
-              onDeleteWorkout={savedWorkoutsData.deleteWorkout}
+              onStartProgramDay={handleStartSavedProgram}
+              onEditProgram={handleEditSavedProgram}
+              onDeleteProgram={savedProgramsData.deleteProgram}
             />
           )}
 
           {patientTab === "diy" && !showMyWorkouts && (
             <DiyBuilderTab
               exerciseCatalog={patientData.exerciseCatalog}
+              onViewExerciseInfo={(exercise) => session.setViewingExInfo(exercise)}
               diyEquipFilter={planSelection.diyEquipFilter}
               setDiyEquipFilter={planSelection.setDiyEquipFilter}
               diyCategoryFilter={planSelection.diyCategoryFilter}
               setDiyCategoryFilter={planSelection.setDiyCategoryFilter}
               diyBodyPartFilter={planSelection.diyBodyPartFilter}
               setDiyBodyPartFilter={planSelection.setDiyBodyPartFilter}
-              diySelectedExercises={planSelection.diySelectedExercises}
-              setDiySelectedExercises={planSelection.setDiySelectedExercises}
-              diyScheduleDay={planSelection.diyScheduleDay}
-              setDiyScheduleDay={planSelection.setDiyScheduleDay}
-              diyWorkoutName={planSelection.diyWorkoutName}
-              setDiyWorkoutName={planSelection.setDiyWorkoutName}
+              diyExercisesByDay={planSelection.diyExercisesByDay}
+              setDiyExercisesByDay={planSelection.setDiyExercisesByDay}
+              diyActiveDay={planSelection.diyActiveDay}
+              setDiyActiveDay={planSelection.setDiyActiveDay}
+              onAddDiyDay={planSelection.addDiyDay}
+              onRemoveDiyDay={planSelection.removeDiyDay}
+              diyProgramName={planSelection.diyProgramName}
+              setDiyProgramName={planSelection.setDiyProgramName}
               onStartDiyWorkoutNow={() => {
                 planSelection.setIsDiyMode(true);
                 session.startDiyWorkoutNow();
               }}
               onOpenMyWorkouts={() => setShowMyWorkouts(true)}
-              onSaveDiyWorkout={handleSaveDiyWorkout}
-              isEditingSavedWorkout={editingSavedWorkoutId !== null}
-              onCancelEditSavedWorkout={() => setEditingSavedWorkoutId(null)}
+              onSaveDiyProgram={handleSaveDiyProgram}
+              isEditingSavedProgram={editingSavedProgramId !== null}
+              onCancelEditSavedProgram={() => setEditingSavedProgramId(null)}
             />
           )}
 
@@ -254,7 +300,7 @@ export default function PatientShell() {
               availablePatientWeeks={planSelection.availablePatientWeeks}
               setPatientSelectedWeek={planSelection.setPatientSelectedWeek}
               isDiyMode={planSelection.isDiyMode}
-              diyWorkoutName={planSelection.diyWorkoutName}
+              diyProgramName={planSelection.diyProgramName}
               patientCategories={session.patientCategories}
               weekFilteredExercises={session.weekFilteredPatientExercises}
               displayedExercises={session.displayedExercises}

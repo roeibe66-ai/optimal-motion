@@ -1,6 +1,6 @@
 "use client";
 
-import { ClipboardList, Info, TrendingUp } from "lucide-react";
+import { ClipboardList, Dumbbell, Info, Target, TrendingUp } from "lucide-react";
 import {
   CartesianGrid,
   Line,
@@ -16,6 +16,7 @@ import Modal from "@/app/components/ui/Modal";
 import ExerciseMuscleMap from "@/app/components/patient/ExerciseMuscleMap";
 import AnatomyHeatmap from "@/app/components/AnatomyHeatmap";
 import { formatCueLines, getExerciseName, type CueLine } from "@/app/utils/format";
+import { EQUIPMENT_LIST } from "@/app/constants/catalog";
 
 interface ExerciseHistoryPoint {
   date: string;
@@ -90,7 +91,18 @@ export default function ExerciseInfoModal({ exercise, historyData, onClose }: Ex
 
   return (
     <Modal onClose={onClose} title="מידע לתרגיל" icon={<Info size={20} className="text-emerald-700" />}>
-      <h4 className="font-black text-xl tracking-tight mb-4 text-stone-900">{getExerciseName(exercise, lang)}</h4>
+      <h4 className="text-start font-black text-xl tracking-tight mb-4 text-stone-900">{getExerciseName(exercise, lang)}</h4>
+
+      {exercise.equipment && exercise.equipment.length > 0 && (
+        <div className="flex flex-wrap gap-2 mb-6">
+          {exercise.equipment.map((eqId) => (
+            <span key={eqId} className="inline-flex items-center gap-1.5 bg-stone-50 border border-stone-100 text-stone-600 text-xs font-bold px-3 py-1.5 rounded-full">
+              <Dumbbell size={12} className="text-emerald-700" />
+              {EQUIPMENT_LIST.find((e) => e.id === eqId)?.label || eqId}
+            </span>
+          ))}
+        </div>
+      )}
 
       {hasDescription && (
         <p className={`text-start text-stone-600 leading-relaxed text-lg font-medium pb-6 ${hasMoreAfterDescription ? "mb-6 border-b border-stone-100" : ""}`}>
@@ -134,8 +146,15 @@ export default function ExerciseInfoModal({ exercise, historyData, onClose }: Ex
       )}
 
       {hasHeatmapData ? (
-        <div className="w-full max-w-lg mx-auto">
-          <AnatomyHeatmap primeMovers={primeMovers} synergists={synergists} />
+        // Full-bleed against the modal's own p-6 padding (-mx-6) so the map
+        // gets the sheet's entire width to work with on mobile instead of
+        // being capped and centered — "massive" only works edge-to-edge.
+        <div className="-mx-6 px-4 pt-5 pb-2 bg-emerald-50/50">
+          <div className="flex items-center gap-2 mb-4 px-2">
+            <Target size={15} className="text-emerald-700" />
+            <h4 className="font-bold text-[13px] tracking-wide text-stone-500 uppercase">מפת שרירים מעורבים</h4>
+          </div>
+          <AnatomyHeatmap primeMovers={primeMovers} synergists={synergists} className="max-w-2xl mx-auto" />
         </div>
       ) : (
         <ExerciseMuscleMap exercise={exercise} />

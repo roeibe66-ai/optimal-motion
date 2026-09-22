@@ -112,4 +112,24 @@ session actually touched (`PatientShell.tsx`'s `<main>`, using the same working
 `pt-[max(1rem,env(safe-area-inset-top))]` pattern as `PatientCoachSheet.tsx`) — the
 `WorkoutPlayer.tsx`/bottom-nav instances are still the dead no-op and worth a real fix later.
 
+## 2026-09-22 — Equipment was never a real column, just keyword-sniffed from name/description
+
+**What happened:** Neither `PlanTab.tsx`'s workout-overview equipment row nor `DiyBuilderTab.tsx`'s
+equipment filter (`matchesEquip`) ever read a real equipment field — both guessed by lowercasing
+an exercise's name/description and checking `.includes()` against hardcoded Hebrew/English
+keywords ("מתח", "pull up", "dip", etc.), duplicated slightly differently in each file. An
+`EQUIPMENT_LIST` constant already existed in `catalog.ts` and was already used to populate the
+DIY builder's filter dropdown, but nothing ever wrote a matching id anywhere — the dropdown just
+fed its label text into the same keyword-sniffing.
+**Why:** `exercises` never had an equipment column, so equipment "detection" was bolted on as a
+text heuristic instead. It happened to look approximately right for common cases but silently
+missed/misclassified anything not in the fixed keyword list.
+**Rule:** added a real `exercises.equipment text[]` column
+(`20260922120000_exercises_add_equipment.sql`) and wired the admin builder to actually write to
+it (mirroring the `prime_movers`/`synergists` chip-picker pattern). Both call sites now read
+`exercise.equipment` directly — no more keyword sniffing. If a filter/aggregation over exercise
+data looks like it's parsing free text instead of reading a typed column, that's the same
+red flag as the `target_muscle` comma-packing entry above — check whether a real column exists
+before trusting the text-parsing code.
+
 <!-- Add new entries above this line, newest first is fine but not required. -->

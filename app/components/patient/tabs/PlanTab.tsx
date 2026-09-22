@@ -18,7 +18,7 @@ import {
 import { useAuth } from "@/app/context/AuthContext";
 import { getTrackAccess } from "@/app/utils/premium";
 import { getExerciseName, getWorkoutMuscleAggregation, type WorkoutMuscleAggregation } from "@/app/utils/format";
-import { AVAILABLE_MUSCLES, DEFAULT_TRACK_GLOW, TRACK_GLOW_TINTS } from "@/app/constants/catalog";
+import { AVAILABLE_MUSCLES, DEFAULT_TRACK_GLOW, EQUIPMENT_LIST, TRACK_GLOW_TINTS } from "@/app/constants/catalog";
 import type { AIAssistantContext, CuratedFact, Exercise, WorkoutLog } from "@/app/types";
 import type { HydratedPatientExercise, SessionExercise } from "@/app/hooks/useWorkoutSession";
 import PatientCoachSheet from "@/app/components/patient/PatientCoachSheet";
@@ -34,7 +34,7 @@ interface PlanTabProps {
   availablePatientWeeks: number[];
   setPatientSelectedWeek: (week: number) => void;
   isDiyMode: boolean;
-  diyWorkoutName: string;
+  diyProgramName: string;
   patientCategories: string[];
   weekFilteredExercises: HydratedPatientExercise[];
   displayedExercises: HydratedPatientExercise[];
@@ -112,7 +112,7 @@ export default function PlanTab({
   availablePatientWeeks,
   setPatientSelectedWeek,
   isDiyMode,
-  diyWorkoutName,
+  diyProgramName,
   patientCategories,
   weekFilteredExercises,
   displayedExercises,
@@ -318,7 +318,7 @@ export default function PlanTab({
 
             {/* Title + meta, bottom-right (RTL) */}
             <div className="absolute bottom-5 right-5 left-24 z-10 flex flex-col gap-2">
-              <h3 className="text-[26px] font-black tracking-tight leading-tight text-white truncate">{isDiyMode ? diyWorkoutName : todayCat}</h3>
+              <h3 className="text-[26px] font-black tracking-tight leading-tight text-white truncate">{isDiyMode ? diyProgramName : todayCat}</h3>
               <div className="flex items-center gap-3.5 text-stone-300 text-[13px] font-semibold">
                 <span className="flex items-center gap-1.5">
                   <Timer size={14} /> כ-{todayEstimatedMinutes} דק&apos;
@@ -502,12 +502,10 @@ export default function PlanTab({
 
           const equipSet = new Set<string>();
           displayedExercises.forEach((a) => {
-            const str = `${a.exercise?.name_he ?? ""} ${a.exercise?.name_en ?? ""} ${a.exercise?.description ?? ""}`.toLowerCase();
-            if (str.includes("מתח") || str.includes("pull up") || str.includes("pull-up")) equipSet.add("מתח");
-            if (str.includes("מקבילים") || str.includes("dip")) equipSet.add("מקבילים");
-            if (str.includes("טבעות") || str.includes("ring")) equipSet.add("טבעות");
-            if (str.includes("פרללס") || str.includes("parallettes")) equipSet.add("פרללס");
-            if (str.includes("משקולות") || str.includes("dumbbell")) equipSet.add("משקולות");
+            (a.exercise?.equipment ?? []).forEach((eqId) => {
+              const label = EQUIPMENT_LIST.find((e) => e.id === eqId)?.label;
+              if (label) equipSet.add(label);
+            });
           });
           const equipmentLabels = equipSet.size > 0 ? Array.from(equipSet).join(", ") : "משקל גוף (ללא ציוד)";
 
@@ -515,7 +513,7 @@ export default function PlanTab({
             <>
               <div className="mb-8">
                 <span className="bg-stone-100 text-stone-600 font-bold px-2.5 py-1 rounded-md text-[10px] uppercase tracking-widest mb-3 inline-block">קלאסי</span>
-                <h1 className="text-4xl font-black text-stone-900 tracking-tight leading-tight mb-2">{isDiyMode ? diyWorkoutName : selectedCategory}</h1>
+                <h1 className="text-4xl font-black text-stone-900 tracking-tight leading-tight mb-2">{isDiyMode ? diyProgramName : selectedCategory}</h1>
                 <p className="text-stone-500 text-sm font-medium">
                   שבוע {activePatientWeek} - אימון {selectedDayFilter === "all" ? "1" : selectedDayFilter} - {new Date().toLocaleDateString("he-IL", { weekday: "short", month: "short", day: "numeric" })}
                 </p>
