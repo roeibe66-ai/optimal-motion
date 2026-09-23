@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Globe, Mail } from "lucide-react";
+import { Fingerprint, Globe, Mail } from "lucide-react";
 import { useAuth } from "@/app/context/AuthContext";
 import { useAuthSession } from "@/app/hooks/useAuthSession";
 
@@ -14,6 +14,10 @@ export default function LoginPage() {
     setLoginPassword,
     handleLogin,
     handleGoogleSignIn,
+    isPasskeySupported,
+    isPasskeyLoggingIn,
+    passkeyLoginError,
+    handlePasskeyLogin,
     forgotEmail,
     setForgotEmail,
     forgotSent,
@@ -85,6 +89,31 @@ export default function LoginPage() {
           )
         ) : (
           <>
+            {/* Real WebAuthn passwordless login — a usernameless/discoverable
+                assertion ceremony (see app/actions/passkeyAuth.ts), only
+                shown when this browser/device actually reports a platform
+                authenticator. A returning patient who enabled a passkey from
+                the post-login prompt skips the form entirely from here. */}
+            {isPasskeySupported && (
+              <>
+                <button
+                  type="button"
+                  onClick={handlePasskeyLogin}
+                  disabled={isPasskeyLoggingIn}
+                  className="w-full flex items-center justify-center gap-2.5 bg-stone-900 text-white py-4 rounded-xl font-bold hover:bg-stone-800 transition-colors disabled:opacity-60"
+                >
+                  <Fingerprint size={20} />
+                  {isPasskeyLoggingIn ? "מתחבר..." : "התחבר עם Face ID / Touch ID"}
+                </button>
+                {passkeyLoginError && <p className="text-xs font-bold text-red-600 text-center mt-2.5">{passkeyLoginError}</p>}
+                <div className="flex items-center gap-3 my-5">
+                  <div className="flex-1 h-px bg-stone-200"></div>
+                  <span className="text-xs font-bold text-stone-400">או התחבר עם סיסמה</span>
+                  <div className="flex-1 h-px bg-stone-200"></div>
+                </div>
+              </>
+            )}
+
             <form onSubmit={handleLogin} className="space-y-5">
               <div>
                 <label htmlFor="login-email" className="block text-xs font-bold text-stone-500 mb-1.5">

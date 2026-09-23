@@ -1,9 +1,11 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
+import { browserSupportsWebAuthn, platformAuthenticatorIsAvailable, startAuthentication, WebAuthnError } from "@simplewebauthn/browser";
 import { supabase } from "@/app/lib/supabase";
 import { useAuth } from "@/app/context/AuthContext";
 import { isPasswordConfirmed, isStrongPassword } from "@/app/utils/validation";
+import { generatePasskeyAuthenticationOptions, verifyPasskeyAuthentication } from "@/app/actions/passkeyAuth";
 
 // Login + registration business logic, now backed by real Supabase Auth
 // instead of a plaintext password column. This hook only triggers the auth
@@ -34,6 +36,15 @@ export function useAuthSession() {
   const [newPassword, setNewPassword] = useState("");
   const [newPasswordConfirm, setNewPasswordConfirm] = useState("");
 
+  const [isPasskeySupported, setIsPasskeySupported] = useState(false);
+  const [isPasskeyLoggingIn, setIsPasskeyLoggingIn] = useState(false);
+  const [passkeyLoginError, setPasskeyLoginError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!browserSupportsWebAuthn()) return;
+    platformAuthenticatorIsAvailable().then(setIsPasskeySupported);
+  }, []);
+
   const handleLogin = async (e: FormEvent) => {
     e.preventDefault();
 
@@ -57,6 +68,44 @@ export function useAuthSession() {
     const { error } = await supabase.auth.signInWithOAuth({ provider: "google" });
     if (error) {
       alert("שגיאה בהתחברות עם Google: " + error.message);
+    }
+  };
+
+  // Passwordless login: a real WebAuthn assertion ceremony (no email/
+  // password entered anywhere), verified server-side, resolved into a real
+  // Supabase Auth session via verifyOtp — see app/actions/passkeyAuth.ts for
+  // why that's the mechanism rather than a hand-rolled token. Same
+  // no-manual-routing note as every other sign-in path here: a successful
+  // verifyOtp fires the normal SIGNED_IN event, which AuthContext's
+  // onAuthStateChange listener already routes on.
+  const handlePasskeyLogin = async () => {
+    setIsPasskeyLoggingIn(true);
+    setPasskeyLoginError(null);
+    try {
+      const optionsJSON = await generatePasskeyAuthenticationOptions();
+      const authResponse = await startAuthentication({ optionsJSON });
+      const result = await verifyPasskeyAuthentication(authResponse, optionsJSON.challenge);
+
+      if (!result.verified) {
+        setPasskeyLoginError(result.error);
+        return;
+      }
+
+      const { error } = await supabase.auth.verifyOtp({ token_hash: result.tokenHash, type: "magiclink" });
+      if (error) {
+        setPasskeyLoginError("שגיאה בהתחברות: " + error.message);
+      }
+    } catch (err) {
+      // Backing out of the OS Face ID/Touch ID prompt is a completely normal
+      // outcome, not an error worth surfacing — every other ceremony
+      // failure still gets a message.
+      if (err instanceof WebAuthnError) {
+        if (err.name !== "NotAllowedError") setPasskeyLoginError(err.message);
+      } else {
+        setPasskeyLoginError(err instanceof Error ? err.message : "שגיאה לא ידועה");
+      }
+    } finally {
+      setIsPasskeyLoggingIn(false);
     }
   };
 
@@ -159,6 +208,10 @@ export function useAuthSession() {
     setLoginPassword,
     handleLogin,
     handleGoogleSignIn,
+    isPasskeySupported,
+    isPasskeyLoggingIn,
+    passkeyLoginError,
+    handlePasskeyLogin,
     regFirstName,
     setRegFirstName,
     regLastName,
