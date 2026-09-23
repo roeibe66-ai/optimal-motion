@@ -171,7 +171,7 @@ export default function PatientShell() {
           Letting the whole shell scroll as one is what caused the
           background to drag and the fixed bottom nav to detach/overlap
           during fast scrolling. */}
-      <div className="fixed inset-0 overflow-hidden bg-[#FDFBF7] text-stone-900 flex flex-col">
+      <div className="fixed inset-0 overflow-hidden bg-brand-stone text-brand-espresso flex flex-col">
         {session.viewingExInfo && (
           <ExerciseInfoModal exercise={session.viewingExInfo} historyData={session.exHistoryData} onClose={() => session.setViewingExInfo(null)} />
         )}
@@ -181,35 +181,35 @@ export default function PatientShell() {
             MISTAKES.md) — using the same working
             max(<min>, env(safe-area-inset-bottom)) pattern as
             PatientCoachSheet instead. */}
-        <nav className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-md border-t border-stone-100 z-50 print:hidden pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+        <nav className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-md border-t border-brand-espresso/5 z-50 print:hidden pb-[max(0.5rem,env(safe-area-inset-bottom))]">
           <div className="flex justify-around items-center h-16 max-w-5xl mx-auto px-2">
-            <button onClick={() => switchTab("plan")} className={`flex flex-col items-center justify-center w-16 h-full gap-1 transition-colors ${patientTab === "plan" ? "text-emerald-800" : "text-stone-400 hover:text-stone-600"}`}>
-              <HomeIcon size={22} className={patientTab === "plan" ? "fill-emerald-800/15" : ""} />
+            <button onClick={() => switchTab("plan")} className={`flex flex-col items-center justify-center w-16 h-full gap-1 transition-colors ${patientTab === "plan" ? "text-brand-terracotta" : "text-stone-400 hover:text-stone-600"}`}>
+              <HomeIcon size={22} className={patientTab === "plan" ? "fill-brand-terracotta/15" : ""} />
               <span className="text-[10px] font-bold">ראשי</span>
             </button>
 
-            <button onClick={() => switchTab("calendar")} className={`flex flex-col items-center justify-center w-16 h-full gap-1 transition-colors ${patientTab === "calendar" ? "text-emerald-800" : "text-stone-400 hover:text-stone-600"}`}>
-              <CalendarDays size={22} className={patientTab === "calendar" ? "fill-emerald-800/15" : ""} />
+            <button onClick={() => switchTab("calendar")} className={`flex flex-col items-center justify-center w-16 h-full gap-1 transition-colors ${patientTab === "calendar" ? "text-brand-terracotta" : "text-stone-400 hover:text-stone-600"}`}>
+              <CalendarDays size={22} className={patientTab === "calendar" ? "fill-brand-terracotta/15" : ""} />
               <span className="text-[10px] font-bold">לוח שנה</span>
             </button>
 
             {loggedInPatient.patient_type === "fitness" && (
-              <button onClick={() => switchTab("diy")} className={`flex flex-col items-center justify-center w-16 h-full gap-1 transition-colors ${patientTab === "diy" ? "text-emerald-800" : "text-stone-400 hover:text-stone-600"}`}>
+              <button onClick={() => switchTab("diy")} className={`flex flex-col items-center justify-center w-16 h-full gap-1 transition-colors ${patientTab === "diy" ? "text-brand-terracotta" : "text-stone-400 hover:text-stone-600"}`}>
                 <Dumbbell size={22} />
                 <span className="text-[10px] font-bold">בנה אימון</span>
               </button>
             )}
 
             {loggedInPatient.patient_type === "fitness" && (
-              <button onClick={() => switchTab("explore")} className={`flex flex-col items-center justify-center w-16 h-full gap-1 transition-colors ${patientTab === "explore" ? "text-emerald-800" : "text-stone-400 hover:text-stone-600"}`}>
-                <Compass size={22} className={patientTab === "explore" ? "fill-emerald-800/15" : ""} />
+              <button onClick={() => switchTab("explore")} className={`flex flex-col items-center justify-center w-16 h-full gap-1 transition-colors ${patientTab === "explore" ? "text-brand-terracotta" : "text-stone-400 hover:text-stone-600"}`}>
+                <Compass size={22} className={patientTab === "explore" ? "fill-brand-terracotta/15" : ""} />
                 <span className="text-[10px] font-bold">גלה</span>
               </button>
             )}
 
             {loggedInPatient.patient_type === "fitness" && (
-              <button onClick={() => switchTab("premium")} className={`flex flex-col items-center justify-center w-16 h-full gap-1 transition-colors ${patientTab === "premium" ? "text-emerald-800" : "text-stone-400 hover:text-stone-600"}`}>
-                <Crown size={22} className={patientTab === "premium" ? "fill-emerald-800/15" : ""} />
+              <button onClick={() => switchTab("premium")} className={`flex flex-col items-center justify-center w-16 h-full gap-1 transition-colors ${patientTab === "premium" ? "text-brand-terracotta" : "text-stone-400 hover:text-stone-600"}`}>
+                <Crown size={22} className={patientTab === "premium" ? "fill-brand-terracotta/15" : ""} />
                 <span className="text-[10px] font-bold">תוכניות</span>
               </button>
             )}
@@ -218,10 +218,10 @@ export default function PatientShell() {
                 to show (first-letter circle) — moved here rather than kept
                 as a separate button, since this tab already does the same
                 job (open the account/profile screen). */}
-            <button onClick={() => switchTab("profile")} className={`flex flex-col items-center justify-center w-16 h-full gap-1 transition-colors ${patientTab === "profile" ? "text-emerald-800" : "text-stone-400 hover:text-stone-600"}`}>
+            <button onClick={() => switchTab("profile")} className={`flex flex-col items-center justify-center w-16 h-full gap-1 transition-colors ${patientTab === "profile" ? "text-brand-terracotta" : "text-stone-400 hover:text-stone-600"}`}>
               <span
                 className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold transition-colors ${
-                  patientTab === "profile" ? "bg-emerald-800 text-white" : "bg-amber-500 text-stone-950"
+                  patientTab === "profile" ? "bg-brand-terracotta text-white" : "bg-amber-500 text-stone-950"
                 }`}
               >
                 {loggedInPatient.full_name.charAt(0)}
@@ -334,8 +334,6 @@ export default function PatientShell() {
               selectedDayFilter={planSelection.selectedDayFilter}
               setSelectedDayFilter={planSelection.setSelectedDayFilter}
               activePatientWeek={planSelection.activePatientWeek}
-              availablePatientWeeks={planSelection.availablePatientWeeks}
-              setPatientSelectedWeek={planSelection.setPatientSelectedWeek}
               isDiyMode={planSelection.isDiyMode}
               diyProgramName={planSelection.diyProgramName}
               patientCategories={session.patientCategories}

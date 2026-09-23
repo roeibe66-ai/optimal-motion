@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { ClipboardList, Dumbbell, History, Info, TrendingUp } from "lucide-react";
+import { ClipboardList, Dumbbell, History, Info, Loader2, TrendingUp } from "lucide-react";
 import {
   CartesianGrid,
   Line,
@@ -18,6 +18,7 @@ import ExerciseMuscleMap from "@/app/components/patient/ExerciseMuscleMap";
 import AnatomyHeatmap from "@/app/components/AnatomyHeatmap";
 import { formatCueLines, getExerciseName, type CueLine } from "@/app/utils/format";
 import { EQUIPMENT_LIST } from "@/app/constants/catalog";
+import { useExerciseHistory } from "@/app/hooks/useExerciseHistory";
 
 interface ExerciseHistoryPoint {
   date: string;
@@ -54,7 +55,7 @@ function InstructionLine({ line }: { line: CueLine }) {
     <div className="flex items-start gap-3 mb-5 last:mb-0">
       <span className="text-xl shrink-0 mt-0.5">{line.emoji}</span>
       <p className="flex-1 text-base leading-relaxed text-start">
-        {lead && <span className="font-bold text-stone-900">{lead}</span>}
+        {lead && <span className="font-bold text-brand-espresso">{lead}</span>}
         <span className="text-stone-600">{rest}</span>
       </p>
     </div>
@@ -80,6 +81,7 @@ function PlaceholderTabBody({ icon, text }: { icon: ReactNode; text: string }) {
 export default function ExerciseInfoModal({ exercise, historyData, onClose }: ExerciseInfoModalProps) {
   const { lang } = useAuth();
   const [activeTab, setActiveTab] = useState<TabId>("about");
+  const { sessions: pastSessions, isLoading: isHistoryLoading } = useExerciseHistory(exercise.id);
 
   // Cue lines first, mistake lines immediately after — one merged list, one
   // section ("הנחיות"/Instructions), rather than the two separately-colored
@@ -105,14 +107,14 @@ export default function ExerciseInfoModal({ exercise, historyData, onClose }: Ex
   const hasAboutContent = hasDescription || instructionLines.length > 0 || hasHeatmapData;
 
   return (
-    <Modal onClose={onClose} title="מידע לתרגיל" icon={<Info size={20} className="text-emerald-700" />}>
-      <h4 className="text-start font-black text-xl tracking-tight mb-4 text-stone-900">{getExerciseName(exercise, lang)}</h4>
+    <Modal onClose={onClose} title="מידע לתרגיל" icon={<Info size={20} className="text-brand-terracotta" />}>
+      <h4 className="text-start font-black text-xl tracking-tight mb-4 text-brand-espresso">{getExerciseName(exercise, lang)}</h4>
 
       {exercise.equipment && exercise.equipment.length > 0 && (
         <div className="flex flex-wrap gap-2 mb-5">
           {exercise.equipment.map((eqId) => (
             <span key={eqId} className="inline-flex items-center gap-1.5 bg-stone-50 border border-stone-100 text-stone-600 text-xs font-bold px-3 py-1.5 rounded-full">
-              <Dumbbell size={12} className="text-emerald-700" />
+              <Dumbbell size={12} className="text-brand-terracotta" />
               {EQUIPMENT_LIST.find((e) => e.id === eqId)?.label || eqId}
             </span>
           ))}
@@ -129,10 +131,10 @@ export default function ExerciseInfoModal({ exercise, historyData, onClose }: Ex
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`relative py-3 text-sm font-bold transition-colors ${isActive ? "text-emerald-700" : "text-stone-400 hover:text-stone-600"}`}
+              className={`relative py-3 text-sm font-bold transition-colors ${isActive ? "text-brand-terracotta" : "text-stone-400 hover:text-stone-600"}`}
             >
               {tab.label}
-              {isActive && <span className="absolute bottom-0 inset-x-0 h-[2.5px] bg-emerald-700 rounded-full" />}
+              {isActive && <span className="absolute bottom-0 inset-x-0 h-[2.5px] bg-brand-terracotta rounded-full" />}
             </button>
           );
         })}
@@ -149,7 +151,7 @@ export default function ExerciseInfoModal({ exercise, historyData, onClose }: Ex
           {instructionLines.length > 0 && (
             <div className={hasHeatmapData ? "mb-6" : ""}>
               <div className="flex items-center gap-2 mb-4">
-                <ClipboardList size={15} className="text-emerald-700" />
+                <ClipboardList size={15} className="text-brand-terracotta" />
                 <h4 className="font-bold text-[13px] tracking-wide text-stone-500 uppercase">הנחיות</h4>
               </div>
               <div>
@@ -177,15 +179,51 @@ export default function ExerciseInfoModal({ exercise, historyData, onClose }: Ex
       )}
 
       {activeTab === "history" && (
-        <PlaceholderTabBody icon={<History size={32} className="text-stone-300" />} text="רשימת הסטים והחזרות הקודמים לתרגיל זה תופיע כאן בקרוב." />
+        <>
+          {isHistoryLoading ? (
+            <div className="flex justify-center py-14">
+              <Loader2 size={28} className="text-stone-300 animate-spin" />
+            </div>
+          ) : pastSessions.length === 0 ? (
+            <PlaceholderTabBody icon={<History size={32} className="text-stone-300" />} text="עדיין אין היסטוריית ביצועים לתרגיל זה." />
+          ) : (
+            <div className="flex flex-col gap-3">
+              {pastSessions.map((session) => (
+                <div key={session.logId} className="bg-stone-50 rounded-2xl p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-sm font-black text-brand-espresso">
+                      {new Date(session.date).toLocaleDateString("he-IL", { weekday: "short", day: "2-digit", month: "2-digit", year: "numeric" })}
+                    </span>
+                    <span className="text-[11px] font-bold text-stone-400">{session.sets.length} סטים</span>
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    {session.sets.map((set, i) => (
+                      <div key={i} className="flex items-center justify-between text-sm">
+                        <span className="text-stone-500 font-medium">סט {set.set_number}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-brand-espresso">{set.reps} חזרות</span>
+                          {set.rir != null && (
+                            <span className="bg-white text-brand-terracotta text-[10px] font-extrabold px-2 py-0.5 rounded-full border border-stone-100">
+                              RIR {set.rir}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
       )}
 
       {activeTab === "charts" && (
         <>
           {hasHistory ? (
             <div>
-              <h4 className="font-bold text-sm mb-4 flex items-center gap-2 text-stone-900">
-                <TrendingUp size={16} className="text-emerald-700" /> היסטוריית ביצועים (מקסימום לאימון)
+              <h4 className="font-bold text-sm mb-4 flex items-center gap-2 text-brand-espresso">
+                <TrendingUp size={16} className="text-brand-terracotta" /> היסטוריית ביצועים (מקסימום לאימון)
               </h4>
               <div className="h-56 w-full" dir="ltr">
                 <ResponsiveContainer width="100%" height="100%">
@@ -195,7 +233,7 @@ export default function ExerciseInfoModal({ exercise, historyData, onClose }: Ex
                     <YAxis yAxisId="left" tick={{ fontSize: 10, fill: "#78716c" }} width={30} />
                     <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10, fill: "#78716c" }} width={24} allowDecimals={false} />
                     <RechartsTooltip contentStyle={{ backgroundColor: "#fff", borderColor: "#e7e5e4", color: "#1c1917" }} />
-                    <Line yAxisId="left" type="monotone" dataKey="reps" name="חזרות" stroke="#047857" strokeWidth={3} dot={{ r: 4 }} />
+                    <Line yAxisId="left" type="monotone" dataKey="reps" name="חזרות" stroke="#A15D38" strokeWidth={3} dot={{ r: 4 }} />
                     <Line yAxisId="right" type="monotone" dataKey="rir" name="RIR" stroke="#f59e0b" strokeWidth={2} dot={{ r: 3 }} connectNulls={false} />
                   </LineChart>
                 </ResponsiveContainer>

@@ -115,8 +115,8 @@ export default function CalendarTab({ patientExercises, workoutLogs, patientId, 
 
   return (
     <div className="animate-in fade-in duration-500">
-      <h2 className="text-xl md:text-2xl font-black text-stone-900 tracking-tight flex items-center gap-2 mb-6">
-        <CalendarDays size={22} className="text-emerald-800" />
+      <h2 className="text-xl md:text-2xl font-black text-brand-espresso tracking-tight flex items-center gap-2 mb-6">
+        <CalendarDays size={22} className="text-brand-terracotta" />
         לוח שנה
       </h2>
 
@@ -126,15 +126,15 @@ export default function CalendarTab({ patientExercises, workoutLogs, patientId, 
         <button
           onClick={() => handleChangeMonth(-1)}
           aria-label="חודש קודם"
-          className="text-stone-500 hover:text-stone-900 active:scale-90 transition-all duration-150 ease-out p-2 -m-2"
+          className="text-stone-500 hover:text-brand-espresso active:scale-90 transition-all duration-150 ease-out p-2 -m-2"
         >
           <ChevronRight size={22} />
         </button>
-        <h3 className="font-black text-2xl md:text-3xl text-stone-900 tracking-tight">{monthLabel}</h3>
+        <h3 className="font-black text-2xl md:text-3xl text-brand-espresso tracking-tight">{monthLabel}</h3>
         <button
           onClick={() => handleChangeMonth(1)}
           aria-label="חודש הבא"
-          className="text-stone-500 hover:text-stone-900 active:scale-90 transition-all duration-150 ease-out p-2 -m-2"
+          className="text-stone-500 hover:text-brand-espresso active:scale-90 transition-all duration-150 ease-out p-2 -m-2"
         >
           <ChevronLeft size={22} />
         </button>
@@ -176,9 +176,9 @@ export default function CalendarTab({ patientExercises, workoutLogs, patientId, 
               <span
                 className={`relative w-9 h-9 rounded-full flex items-center justify-center text-[13px] font-bold tabular-nums transition-all duration-200 ease-out ${
                   isSelected
-                    ? "bg-emerald-800 text-white shadow-[0_4px_14px_-2px_rgba(6,78,59,0.5)]"
+                    ? "bg-brand-terracotta text-white shadow-[0_4px_14px_-2px_rgba(161,93,56,0.5)]"
                     : isClickable
-                      ? "text-stone-900 group-hover:bg-stone-100 group-active:scale-90"
+                      ? "text-brand-espresso group-hover:bg-stone-100 group-active:scale-90"
                       : "text-stone-500"
                 }`}
               >
@@ -220,7 +220,7 @@ export default function CalendarTab({ patientExercises, workoutLogs, patientId, 
         <div className="w-10 h-1.5 rounded-full bg-stone-200 mx-auto mb-5"></div>
 
         <div className="flex items-center justify-between mb-4">
-          <h4 className="font-black text-stone-900 text-base">
+          <h4 className="font-black text-brand-espresso text-base">
             {selectedDayCategories.length} {selectedDayCategories.length === 1 ? "אימון" : "אימונים"}
           </h4>
           {selectedDate && (
@@ -252,7 +252,7 @@ export default function CalendarTab({ patientExercises, workoutLogs, patientId, 
                     <div className="absolute bottom-0 inset-x-0 h-[3px]" style={{ background: style.text }}></div>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h5 className="font-black text-stone-900 text-[15px] truncate">{cat}</h5>
+                    <h5 className="font-black text-brand-espresso text-[15px] truncate">{cat}</h5>
                     <p className="text-stone-500 text-[12px] font-semibold mt-0.5">
                       שבוע {selectedWeek} · {catExercises.length} תרגילים
                     </p>

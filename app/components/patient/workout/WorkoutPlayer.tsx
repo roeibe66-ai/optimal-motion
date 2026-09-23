@@ -28,7 +28,7 @@ const RIR_OPTIONS = [0, 1, 2, 3, 4];
 // screen — light glass now (bg-white/70 backdrop-blur-md per the boutique-
 // clinic palette), a soft diffused shadow standing in for the old inset
 // highlight, which only reads correctly against a dark surface.
-const GLASS = "bg-white/70 backdrop-blur-md border border-stone-200/60 shadow-[0_4px_20px_rgba(0,0,0,0.04)]";
+const GLASS = "bg-white/70 backdrop-blur-md border border-brand-espresso/5 shadow-[0_4px_20px_rgba(0,0,0,0.04)]";
 
 // The whole active-workout experience: the pre-workout pain check-in, the
 // immersive full-screen player, and the post-workout feedback flow. Renders
@@ -106,7 +106,7 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
 
   return (
     <div
-      className="fixed inset-0 z-[150] bg-[#FDFBF7] text-stone-900 flex flex-col overflow-hidden"
+      className="fixed inset-0 z-[150] bg-brand-stone text-brand-espresso flex flex-col overflow-hidden"
       dir={dir}
       onTouchStart={session.onTouchStart}
       onTouchMove={session.onTouchMove}
@@ -123,7 +123,7 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
       {/* Background — solid warm off-white for both states now; the active
           screen's exercise media lives only inside its own contained
           player below, never as a full-bleed background. */}
-      <div className="absolute inset-0 z-0 bg-[#FDFBF7]"></div>
+      <div className="absolute inset-0 z-0 bg-brand-stone"></div>
 
       {!isPostSet ? (
         /* Top bar for the active-set screen: one continuous progress line
@@ -134,24 +134,24 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
             <button
               onClick={() => ex && session.setViewingExInfo(ex)}
               aria-label="פרטי תרגיל"
-              className="w-7 h-7 shrink-0 rounded-full border border-stone-300 text-stone-500 hover:text-stone-900 hover:border-stone-400 active:scale-90 transition-all duration-150 ease-out flex items-center justify-center"
+              className="w-7 h-7 shrink-0 rounded-full border border-stone-300 text-stone-500 hover:text-brand-espresso hover:border-stone-400 active:scale-90 transition-all duration-150 ease-out flex items-center justify-center"
             >
               <Info size={13} />
             </button>
             <div className="flex-1 h-[3px] rounded-full bg-stone-200 overflow-hidden">
-              <div className="h-full bg-emerald-800 rounded-full transition-all duration-500 ease-out" style={{ width: `${overallProgress * 100}%` }}></div>
+              <div className="h-full bg-brand-terracotta rounded-full transition-all duration-500 ease-out" style={{ width: `${overallProgress * 100}%` }}></div>
             </div>
             <button
               onClick={session.closeWorkout}
               aria-label="סגור אימון"
-              className="w-7 h-7 shrink-0 flex items-center justify-center text-stone-500 hover:text-stone-900 active:scale-90 transition-all duration-150 ease-out"
+              className="w-7 h-7 shrink-0 flex items-center justify-center text-stone-500 hover:text-brand-espresso active:scale-90 transition-all duration-150 ease-out"
             >
               <X size={18} />
             </button>
           </div>
 
           <div className="text-center">
-            <h2 className="text-2xl md:text-3xl font-black italic text-stone-900 tracking-tight">{ex && getExerciseName(ex, lang)}</h2>
+            <h2 className="text-2xl md:text-3xl font-black italic text-brand-espresso tracking-tight">{ex && getExerciseName(ex, lang)}</h2>
             <p className="text-stone-500 text-sm font-bold mt-1 tabular-nums">
               סט {session.currentBlockSet} / {session.maxSetsInBlock}
             </p>
@@ -178,7 +178,7 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
       {isPostSet && !session.isSupersetCheck && (
         <div className="relative z-10 flex flex-col items-center pt-2 animate-in fade-in duration-500">
           <span className="text-[11px] font-bold tracking-[0.25em] uppercase text-stone-400 mb-1">מנוחה</span>
-          <span className="text-6xl font-black tabular-nums text-stone-900 tracking-tighter" dir="ltr">
+          <span className="text-6xl font-black tabular-nums text-brand-espresso tracking-tighter" dir="ltr">
             {formatTime(session.restTimer)}
           </span>
         </div>
@@ -193,18 +193,18 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
             {/* Dynamic hero metric — a massive countdown for a timed set, or
                 split reps/RIR typography for a countable one. */}
             {session.activeAssign?.is_time ? (
-              <div className="text-7xl md:text-8xl font-black tracking-tighter tabular-nums text-stone-900" dir="ltr">
+              <div className="text-7xl md:text-8xl font-black tracking-tighter tabular-nums text-brand-espresso" dir="ltr">
                 {formatTime(session.exTimer ?? session.effectiveTargetReps ?? session.activeAssign.reps)}
               </div>
             ) : (
               <div className="flex items-end justify-center gap-10">
                 <div className="flex flex-col items-center">
-                  <span className="text-7xl font-black text-stone-900 tabular-nums leading-none">{session.effectiveTargetReps}</span>
+                  <span className="text-7xl font-black text-brand-espresso tabular-nums leading-none">{session.effectiveTargetReps}</span>
                   <span className="text-[11px] font-bold text-stone-500 uppercase tracking-wide mt-2">חזרות</span>
                 </div>
                 {session.effectiveTargetRir !== null && (
                   <div className="flex flex-col items-center">
-                    <span className="text-7xl font-black text-emerald-800 tabular-nums leading-none">{session.effectiveTargetRir}</span>
+                    <span className="text-7xl font-black text-brand-terracotta tabular-nums leading-none">{session.effectiveTargetRir}</span>
                     <span className="text-[11px] font-bold text-stone-500 uppercase tracking-wide mt-2">RIR</span>
                   </div>
                 )}
@@ -259,7 +259,7 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
               session.exTimer === 0 ? (
                 <button
                   onClick={session.handleFinishAction}
-                  className="w-full max-w-[220px] bg-emerald-800 hover:bg-emerald-900 text-white py-4 rounded-full font-black text-base transition-all duration-200 ease-out hover:scale-[1.02] active:scale-[0.97] shadow-[0_12px_32px_-8px_rgba(6,78,59,0.4)]"
+                  className="w-full max-w-[220px] bg-brand-terracotta hover:brightness-90 text-white py-4 rounded-full font-black text-base transition-all duration-200 ease-out hover:scale-[1.02] active:scale-[0.97] shadow-[0_12px_32px_-8px_rgba(161,93,56,0.4)]"
                 >
                   המשך
                 </button>
@@ -267,7 +267,7 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
                 <div className="flex items-center justify-center gap-8">
                   <button
                     onClick={session.skipExerciseTimer}
-                    className="flex flex-col items-center gap-1 text-stone-500 hover:text-stone-900 active:scale-90 transition-all duration-150 ease-out"
+                    className="flex flex-col items-center gap-1 text-stone-500 hover:text-brand-espresso active:scale-90 transition-all duration-150 ease-out"
                   >
                     <SkipForward size={20} />
                     <span className="text-[10px] font-bold uppercase tracking-wide">דלג</span>
@@ -275,7 +275,7 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
                   <button
                     onClick={session.toggleExerciseTimer}
                     aria-label={session.isExTimerRunning ? "השהה טיימר" : "הפעל טיימר"}
-                    className="w-16 h-16 rounded-full bg-emerald-800 flex items-center justify-center text-white shadow-[0_12px_32px_-8px_rgba(6,78,59,0.4)] active:scale-95 transition-transform duration-150 ease-out"
+                    className="w-16 h-16 rounded-full bg-brand-terracotta flex items-center justify-center text-white shadow-[0_12px_32px_-8px_rgba(161,93,56,0.4)] active:scale-95 transition-transform duration-150 ease-out"
                   >
                     {session.isExTimerRunning ? <Pause size={24} className="fill-white" /> : <Play size={24} className="fill-white ms-0.5" />}
                   </button>
@@ -286,13 +286,13 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
                 <button
                   onClick={session.makeEasier}
                   aria-label="הפוך לקל יותר"
-                  className="w-12 h-12 shrink-0 rounded-full bg-stone-100 hover:bg-stone-200 flex items-center justify-center text-stone-500 hover:text-stone-900 active:scale-90 transition-all duration-150 ease-out"
+                  className="w-12 h-12 shrink-0 rounded-full bg-stone-100 hover:bg-stone-200 flex items-center justify-center text-stone-500 hover:text-brand-espresso active:scale-90 transition-all duration-150 ease-out"
                 >
                   <Minus size={18} />
                 </button>
                 <button
                   onClick={session.handleFinishAction}
-                  className="flex-1 bg-emerald-800 hover:bg-emerald-900 text-white font-black text-base py-4 rounded-full flex items-center justify-center gap-2 transition-all duration-200 ease-out hover:scale-[1.02] active:scale-[0.97] shadow-[0_12px_32px_-8px_rgba(6,78,59,0.4)]"
+                  className="flex-1 bg-brand-terracotta hover:brightness-90 text-white font-black text-base py-4 rounded-full flex items-center justify-center gap-2 transition-all duration-200 ease-out hover:scale-[1.02] active:scale-[0.97] shadow-[0_12px_32px_-8px_rgba(161,93,56,0.4)]"
                 >
                   <SkipForward size={18} />
                   סיום סט
@@ -300,7 +300,7 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
                 <button
                   onClick={session.makeHarder}
                   aria-label="הפוך לקשה יותר"
-                  className="w-12 h-12 shrink-0 rounded-full bg-stone-100 hover:bg-stone-200 flex items-center justify-center text-stone-500 hover:text-stone-900 active:scale-90 transition-all duration-150 ease-out"
+                  className="w-12 h-12 shrink-0 rounded-full bg-stone-100 hover:bg-stone-200 flex items-center justify-center text-stone-500 hover:text-brand-espresso active:scale-90 transition-all duration-150 ease-out"
                 >
                   <Plus size={18} />
                 </button>
@@ -330,14 +330,14 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
                     className="absolute inset-0 -rotate-90"
                   >
                     <defs>
-                      {/* Darker stops than the old bright teal/emerald pair —
-                          those were tuned to pop against black; against a
-                          cream page a darker gradient reads clearly without
-                          needing a glow (dropped below, glows are a
-                          dark-surface technique that just looks smudgy here). */}
+                      {/* Brand-terracotta gradient — darker stops than a
+                          bright single terracotta would give, tuned to read
+                          clearly against the stone page without needing a
+                          glow (dropped below, glows are a dark-surface
+                          technique that just looks smudgy here). */}
                       <linearGradient id="restSquareGradient" x1="0" y1="0" x2="1" y2="1">
-                        <stop offset="0%" stopColor="#0f766e" />
-                        <stop offset="100%" stopColor="#065f46" />
+                        <stop offset="0%" stopColor="#C98F6B" />
+                        <stop offset="100%" stopColor="#7A3E22" />
                       </linearGradient>
                     </defs>
                     <rect
@@ -393,7 +393,7 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
                 <span className="text-stone-500 text-sm font-bold tabular-nums">
                   סט {session.currentBlockSet + 1} מתוך {session.maxSetsInBlock}
                 </span>
-                <h3 className="text-xl font-black text-stone-900">{ex && getExerciseName(ex, lang)}</h3>
+                <h3 className="text-xl font-black text-brand-espresso">{ex && getExerciseName(ex, lang)}</h3>
               </div>
             ) : next ? (
               <div className="flex flex-col items-center gap-1.5">
@@ -403,14 +403,14 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
                   onClick={() => session.setViewingExInfo(next.exercise)}
                   className="flex items-center gap-1.5 active:scale-95 transition-transform duration-150 ease-out"
                 >
-                  <h3 className="text-xl font-black text-stone-900">{getExerciseName(next.exercise, lang)}</h3>
+                  <h3 className="text-xl font-black text-brand-espresso">{getExerciseName(next.exercise, lang)}</h3>
                   <Info size={14} className="text-stone-400" />
                 </button>
               </div>
             ) : (
               <div className="flex flex-col items-center gap-2">
-                <Trophy size={32} className="text-emerald-800" />
-                <h3 className="text-xl font-black text-stone-900">הסט האחרון לאימון!</h3>
+                <Trophy size={32} className="text-brand-terracotta" />
+                <h3 className="text-xl font-black text-brand-espresso">הסט האחרון לאימון!</h3>
               </div>
             )}
 
@@ -429,7 +429,7 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
                   <Minus size={15} />
                 </button>
                 <div className="flex flex-col items-center">
-                  <span className="text-4xl font-black text-stone-900 tabular-nums" dir="ltr">
+                  <span className="text-4xl font-black text-brand-espresso tabular-nums" dir="ltr">
                     {session.actualRepsLogged}
                   </span>
                   <span className="text-[10px] font-bold text-stone-500 uppercase tracking-wide mt-0.5">
@@ -438,7 +438,7 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
                 </div>
                 <button
                   onClick={() => session.adjustRestReps(session.activeAssign?.is_time ? 5 : 1)}
-                  className="w-9 h-9 rounded-full bg-emerald-800/10 border border-emerald-800/25 flex items-center justify-center text-emerald-800 active:scale-90 transition-transform duration-150 ease-out"
+                  className="w-9 h-9 rounded-full bg-brand-terracotta/10 border border-brand-terracotta/25 flex items-center justify-center text-brand-terracotta active:scale-90 transition-transform duration-150 ease-out"
                 >
                   <Plus size={15} />
                 </button>
@@ -458,7 +458,7 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
                   <>
                     <div className="fixed inset-0 z-40" onClick={() => setShowRirInfo(false)} />
                     <div className="absolute bottom-full right-0 mb-3 z-50 w-64 bg-white text-stone-700 rounded-2xl shadow-2xl border border-stone-100 p-4 text-start animate-in fade-in zoom-in-95 duration-150">
-                      <p className="font-black text-stone-900 text-[13px] mb-1.5">מהו RIR?</p>
+                      <p className="font-black text-brand-espresso text-[13px] mb-1.5">מהו RIR?</p>
                       <p className="text-xs leading-relaxed">
                         Reps In Reserve — כמה חזרות נוספות היית יכול לבצע בטכניקה תקינה. לדוגמה, RIR 2 אומר שצריך לעצור את הסט כשאתה מרגיש שנשארו לך עוד 2 חזרות בלבד עד הכשל.
                       </p>
@@ -473,7 +473,7 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
                       key={val}
                       onClick={() => session.selectRestRir(val)}
                       className={`w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold transition-all duration-150 ease-out active:scale-90 ${
-                        isSelected ? "bg-emerald-800 text-white scale-110 shadow-[0_2px_10px_-2px_rgba(6,78,59,0.5)]" : "text-stone-500 border border-stone-200"
+                        isSelected ? "bg-brand-terracotta text-white scale-110 shadow-[0_2px_10px_-2px_rgba(161,93,56,0.5)]" : "text-stone-500 border border-stone-200"
                       }`}
                     >
                       {val === 4 ? "4+" : val}
@@ -488,12 +488,12 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
                 stretched full-width cards. The old "bg-white" primary
                 buttons only read as a pop of contrast against black — on
                 this cream background they'd be nearly invisible, so both
-                convert to the solid emerald accent instead. */}
+                convert to the solid brand-terracotta accent instead. */}
             <div className="flex items-center justify-center gap-8">
               {session.isSupersetCheck ? (
                 <button
                   onClick={session.handleContinueSuperset}
-                  className="bg-emerald-800 hover:bg-emerald-900 text-white font-black px-10 py-4 rounded-full transition-transform ease-out hover:scale-[1.02] active:scale-[0.97] shadow-[0_12px_32px_-8px_rgba(6,78,59,0.4)]"
+                  className="bg-brand-terracotta hover:brightness-90 text-white font-black px-10 py-4 rounded-full transition-transform ease-out hover:scale-[1.02] active:scale-[0.97] shadow-[0_12px_32px_-8px_rgba(161,93,56,0.4)]"
                 >
                   המשך לתרגיל הבא
                 </button>
@@ -501,14 +501,14 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
                 <>
                   <button
                     onClick={session.addRestTime}
-                    className="flex flex-col items-center gap-1 text-stone-500 hover:text-stone-900 active:scale-90 transition-all duration-150 ease-out"
+                    className="flex flex-col items-center gap-1 text-stone-500 hover:text-brand-espresso active:scale-90 transition-all duration-150 ease-out"
                   >
                     <span className="text-lg font-black">+15</span>
                     <span className="text-[10px] font-bold uppercase tracking-wide">שניות</span>
                   </button>
                   <button
                     onClick={session.handleEndRest}
-                    className="bg-emerald-800 hover:bg-emerald-900 text-white font-black px-10 py-4 rounded-full transition-transform ease-out hover:scale-[1.02] active:scale-[0.97] shadow-[0_12px_32px_-8px_rgba(6,78,59,0.4)]"
+                    className="bg-brand-terracotta hover:brightness-90 text-white font-black px-10 py-4 rounded-full transition-transform ease-out hover:scale-[1.02] active:scale-[0.97] shadow-[0_12px_32px_-8px_rgba(161,93,56,0.4)]"
                   >
                     דלג
                   </button>

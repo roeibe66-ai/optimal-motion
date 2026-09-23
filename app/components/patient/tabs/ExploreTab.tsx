@@ -63,7 +63,7 @@ function WorkoutCard({
       </div>
 
       <div className="p-3.5 flex flex-col gap-1.5">
-        <h4 className="font-extrabold text-[13px] text-stone-900 truncate">{workout.title}</h4>
+        <h4 className="font-extrabold text-[13px] text-brand-espresso truncate">{workout.title}</h4>
         <div className="flex items-center gap-1.5">
           {workout.category && (
             <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full whitespace-nowrap" style={{ background: style.bg, color: style.text }}>
@@ -124,14 +124,14 @@ export default function ExploreTab({ freeWorkouts, newReleases, likedWorkouts, l
   return (
     <div className="animate-in fade-in duration-500">
       <div className="mb-6">
-        <h2 className="text-2xl md:text-3xl font-black text-stone-900 tracking-tight mb-1.5 flex items-center gap-2">
-          <Compass size={24} className="text-emerald-700" /> גלה אימונים
+        <h2 className="text-2xl md:text-3xl font-black text-brand-espresso tracking-tight mb-1.5 flex items-center gap-2">
+          <Compass size={24} className="text-brand-terracotta" /> גלה אימונים
         </h2>
         <p className="text-stone-500 text-[13px] md:text-sm">עיין באימונים מוכנים מהמאגר, שמור מה שאהבת והתחל מיד.</p>
       </div>
 
       <WorkoutCarousel
-        title="אהבתי"
+        title="אימונים שאהבתי"
         icon={<Heart size={13} className="fill-red-500 text-red-500" />}
         workoutsList={likedWorkouts}
         likedWorkoutIds={likedWorkoutIds}
@@ -141,7 +141,7 @@ export default function ExploreTab({ freeWorkouts, newReleases, likedWorkouts, l
 
       <WorkoutCarousel
         title="אימונים חינמיים"
-        icon={<Dumbbell size={13} className="text-emerald-700" />}
+        icon={<Dumbbell size={13} className="text-brand-terracotta" />}
         workoutsList={freeWorkouts}
         likedWorkoutIds={likedWorkoutIds}
         onToggleLike={onToggleLike}
@@ -165,8 +165,8 @@ export default function ExploreTab({ freeWorkouts, newReleases, likedWorkouts, l
       )}
 
       {previewWorkout && (
-        <Modal onClose={() => setPreviewWorkout(null)} title="תצוגה מקדימה" icon={<Dumbbell size={20} className="text-emerald-700" />}>
-          <h4 className="text-start font-black text-xl tracking-tight mb-1 text-stone-900">{previewWorkout.title}</h4>
+        <Modal onClose={() => setPreviewWorkout(null)} title="תצוגה מקדימה" icon={<Dumbbell size={20} className="text-brand-terracotta" />}>
+          <h4 className="text-start font-black text-xl tracking-tight mb-1 text-brand-espresso">{previewWorkout.title}</h4>
           {previewWorkout.category && <p className="text-start text-stone-500 text-xs font-bold mb-5">{previewWorkout.category}</p>}
 
           <div className="flex flex-col gap-2 mb-6">
@@ -187,7 +187,7 @@ export default function ExploreTab({ freeWorkouts, newReleases, likedWorkouts, l
               onStartWorkout(previewWorkout);
               setPreviewWorkout(null);
             }}
-            className="w-full bg-emerald-800 hover:bg-emerald-900 text-white font-black text-sm py-3.5 rounded-2xl transition-colors"
+            className="w-full bg-brand-terracotta hover:brightness-90 text-white font-black text-sm py-3.5 rounded-2xl transition-colors"
           >
             התחל אימון זה
           </button>

@@ -15,7 +15,7 @@ export default function PasskeyPrompt() {
 
   return (
     <div
-      className="fixed inset-0 z-[180] flex items-end sm:items-center justify-center bg-stone-900/40 backdrop-blur-sm print:hidden"
+      className="fixed inset-0 z-[180] flex items-end sm:items-center justify-center bg-brand-espresso/40 backdrop-blur-sm print:hidden"
       onClick={dismissPrompt}
     >
       <div
@@ -23,7 +23,7 @@ export default function PasskeyPrompt() {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex justify-between items-start mb-4">
-          <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center">
+          <div className="w-12 h-12 rounded-2xl bg-brand-terracotta/8 text-brand-terracotta flex items-center justify-center">
             <Fingerprint size={26} />
           </div>
           <button onClick={dismissPrompt} aria-label="סגור" className="text-stone-400 hover:text-stone-600 p-1 -m-1">
@@ -31,7 +31,7 @@ export default function PasskeyPrompt() {
           </button>
         </div>
 
-        <h3 className="text-lg font-black text-stone-900 mb-1.5">כניסה מהירה עם Face ID</h3>
+        <h3 className="text-lg font-black text-brand-espresso mb-1.5">כניסה מהירה עם Face ID</h3>
         <p className="text-sm text-stone-500 leading-relaxed mb-5">
           הפעל כניסה עם טביעת אצבע או זיהוי פנים כדי להתחבר בפעם הבאה בלי להקליד סיסמה.
         </p>
@@ -48,7 +48,7 @@ export default function PasskeyPrompt() {
           <button
             onClick={registerPasskey}
             disabled={isRegistering}
-            className="flex-[1.4] bg-emerald-800 text-white font-black text-sm py-3 rounded-2xl hover:bg-emerald-900 transition-colors disabled:opacity-60"
+            className="flex-[1.4] bg-brand-terracotta text-white font-black text-sm py-3 rounded-2xl hover:brightness-90 transition-colors disabled:opacity-60"
           >
             {isRegistering ? "מפעיל..." : "הפעל עכשיו"}
           </button>

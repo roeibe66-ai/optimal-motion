@@ -14,30 +14,31 @@ interface ModalProps {
 // patient app's "Clean Premium Light" surfaces — a white sheet floating on a
 // dimmed backdrop, dark charcoal text, no heavy borders (a hairline
 // stone-100 divider under the header is as far as it goes). Currently only
-// rendered from ExerciseInfoModal.
+// rendered from ExerciseInfoModal (and, via it, the Explore tab's workout
+// preview).
 //
-// On mobile the panel behaves as a full-width bottom sheet (pinned to the
-// bottom edge, squared-off top corners rounded, no side margins) rather than
-// a small centered box with wide gutters — that made small-screen text look
-// squished. From `sm:` up it's back to a centered, max-w-lg card.
+// Always a true edge-to-edge bottom sheet — pinned to the bottom edge, full
+// width, no side margins, squared-off-except-top corners — at every
+// breakpoint, not just mobile. There used to be a `sm:` fallback to a small
+// centered card, but that made this the only sheet in the app with that
+// split behavior; every other bottom sheet here (PatientCoachSheet,
+// PasskeyPrompt) stays bottom-anchored regardless of viewport width, so this
+// now matches them instead of being the odd one out.
 export default function Modal({ onClose, title, icon, children }: ModalProps) {
   return (
-    <div
-      className="fixed inset-0 z-[200] bg-stone-900/60 backdrop-blur-sm flex items-end sm:items-center justify-center sm:p-4"
-      onClick={onClose}
-    >
+    <div className="fixed inset-0 z-[200] bg-brand-espresso/60 backdrop-blur-sm flex items-end justify-center" onClick={onClose}>
       <div
-        className="bg-white text-stone-900 w-full sm:max-w-lg overflow-hidden shadow-2xl relative flex flex-col max-h-[92vh] sm:max-h-[85vh] rounded-t-3xl sm:rounded-3xl m-0 pb-[env(safe-area-inset-bottom)] sm:pb-0"
+        className="bg-white text-brand-espresso w-full overflow-hidden shadow-2xl relative flex flex-col max-h-[92vh] rounded-t-3xl m-0 pb-[env(safe-area-inset-bottom)] animate-in slide-in-from-bottom duration-300 ease-out"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex justify-between items-center p-5 border-b border-stone-100">
-          <h3 className="text-xl font-black flex items-center gap-2 text-stone-900">
+          <h3 className="text-xl font-black flex items-center gap-2 text-brand-espresso">
             {icon} {title}
           </h3>
           <button
             onClick={onClose}
             aria-label="סגור"
-            className="text-stone-500 hover:text-stone-900 bg-stone-100 hover:bg-stone-200 p-2 rounded-full transition-colors"
+            className="text-stone-500 hover:text-brand-espresso bg-stone-100 hover:bg-stone-200 p-2 rounded-full transition-colors"
           >
             <X size={20} />
           </button>

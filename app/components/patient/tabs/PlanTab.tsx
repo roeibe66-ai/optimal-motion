@@ -4,7 +4,6 @@ import { useState } from "react";
 import {
   ChevronDown,
   ChevronLeft,
-  ChevronRight,
   Dumbbell,
   Info,
   Lock,
@@ -31,8 +30,6 @@ interface PlanTabProps {
   selectedDayFilter: string;
   setSelectedDayFilter: (day: string) => void;
   activePatientWeek: number;
-  availablePatientWeeks: number[];
-  setPatientSelectedWeek: (week: number) => void;
   isDiyMode: boolean;
   diyProgramName: string;
   patientCategories: string[];
@@ -69,13 +66,13 @@ function CuratedFactCard({ fact }: { fact: CuratedFact }) {
 
   return (
     <div className="w-full shrink-0 snap-center relative overflow-hidden bg-white rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.08)] p-7 md:p-9 flex flex-col gap-4">
-      <div className="absolute -top-12 -left-12 w-40 h-40 rounded-full bg-emerald-50" aria-hidden="true"></div>
+      <div className="absolute -top-12 -left-12 w-40 h-40 rounded-full bg-brand-terracotta/8" aria-hidden="true"></div>
 
-      <span className="relative self-start inline-flex items-center gap-1.5 bg-emerald-800 text-white text-[10px] font-extrabold tracking-wide px-3 py-1.5 rounded-full">
+      <span className="relative self-start inline-flex items-center gap-1.5 bg-brand-terracotta text-white text-[10px] font-extrabold tracking-wide px-3 py-1.5 rounded-full">
         <Sparkles size={12} /> הידעת?
       </span>
 
-      <p className="relative text-stone-900 text-[22px] md:text-[26px] font-black leading-snug">{fact.did_you_know_he}</p>
+      <p className="relative text-brand-espresso text-[22px] md:text-[26px] font-black leading-snug">{fact.did_you_know_he}</p>
 
       <div className={`relative grid transition-[grid-template-rows] duration-300 ease-out ${isExpanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}>
         <div className="overflow-hidden">
@@ -84,7 +81,7 @@ function CuratedFactCard({ fact }: { fact: CuratedFact }) {
             href={fact.paper_url || undefined}
             target="_blank"
             rel="noopener noreferrer"
-            className="mt-4 pt-4 border-t border-stone-100 block text-[11px] font-semibold text-stone-400 hover:text-emerald-800 transition-colors truncate"
+            className="mt-4 pt-4 border-t border-stone-100 block text-[11px] font-semibold text-stone-400 hover:text-brand-terracotta transition-colors truncate"
           >
             {fact.paper_title}
             {fact.year ? ` · ${fact.year}` : ""}
@@ -96,7 +93,7 @@ function CuratedFactCard({ fact }: { fact: CuratedFact }) {
         type="button"
         onClick={() => setIsExpanded((v) => !v)}
         aria-expanded={isExpanded}
-        className="relative self-start flex items-center gap-1 text-emerald-800 text-[12px] font-bold hover:text-emerald-900 active:scale-95 transition-all duration-150 ease-out"
+        className="relative self-start flex items-center gap-1 text-brand-terracotta text-[12px] font-bold hover:brightness-75 active:scale-95 transition-all duration-150 ease-out"
       >
         {isExpanded ? "הצג פחות" : "קרא עוד"}
         <ChevronDown size={14} className={`transition-transform duration-300 ease-out ${isExpanded ? "rotate-180" : ""}`} />
@@ -112,8 +109,6 @@ export default function PlanTab({
   selectedDayFilter,
   setSelectedDayFilter,
   activePatientWeek,
-  availablePatientWeeks,
-  setPatientSelectedWeek,
   isDiyMode,
   diyProgramName,
   patientCategories,
@@ -151,18 +146,6 @@ export default function PlanTab({
       createdAt: log.created_at,
     })),
     painAreas: Array.from(new Set(workoutLogs.slice(0, 5).flatMap((log) => (log.pain_areas ? log.pain_areas.split(",") : [])))),
-  };
-
-  // Week Switcher: steps through availablePatientWeeks (the only weeks that
-  // actually have content) rather than raw +1/-1, so it can't get stuck on a
-  // gap between sparsely-assigned week numbers.
-  const weeks = availablePatientWeeks.length > 0 ? availablePatientWeeks : [1];
-  const weekIndex = weeks.indexOf(activePatientWeek);
-  const goPrevWeek = () => {
-    if (weekIndex > 0) setPatientSelectedWeek(weeks[weekIndex - 1]);
-  };
-  const goNextWeek = () => {
-    if (weekIndex < weeks.length - 1) setPatientSelectedWeek(weeks[weekIndex + 1]);
   };
 
   // ----- Overview screen -----
@@ -230,44 +213,25 @@ export default function PlanTab({
             uppercase name line against a light-weight italic CTA line for
             the typographic contrast the redesign called for. */}
         <div className="pt-2 pb-10 md:pb-14">
-          <p className="text-5xl md:text-6xl font-black uppercase tracking-tight text-stone-900 leading-[0.95]">{firstName ? `היי ${firstName},` : "היי,"}</p>
+          <p className="text-5xl md:text-6xl font-black uppercase tracking-tight text-brand-espresso leading-[0.95]">{firstName ? `היי ${firstName},` : "היי,"}</p>
           <p className="text-4xl md:text-5xl font-light italic text-stone-400 mt-1">מוכן להתחיל?</p>
-        </div>
-
-        {/* Week Switcher */}
-        <div className="flex items-center justify-center gap-3 mb-8">
-          <button
-            onClick={goPrevWeek}
-            disabled={weekIndex <= 0}
-            aria-label="Previous week"
-            className="w-8 h-8 rounded-full bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] flex items-center justify-center text-stone-600 hover:bg-stone-50 active:scale-90 transition-all duration-150 ease-out disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-white disabled:active:scale-100"
-          >
-            <ChevronRight size={14} />
-          </button>
-          <span className="text-[13px] font-black text-stone-900 tracking-wide px-5 py-1.5 bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-full min-w-[100px] text-center">
-            שבוע {activePatientWeek}
-          </span>
-          <button
-            onClick={goNextWeek}
-            disabled={weekIndex >= weeks.length - 1}
-            aria-label="Next week"
-            className="w-8 h-8 rounded-full bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] flex items-center justify-center text-stone-600 hover:bg-stone-50 active:scale-90 transition-all duration-150 ease-out disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-white disabled:active:scale-100"
-          >
-            <ChevronLeft size={14} />
-          </button>
         </div>
 
         {/* Today hero card — full-bleed photo (placeholder, see note below)
             with a floating glassmorphic day-selector overlaid at the top
             (replaces the old standalone dark pill bar), a real target-muscle
             diagram on the left, and title/meta/play mirrored for RTL: text
-            bottom-right, action button bottom-left. */}
+            bottom-right, action button bottom-left. Taller than before
+            (480px, was 400px) — the week switcher that used to sit above it
+            is gone (week navigation now lives only in the Calendar tab), so
+            the hero expands upward into that freed space instead of just
+            leaving a gap. */}
         {todayCat ? (
           // -mx-4 md:-mx-8 cancels out `main`'s own side padding
           // (PatientShell) so this hero bleeds to the actual viewport edges
           // instead of sitting inside the page's normal content gutter —
           // "wide, full-width hero card" only reads as such edge-to-edge.
-          <div className="relative h-[400px] -mx-4 md:-mx-8 rounded-[2rem] overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.08)] mb-10">
+          <div className="relative h-[480px] -mx-4 md:-mx-8 rounded-[2rem] overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.08)] mb-10">
             {/* Placeholder hero photo — a live Unsplash hotlink (Edoardo
                 Cuoghi, Unsplash License, unsplash.com/photos/5uzsDVRov2w),
                 not a repo asset. Swap for a real owned asset before this
@@ -296,7 +260,7 @@ export default function PlanTab({
                     key={day.id}
                     onClick={() => setSelectedDayFilter(day.id)}
                     className={`flex-1 h-8 flex items-center justify-center rounded-full text-[11px] font-bold transition-all duration-200 ease-out active:scale-90 ${
-                      isActive ? "bg-white text-stone-900 shadow-sm" : "text-white/70 hover:text-white"
+                      isActive ? "bg-white text-brand-espresso shadow-sm" : "text-white/70 hover:text-white"
                     }`}
                   >
                     {day.short}
@@ -357,8 +321,8 @@ export default function PlanTab({
           // free workout catalog instead of a dead end.
           <div className="rounded-[2rem] p-7 md:p-9 bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] mb-10">
             <div className="flex items-center gap-2 mb-1.5">
-              <Sparkles size={18} className="text-emerald-700" />
-              <h3 className="text-lg font-black text-stone-900">התחל עם תוכנית פתיחה</h3>
+              <Sparkles size={18} className="text-brand-terracotta" />
+              <h3 className="text-lg font-black text-brand-espresso">התחל עם תוכנית פתיחה</h3>
             </div>
             <p className="text-stone-500 text-sm mb-6">עדיין אין לך תוכנית מוקצית. הכנו לך {starterWorkouts.length} ימי אימון להתחלה — אפשר להתחיל מיד.</p>
             <div className="flex flex-col gap-3">
@@ -368,10 +332,10 @@ export default function PlanTab({
                   onClick={() => onStartCatalogWorkout(w)}
                   className="flex items-center gap-4 bg-stone-50 hover:bg-stone-100 rounded-2xl p-4 text-start transition-colors"
                 >
-                  <div className="w-11 h-11 rounded-full bg-emerald-800 text-white flex items-center justify-center font-black text-sm shrink-0">{idx + 1}</div>
+                  <div className="w-11 h-11 rounded-full bg-brand-terracotta text-white flex items-center justify-center font-black text-sm shrink-0">{idx + 1}</div>
                   <div className="flex-1 overflow-hidden">
-                    <div className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wide mb-0.5">יום {idx + 1}</div>
-                    <div className="font-bold text-stone-900 truncate">{w.title}</div>
+                    <div className="text-[10px] font-extrabold text-brand-terracotta uppercase tracking-wide mb-0.5">יום {idx + 1}</div>
+                    <div className="font-bold text-brand-espresso truncate">{w.title}</div>
                   </div>
                   <Play size={16} className="text-stone-400 shrink-0" />
                 </button>
@@ -380,8 +344,8 @@ export default function PlanTab({
           </div>
         ) : (
           <div className="rounded-[2rem] p-10 text-center h-[280px] flex flex-col items-center justify-center relative overflow-hidden mb-10 bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
-            <Wind size={44} className="text-emerald-800 mb-4" />
-            <h3 className="text-xl font-black text-stone-900 mb-2">מנוחה פעילה</h3>
+            <Wind size={44} className="text-brand-terracotta mb-4" />
+            <h3 className="text-xl font-black text-brand-espresso mb-2">מנוחה פעילה</h3>
             <p className="text-stone-500 text-sm">אין אימוני כוח מתוכננים להיום. מומלץ לבצע רוטינת תנועתיות בסיסית.</p>
           </div>
         )}
@@ -431,7 +395,7 @@ export default function PlanTab({
                       ></div>
                     </div>
                     <div className="p-3 flex flex-col gap-2">
-                      <div className="font-bold text-[13px] text-stone-900">{cat}</div>
+                      <div className="font-bold text-[13px] text-brand-espresso">{cat}</div>
                       {isLocked ? (
                         <div className="text-[11px] font-bold px-2.5 py-1 rounded-full w-fit" style={{ color: "#c2410c", backgroundColor: "rgba(251,146,60,0.14)" }}>
                           נפתח בשבוע 3
@@ -510,7 +474,7 @@ export default function PlanTab({
       </div>
 
       {loggedInPatient?.patient_type === "fitness" && activePatientWeek >= 3 && !userOwnsTrack && !isDiyMode ? (
-        <div className="bg-white rounded-[2.5rem] p-10 text-center text-stone-900 relative overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.06)]">
+        <div className="bg-white rounded-[2.5rem] p-10 text-center text-brand-espresso relative overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.06)]">
           <Lock size={60} className="text-amber-600 mx-auto mb-6 relative z-10" />
           <h2 className="text-3xl md:text-5xl font-black mb-4 relative z-10 tracking-tight">המשך המסלול נעול</h2>
           <p className="text-lg text-stone-500 mb-8 max-w-md mx-auto relative z-10 font-medium">
@@ -526,7 +490,7 @@ export default function PlanTab({
                 "_blank"
               );
             }}
-            className="bg-amber-500 hover:bg-amber-400 active:scale-[0.97] text-stone-900 px-10 py-4 rounded-xl font-black text-lg transition-all duration-200 ease-out relative z-10 shadow-xl"
+            className="bg-amber-500 hover:bg-amber-400 active:scale-[0.97] text-brand-espresso px-10 py-4 rounded-xl font-black text-lg transition-all duration-200 ease-out relative z-10 shadow-xl"
           >
             שדרג עכשיו לפרימיום
           </button>
@@ -552,7 +516,7 @@ export default function PlanTab({
             <>
               <div className="mb-8">
                 <span className="bg-stone-100 text-stone-600 font-bold px-2.5 py-1 rounded-md text-[10px] uppercase tracking-widest mb-3 inline-block">קלאסי</span>
-                <h1 className="text-4xl font-black text-stone-900 tracking-tight leading-tight mb-2">{isDiyMode ? diyProgramName : selectedCategory}</h1>
+                <h1 className="text-4xl font-black text-brand-espresso tracking-tight leading-tight mb-2">{isDiyMode ? diyProgramName : selectedCategory}</h1>
                 <p className="text-stone-500 text-sm font-medium">
                   שבוע {activePatientWeek} - אימון {selectedDayFilter === "all" ? "1" : selectedDayFilter} - {new Date().toLocaleDateString("he-IL", { weekday: "short", month: "short", day: "numeric" })}
                 </p>
@@ -564,21 +528,21 @@ export default function PlanTab({
                   pattern instead of the old bordered rows. */}
               <div className="space-y-3.5 mb-10 text-stone-600 text-sm">
                 <div className="flex items-center gap-4">
-                  <Dumbbell size={20} className="text-emerald-800 shrink-0" />
+                  <Dumbbell size={20} className="text-brand-terracotta shrink-0" />
                   <div className="flex-1 flex justify-between items-center">
                     <span>{equipmentLabels}</span>
                     <Info size={14} className="text-stone-400" />
                   </div>
                 </div>
                 <div className="flex items-center gap-4">
-                  <Timer size={20} className="text-emerald-800 shrink-0" />
+                  <Timer size={20} className="text-brand-terracotta shrink-0" />
                   <div className="flex-1 flex justify-between items-center">
                     <span>~{estimatedTime} דק׳</span>
                     <Info size={14} className="text-stone-400" />
                   </div>
                 </div>
                 <div className="flex items-center gap-4">
-                  <User size={20} className="text-emerald-800 shrink-0" />
+                  <User size={20} className="text-brand-terracotta shrink-0" />
                   <div className="flex-1 flex justify-between items-center">
                     <span className="leading-relaxed pr-4">{muscleLabels || "גוף מלא"}</span>
                     <Info size={14} className="text-stone-400" />
@@ -589,7 +553,7 @@ export default function PlanTab({
               <div className="space-y-4 pb-32">
                 {blocksKeys.map((blockKey) => (
                   <div key={blockKey} className="space-y-4">
-                    {blocksMap[blockKey].length > 1 && <div className="text-xs font-bold text-emerald-800 uppercase tracking-widest mt-6 mb-2">בלוק {blockKey} (סופר-סט)</div>}
+                    {blocksMap[blockKey].length > 1 && <div className="text-xs font-bold text-brand-terracotta uppercase tracking-widest mt-6 mb-2">בלוק {blockKey} (סופר-סט)</div>}
 
                     {blocksMap[blockKey].map((assignment) => (
                       <div
@@ -613,7 +577,7 @@ export default function PlanTab({
                             {assignment.sets} סטים x {assignment.is_time ? `${assignment.reps}"` : `${assignment.reps} חזרות`}
                             {assignment.rir && <span className="bg-stone-100 text-stone-600 px-1.5 py-0.5 rounded text-[8px] ml-1">RIR {assignment.rir}</span>}
                           </div>
-                          <h4 className="text-stone-900 font-bold truncate">{getExerciseName(assignment.exercise, lang)}</h4>
+                          <h4 className="text-brand-espresso font-bold truncate">{getExerciseName(assignment.exercise, lang)}</h4>
                         </div>
                         <ChevronLeft size={16} className="text-stone-400 group-hover:text-stone-700 transition-colors rotate-180" />
                       </div>
@@ -624,14 +588,14 @@ export default function PlanTab({
 
               {displayedExercises.length > 0 && (
                 // Light glass bar (bg-white/70 backdrop-blur-md) the page
-                // bleeds through, holding a solid emerald CTA pill — the
+                // bleeds through, holding a solid brand-terracotta CTA pill — the
                 // primary accent now carries the button itself, not just
                 // its text. Sits just above the app's own fixed bottom nav
                 // (bottom-[4.5rem] matches its h-16 + gap).
-                <div className="fixed bottom-[4.5rem] left-0 right-0 z-40 bg-white/70 backdrop-blur-md border-t border-stone-100 px-5 py-4">
+                <div className="fixed bottom-[4.5rem] left-0 right-0 z-40 bg-white/70 backdrop-blur-md border-t border-brand-espresso/5 px-5 py-4">
                   <button
                     onClick={onStartWorkout}
-                    className="w-full max-w-lg mx-auto flex items-center justify-center bg-emerald-800 hover:bg-emerald-900 text-white active:scale-[0.98] transition-all duration-150 ease-out font-black text-lg py-4 rounded-full tracking-widest shadow-[0_8px_24px_-4px_rgba(6,78,59,0.35)]"
+                    className="w-full max-w-lg mx-auto flex items-center justify-center bg-brand-terracotta hover:brightness-90 text-white active:scale-[0.98] transition-all duration-150 ease-out font-black text-lg py-4 rounded-full tracking-widest shadow-[0_8px_24px_-4px_rgba(161,93,56,0.45)]"
                   >
                     התחל אימון
                   </button>

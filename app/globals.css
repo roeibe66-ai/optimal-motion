@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f5f5f0;
+  --foreground: #4e342e;
 }
 
 @theme inline {
@@ -10,6 +10,25 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+
+  /* "Organic Motion" brand palette — replaces the earlier "Onyx &
+     Champagne" gold/onyx/alabaster system across the patient app and DIY
+     builder. A single flat brand-terracotta (not a full 50-900 ramp) is
+     intentional: Tailwind v4 generates opacity variants (brand-terracotta/10,
+     /50, …) for any custom color automatically via color-mix(), which covers
+     every light-tint-badge use case. Darkening for hover states uses the
+     `brightness-90` filter utility instead of a second hardcoded shade, for
+     the same reason.
+
+     Unlike the pale champagne gold it replaces, brand-terracotta is dark/
+     saturated enough (~5:1 contrast against white) that solid-fill buttons
+     pair it with white text, not brand-espresso — espresso-on-terracotta is
+     only ~2:1, well under WCAG AA. Light terracotta *tints* (opacity
+     modifiers, badges/chips) still pair with brand-espresso or
+     brand-terracotta text, same as before. */
+  --color-brand-terracotta: #a15d38;
+  --color-brand-espresso: #4e342e;
+  --color-brand-stone: #f5f5f0;
 }
 
 @media (prefers-color-scheme: dark) {

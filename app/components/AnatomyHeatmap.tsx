@@ -9,7 +9,12 @@ interface AnatomyHeatmapProps {
   className?: string;
 }
 
-const EMERALD = "#047857";
+// Deliberately its own color, not --color-brand-terracotta — a muscle-
+// activation diagram reads best in the universal "muscle red" register
+// regardless of whatever the app's general accent color happens to be, so
+// this stays a muted brick-red even while brand-terracotta itself keeps
+// driving buttons/nav/tabs elsewhere.
+const MUSCLE_HIGHLIGHT_COLOR = "#A53021";
 const PRIME_OPACITY = 0.85;
 const SYNERGIST_OPACITY = 0.35;
 const DEFAULT_ASPECT = "1536 / 1024";
@@ -39,8 +44,8 @@ const PATH_ID_TO_MUSCLE: Record<string, string> = Object.fromEntries(
 //
 // Each path's fill is then set imperatively (not via React path props) once
 // mounted, and again whenever the tagged muscles change:
-//   - Prime mover: emerald (#047857) at 85% fill opacity.
-//   - Synergist: emerald at 35% fill opacity.
+//   - Prime mover: muted brick-red (#A53021) at 85% fill opacity.
+//   - Synergist: the same brick-red at 35% fill opacity.
 //   - Untagged: fill="transparent" — only the black outline (and the photo
 //     behind it) shows.
 // The svg's internal ids (`cp` for the clip-path, `Image` for the photo
@@ -102,10 +107,10 @@ export default function AnatomyHeatmap({ primeMovers, synergists, className }: A
     container.querySelectorAll("path[id]").forEach((pathEl) => {
       const muscleId = PATH_ID_TO_MUSCLE[pathEl.id];
       if (muscleId && primeSet.has(muscleId)) {
-        pathEl.setAttribute("fill", EMERALD);
+        pathEl.setAttribute("fill", MUSCLE_HIGHLIGHT_COLOR);
         pathEl.setAttribute("fill-opacity", String(PRIME_OPACITY));
       } else if (muscleId && synergistSet.has(muscleId)) {
-        pathEl.setAttribute("fill", EMERALD);
+        pathEl.setAttribute("fill", MUSCLE_HIGHLIGHT_COLOR);
         pathEl.setAttribute("fill-opacity", String(SYNERGIST_OPACITY));
       } else {
         pathEl.setAttribute("fill", "transparent");

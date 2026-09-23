@@ -73,7 +73,7 @@ export default function PremiumStoreTab({ onGoToPlan }: PremiumStoreTabProps) {
                         "_blank"
                       );
                     }}
-                    className="w-full bg-white text-stone-900 px-6 py-3.5 rounded-2xl font-black text-sm hover:bg-stone-200 transition-colors"
+                    className="w-full bg-white text-brand-espresso px-6 py-3.5 rounded-2xl font-black text-sm hover:bg-stone-200 transition-colors"
                   >
                     לרכישת המסלול
                   </button>

@@ -3,8 +3,8 @@
   "short_name": "OptimalMotion",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#10b981",
+  "background_color": "#F5F5F0",
+  "theme_color": "#4E342E",
   "icons": [
     {
       "src": "https://cdn-icons-png.flaticon.com/512/2964/2964514.png",

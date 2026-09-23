@@ -16,7 +16,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#14b8a6",
+  themeColor: "#4E342E", // brand-espresso — matches the "Organic Motion" palette (app/globals.css)
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,

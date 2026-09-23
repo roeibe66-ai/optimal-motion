@@ -53,7 +53,7 @@ export default function PreWorkoutFlow({
 
         <button
           onClick={onConfirmPainAreas}
-          className="bg-teal-500 text-stone-900 px-10 py-4 rounded-full font-bold text-lg hover:bg-teal-400 transition-colors shadow-lg w-full max-w-sm"
+          className="bg-teal-500 text-brand-espresso px-10 py-4 rounded-full font-bold text-lg hover:bg-teal-400 transition-colors shadow-lg w-full max-w-sm"
         >
           המשך
         </button>

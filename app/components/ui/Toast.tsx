@@ -21,8 +21,8 @@ export default function Toast({ message, onDismiss, durationMs = 2500 }: ToastPr
 
   return (
     <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[250] animate-in fade-in slide-in-from-bottom-4 duration-300 print:hidden">
-      <div className="flex items-center gap-2.5 bg-stone-900 text-white text-sm font-bold px-5 py-3.5 rounded-full shadow-2xl whitespace-nowrap">
-        <CheckCircle2 size={18} className="text-emerald-400 shrink-0" />
+      <div className="flex items-center gap-2.5 bg-brand-espresso text-white text-sm font-bold px-5 py-3.5 rounded-full shadow-2xl whitespace-nowrap">
+        <CheckCircle2 size={18} className="text-brand-terracotta shrink-0" />
         {message}
       </div>
     </div>

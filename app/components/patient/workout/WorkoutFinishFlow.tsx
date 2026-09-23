@@ -59,7 +59,7 @@ export default function WorkoutFinishFlow({ feedbackPhase, onSelectRpe, onSubmit
       <Trophy size={80} className="text-yellow-400 mb-8 animate-bounce" />
       <h2 className="text-4xl md:text-5xl font-black text-white mb-4">הפידבק נשלח!</h2>
       <p className="text-xl text-stone-400 mb-10">הנתונים התעדכנו בתיק שלך.</p>
-      <button onClick={onClose} className="bg-teal-500 text-stone-900 px-10 py-4 rounded-full font-bold text-lg hover:bg-teal-400 transition">
+      <button onClick={onClose} className="bg-teal-500 text-brand-espresso px-10 py-4 rounded-full font-bold text-lg hover:bg-teal-400 transition">
         חזרה למסך הראשי
       </button>
     </div>

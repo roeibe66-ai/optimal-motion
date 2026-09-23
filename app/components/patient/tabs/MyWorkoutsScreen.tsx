@@ -28,10 +28,10 @@ function relativeCreatedLabel(createdAt: string): string {
   return months === 1 ? "נוצר לפני חודש" : `נוצר לפני ${months} חודשים`;
 }
 
-// Boutique-clinic light theme (white cards, soft shadow, emerald accent) —
-// this screen originally assumed the app's old dark backdrop (text-white
-// headings, bg-[#1c1c1e] cards), which the rest of the patient app has
-// since moved off of; the page it actually renders on is #FDFBF7.
+// "Organic Motion" light theme (white cards, soft shadow, brand-terracotta
+// accent) — this screen originally assumed the app's old dark backdrop
+// (text-white headings, bg-[#1c1c1e] cards), which the rest of the patient
+// app has since moved off of; the page it actually renders on is stone.
 //
 // Each program can hold several ordinal days (Day 1, Day 2, ...), so
 // "start" is a row of day pills rather than one button — picking a pill
@@ -54,7 +54,7 @@ export default function MyWorkoutsScreen({ savedPrograms, exerciseCatalog, onBac
           <ChevronRight size={16} className="text-stone-700" />
         </button>
         <div>
-          <h2 className="text-xl md:text-2xl font-black text-stone-900 tracking-tight">התוכניות שלי</h2>
+          <h2 className="text-xl md:text-2xl font-black text-brand-espresso tracking-tight">התוכניות שלי</h2>
           <p className="text-xs text-stone-500 mt-0.5">{savedPrograms.length} תוכניות שבועיות שמורות</p>
         </div>
       </div>
@@ -62,14 +62,14 @@ export default function MyWorkoutsScreen({ savedPrograms, exerciseCatalog, onBac
       <div className="flex flex-col gap-4">
         {savedPrograms.length === 0 ? (
           <div className="bg-white rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.08)] p-10 flex flex-col items-center text-center gap-2">
-            <div className="w-14 h-14 rounded-full bg-emerald-50 text-emerald-800 flex items-center justify-center mb-1.5">
+            <div className="w-14 h-14 rounded-full bg-brand-terracotta/8 text-brand-terracotta flex items-center justify-center mb-1.5">
               <Dumbbell size={26} />
             </div>
-            <h3 className="text-lg font-black text-stone-900">עדיין לא שמרת תוכניות אימון</h3>
+            <h3 className="text-lg font-black text-brand-espresso">עדיין לא שמרת תוכניות אימון</h3>
             <p className="text-stone-500 text-sm max-w-xs">בנה תוכנית שבועית מהמאגר הפתוח ושמור אותה כאן לשימוש חוזר בכל זמן.</p>
             <button
               onClick={onBack}
-              className="mt-4 bg-emerald-800 hover:bg-emerald-900 text-white font-black text-[13px] px-6 py-3.5 rounded-2xl flex items-center justify-center gap-2 transition-colors"
+              className="mt-4 bg-brand-terracotta hover:brightness-90 text-white font-black text-[13px] px-6 py-3.5 rounded-2xl flex items-center justify-center gap-2 transition-colors"
             >
               <Plus size={16} />
               בנה תוכנית חדשה
@@ -98,7 +98,7 @@ export default function MyWorkoutsScreen({ savedPrograms, exerciseCatalog, onBac
                 <div key={program.id} className="bg-white rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.08)] p-4.5 flex flex-col gap-3.5">
                   <div className="flex justify-between items-start gap-2.5">
                     <div>
-                      <div className="text-base font-black text-stone-900">{program.name}</div>
+                      <div className="text-base font-black text-brand-espresso">{program.name}</div>
                       <div className="text-[11px] text-stone-500 mt-0.5">
                         {days.length} ימים · {totalExerciseCount} תרגילים · {relativeCreatedLabel(program.created_at)}
                       </div>

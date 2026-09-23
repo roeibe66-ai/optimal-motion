@@ -71,18 +71,18 @@ export default function ProfileTab({
 
   return (
     <div className="animate-in fade-in duration-500">
-      <h1 className="text-4xl font-black italic text-stone-900 tracking-tight mb-6">פרופיל</h1>
+      <h1 className="text-4xl font-black italic text-brand-espresso tracking-tight mb-6">פרופיל</h1>
 
       {/* Avatar + name row — avatar first (renders on the right under RTL),
           name + a static "manage account" subtitle beside it. No chevron
           here: there's no real account-management screen behind this row,
           and a chevron would promise a tap that goes nowhere. */}
       <div className="flex items-center gap-4 mb-8">
-        <div className="w-20 h-20 rounded-full bg-emerald-800 text-white flex items-center justify-center text-2xl font-black shrink-0">
+        <div className="w-20 h-20 rounded-full bg-brand-terracotta text-white flex items-center justify-center text-2xl font-black shrink-0">
           {initials}
         </div>
         <div className="text-right">
-          <h2 className="text-xl font-black text-stone-900">{loggedInPatient?.full_name}</h2>
+          <h2 className="text-xl font-black text-brand-espresso">{loggedInPatient?.full_name}</h2>
           <p className="text-stone-500 text-sm font-medium mt-0.5">ניהול חשבון</p>
         </div>
       </div>
@@ -95,23 +95,23 @@ export default function ProfileTab({
           <div className="flex items-center justify-between px-5 py-4 border-b border-stone-100">
             <div className="flex items-center gap-3">
               <Flame size={18} className="text-stone-400" />
-              <span className="font-bold text-stone-900 text-sm">ימי רצף</span>
+              <span className="font-bold text-brand-espresso text-sm">ימי רצף</span>
             </div>
-            <span className="font-black text-stone-900 tabular-nums">{streak}</span>
+            <span className="font-black text-brand-espresso tabular-nums">{streak}</span>
           </div>
           <div className="flex items-center justify-between px-5 py-4 border-b border-stone-100">
             <div className="flex items-center gap-3">
               <Medal size={18} className="text-stone-400" />
-              <span className="font-bold text-stone-900 text-sm">דרגה</span>
+              <span className="font-bold text-brand-espresso text-sm">דרגה</span>
             </div>
             <span className={`font-black ${rank.color}`}>{rank.name}</span>
           </div>
           <div className="flex items-center justify-between px-5 py-4">
             <div className="flex items-center gap-3">
               <CheckCircle size={18} className="text-stone-400" />
-              <span className="font-bold text-stone-900 text-sm">אימונים</span>
+              <span className="font-bold text-brand-espresso text-sm">אימונים</span>
             </div>
-            <span className="font-black text-stone-900 tabular-nums">{totalWorkouts}</span>
+            <span className="font-black text-brand-espresso tabular-nums">{totalWorkouts}</span>
           </div>
         </div>
 
@@ -142,7 +142,7 @@ export default function ProfileTab({
             <div className="flex items-center gap-3">
               <Crown size={18} className="text-stone-400" />
               <div className="text-right">
-                <h4 className="font-bold text-stone-900 text-sm">ניהול מנוי פרימיום</h4>
+                <h4 className="font-bold text-brand-espresso text-sm">ניהול מנוי פרימיום</h4>
                 <p className="text-xs text-stone-500">הצטרפות, שדרוג וביטול מסלולים</p>
               </div>
             </div>
@@ -153,7 +153,7 @@ export default function ProfileTab({
             <div className="flex items-center gap-3">
               <Receipt size={18} className="text-stone-400" />
               <div className="text-right">
-                <h4 className="font-bold text-stone-900 text-sm">חשבוניות וקבלות</h4>
+                <h4 className="font-bold text-brand-espresso text-sm">חשבוניות וקבלות</h4>
                 <p className="text-xs text-stone-500">היסטוריית תשלומים באפליקציה</p>
               </div>
             </div>
@@ -167,7 +167,7 @@ export default function ProfileTab({
             <div className="flex items-center gap-3">
               <Bell size={18} className="text-stone-400" />
               <div className="text-right">
-                <h4 className="font-bold text-stone-900 text-sm">התראות אימון (Push)</h4>
+                <h4 className="font-bold text-brand-espresso text-sm">התראות אימון (Push)</h4>
                 <p className="text-xs text-stone-500">בחר שעה וימים לקבלת תזכורת</p>
               </div>
             </div>
@@ -177,7 +177,7 @@ export default function ProfileTab({
                 type="time"
                 value={reminderTime}
                 onChange={(e) => setReminderTime(e.target.value)}
-                className="text-center font-black text-stone-900 border border-stone-200 rounded-lg p-2 focus:border-emerald-800 focus:ring-1 focus:ring-emerald-800/20 outline-none bg-white"
+                className="text-center font-black text-brand-espresso border border-stone-200 rounded-lg p-2 focus:border-brand-terracotta focus:ring-1 focus:ring-brand-terracotta/20 outline-none bg-white"
               />
               <div className="flex flex-wrap justify-center gap-1">
                 {DAYS_OF_WEEK.map((day) => {
@@ -188,7 +188,7 @@ export default function ProfileTab({
                       type="button"
                       onClick={() => setReminderDays((prev) => (isSelected ? prev.filter((d) => d !== day.id) : [...prev, day.id]))}
                       className={`w-8 h-8 rounded-lg font-bold text-xs transition-all duration-150 ease-out active:scale-90 ${
-                        isSelected ? "bg-emerald-800 text-white shadow-sm scale-105" : "bg-white text-stone-500 hover:bg-stone-100 border border-stone-200"
+                        isSelected ? "bg-brand-terracotta text-white shadow-sm scale-105" : "bg-white text-stone-500 hover:bg-stone-100 border border-stone-200"
                       }`}
                     >
                       {lang === "he" ? day.he_short : day.short}
@@ -198,7 +198,7 @@ export default function ProfileTab({
               </div>
               <button
                 onClick={onSaveSettings}
-                className="bg-emerald-800 hover:bg-emerald-900 text-white px-4 py-2 rounded-lg text-sm font-bold active:scale-95 transition-all duration-150 ease-out w-full md:w-auto"
+                className="bg-brand-terracotta hover:brightness-90 text-white px-4 py-2 rounded-lg text-sm font-bold active:scale-95 transition-all duration-150 ease-out w-full md:w-auto"
               >
                 שמור
               </button>
@@ -209,7 +209,7 @@ export default function ProfileTab({
             <div className="flex items-center gap-3">
               <Activity size={18} className="text-stone-400" />
               <div className="text-right">
-                <h4 className="font-bold text-stone-900 text-sm">פידבק רטט (Haptics)</h4>
+                <h4 className="font-bold text-brand-espresso text-sm">פידבק רטט (Haptics)</h4>
                 <p className="text-xs text-stone-500">רטט בסיום סטים ומנוחה</p>
               </div>
             </div>
@@ -217,7 +217,7 @@ export default function ProfileTab({
             <button
               onClick={toggleHaptics}
               className={`w-[46px] h-[26px] rounded-full transition-all duration-300 ease-out relative flex items-center active:scale-95 ${
-                hapticsEnabled ? "bg-emerald-800" : "bg-stone-300"
+                hapticsEnabled ? "bg-brand-terracotta" : "bg-stone-300"
               }`}
             >
               <div className={`w-5 h-5 bg-white rounded-full absolute shadow-sm transition-transform duration-300 ease-out ${hapticsEnabled ? "left-1" : "right-1"}`}></div>
@@ -231,7 +231,7 @@ export default function ProfileTab({
             <div className="flex items-center gap-3">
               <Globe size={18} className="text-stone-400" />
               <div className="text-right">
-                <h4 className="font-bold text-stone-900 text-sm">שפת מערכת</h4>
+                <h4 className="font-bold text-brand-espresso text-sm">שפת מערכת</h4>
                 <p className="text-xs text-stone-500">{lang === "he" ? "עברית" : "English"}</p>
               </div>
             </div>

@@ -284,14 +284,16 @@ export const MUSCLE_TO_ANATOMY_REGIONS: Record<string, { view: "front" | "back";
   // TODO: fill in via AnatomyDiagram's Dev Mode click-to-console.log.
 };
 
-// Emerald rather than the red/pink this app's pain-area check-in already
-// uses (react-body-highlighter's default) — a "muscles this exercise
-// works" diagram and a "where does it hurt" diagram are different concepts,
-// and reusing red for both risked reading as if the highlighted muscles
-// were the sore ones. Emerald is also this app's established positive/
-// premium accent everywhere else (the patient coach FAB, primary CTAs, the
-// selected calendar day). `primary` is emerald-700 — one shade lighter than
-// this app's usual emerald-800 CTA fill, picked (per explicit design
-// direction) to read as its own clinical tone on the diagram rather than
-// literally reusing button-emerald.
-export const ANATOMY_TIER_COLORS = { primary: "#047857", secondary: "#a7f3d0" };
+// A muted brick-red — the universal "muscle activation" register, restored
+// after briefly living on the app's general brand-terracotta accent (which
+// still drives buttons/nav/tabs elsewhere, just not this diagram any more).
+// Deliberately muted/brownish rather than a vivid red so it still reads as
+// distinct from react-body-highlighter's default (bright) red on the
+// separate "where does it hurt" pain-area check-in — a "muscles this
+// exercise works" diagram and a "where does it hurt" diagram are different
+// concepts, and two diagrams both glowing the same saturated red risked
+// reading as if the highlighted muscles were the sore ones. Matches
+// AnatomyHeatmap.tsx's own MUSCLE_HIGHLIGHT_COLOR constant. `secondary` is
+// a paler tint of the same hue for the synergist tier, mirroring
+// AnatomyHeatmap's own prime/synergist opacity split.
+export const ANATOMY_TIER_COLORS = { primary: "#A53021", secondary: "#E4C1BC" };
