@@ -1,6 +1,7 @@
 "use client";
 
-import { ClipboardList, Dumbbell, Info, Target, TrendingUp } from "lucide-react";
+import { useState, type ReactNode } from "react";
+import { ClipboardList, Dumbbell, History, Info, TrendingUp } from "lucide-react";
 import {
   CartesianGrid,
   Line,
@@ -30,11 +31,13 @@ interface ExerciseInfoModalProps {
   onClose: () => void;
 }
 
-// The "InfoModal" from the original file — exercise mistakes/description plus
-// a per-exercise max-reps history chart. `historyData` is computed by the
-// caller (it needs workout_logs + patient_type, which live outside this
-// component's scope) and passed in already shaped for the chart.
-//
+const TABS = [
+  { id: "about", label: "אודות" },
+  { id: "history", label: "היסטוריה" },
+  { id: "charts", label: "גרפים" },
+] as const;
+type TabId = (typeof TABS)[number]["id"];
+
 // The ✅/❌ marker is laid out as a fixed-width bullet (its own flex child,
 // not prepended into the text) so a line that wraps to a second line stays
 // aligned under the text above it rather than under the emoji. A cue/mistake
@@ -58,11 +61,28 @@ function InstructionLine({ line }: { line: CueLine }) {
   );
 }
 
+// A placeholder tab body — same shape used for both "History" (a future list
+// of past sets/reps) and "Charts" without real data yet — nothing to build a
+// real empty-state component around until either has real content.
+function PlaceholderTabBody({ icon, text }: { icon: ReactNode; text: string }) {
+  return (
+    <div className="flex flex-col items-center text-center gap-3 py-14 text-stone-400">
+      {icon}
+      <p className="text-sm font-bold text-stone-500 max-w-[220px]">{text}</p>
+    </div>
+  );
+}
+
+// The "InfoModal" from the original file — exercise mistakes/description plus
+// a per-exercise max-reps history chart. `historyData` is computed by the
+// caller (it needs workout_logs + patient_type, which live outside this
+// component's scope) and passed in already shaped for the chart.
 export default function ExerciseInfoModal({ exercise, historyData, onClose }: ExerciseInfoModalProps) {
   const { lang } = useAuth();
+  const [activeTab, setActiveTab] = useState<TabId>("about");
 
   // Cue lines first, mistake lines immediately after — one merged list, one
-  // section ("הנחiות"/Instructions), rather than the two separately-colored
+  // section ("הנחיות"/Instructions), rather than the two separately-colored
   // cards this used to be. The ✅/❌ prefix on each line (from formatCueLines)
   // is what signals positive vs. negative now, not card color.
   const instructionLines = [...formatCueLines(exercise.patient_cues, "✅"), ...formatCueLines(exercise.common_mistake, "❌")];
@@ -77,24 +97,19 @@ export default function ExerciseInfoModal({ exercise, historyData, onClose }: Ex
   const synergists = exercise.synergists ?? [];
   const hasHeatmapData = primeMovers.length > 0 || synergists.length > 0;
 
-  // Content order is deliberately Title -> Description -> Instructions ->
-  // History -> Heatmap: the heatmap is supplementary visual info the reader
-  // gets to after the actual instructions, not the first thing they see, so
-  // it sits at the very bottom of the scroll rather than up top. Each
-  // section only draws the divider below it when something else still
-  // follows, so whichever section ends up last (heatmap, history, or
-  // instructions, depending on what this exercise actually has) never ends
-  // in a trailing line.
-  const hasMoreAfterDescription = instructionLines.length > 0 || hasHistory || hasHeatmapData;
-  const hasMoreAfterInstructions = hasHistory || hasHeatmapData;
-  const hasMoreAfterHistory = hasHeatmapData;
+  // Description -> Instructions -> Heatmap within "About". The heatmap has
+  // no header/colored panel of its own any more, so it only needs a divider
+  // above it when the section right before it is Description with no
+  // Instructions in between — Instructions already ends in its own rhythm.
+  const hasMoreAfterDescription = instructionLines.length > 0;
+  const hasAboutContent = hasDescription || instructionLines.length > 0 || hasHeatmapData;
 
   return (
     <Modal onClose={onClose} title="מידע לתרגיל" icon={<Info size={20} className="text-emerald-700" />}>
       <h4 className="text-start font-black text-xl tracking-tight mb-4 text-stone-900">{getExerciseName(exercise, lang)}</h4>
 
       {exercise.equipment && exercise.equipment.length > 0 && (
-        <div className="flex flex-wrap gap-2 mb-6">
+        <div className="flex flex-wrap gap-2 mb-5">
           {exercise.equipment.map((eqId) => (
             <span key={eqId} className="inline-flex items-center gap-1.5 bg-stone-50 border border-stone-100 text-stone-600 text-xs font-bold px-3 py-1.5 rounded-full">
               <Dumbbell size={12} className="text-emerald-700" />
@@ -104,64 +119,92 @@ export default function ExerciseInfoModal({ exercise, historyData, onClose }: Ex
         </div>
       )}
 
-      {hasDescription && (
-        <p className={`text-start text-stone-600 leading-relaxed text-lg font-medium pb-6 ${hasMoreAfterDescription ? "mb-6 border-b border-stone-100" : ""}`}>
-          {exercise.description}
-        </p>
+      {/* Sticky under the modal's own fixed header so switching tabs never
+          requires scrolling back up first — bleeds to the sheet's edges
+          (-mx-6) so its white backing fully covers content scrolling under it. */}
+      <div className="sticky top-0 z-10 -mx-6 px-6 bg-white flex gap-5 border-b border-stone-100 mb-6">
+        {TABS.map((tab) => {
+          const isActive = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`relative py-3 text-sm font-bold transition-colors ${isActive ? "text-emerald-700" : "text-stone-400 hover:text-stone-600"}`}
+            >
+              {tab.label}
+              {isActive && <span className="absolute bottom-0 inset-x-0 h-[2.5px] bg-emerald-700 rounded-full" />}
+            </button>
+          );
+        })}
+      </div>
+
+      {activeTab === "about" && (
+        <>
+          {hasDescription && (
+            <p className={`text-start text-stone-600 leading-relaxed text-lg font-medium pb-6 ${hasMoreAfterDescription ? "mb-6 border-b border-stone-100" : ""}`}>
+              {exercise.description}
+            </p>
+          )}
+
+          {instructionLines.length > 0 && (
+            <div className={hasHeatmapData ? "mb-6" : ""}>
+              <div className="flex items-center gap-2 mb-4">
+                <ClipboardList size={15} className="text-emerald-700" />
+                <h4 className="font-bold text-[13px] tracking-wide text-stone-500 uppercase">הנחיות</h4>
+              </div>
+              <div>
+                {instructionLines.map((line, i) => (
+                  <InstructionLine key={i} line={line} />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {hasHeatmapData ? (
+            // Full-bleed against the modal's own p-6 padding (-mx-6) so the
+            // map gets the sheet's entire width — no title/icon/colored
+            // panel any more, just the map itself sitting directly on the
+            // modal's plain white background.
+            <div className="-mx-6 px-4">
+              <AnatomyHeatmap primeMovers={primeMovers} synergists={synergists} className="max-w-2xl mx-auto" />
+            </div>
+          ) : (
+            <ExerciseMuscleMap exercise={exercise} />
+          )}
+
+          {!hasAboutContent && <div className="text-center text-stone-500 font-medium p-4">אין מידע נוסף לתרגיל זה.</div>}
+        </>
       )}
 
-      {instructionLines.length > 0 && (
-        <div className={hasMoreAfterInstructions ? "pb-2 mb-6 border-b border-stone-100" : ""}>
-          <div className="flex items-center gap-2 mb-4">
-            <ClipboardList size={15} className="text-emerald-700" />
-            <h4 className="font-bold text-[13px] tracking-wide text-stone-500 uppercase">הנחיות</h4>
-          </div>
-          <div>
-            {instructionLines.map((line, i) => (
-              <InstructionLine key={i} line={line} />
-            ))}
-          </div>
-        </div>
+      {activeTab === "history" && (
+        <PlaceholderTabBody icon={<History size={32} className="text-stone-300" />} text="רשימת הסטים והחזרות הקודמים לתרגיל זה תופיע כאן בקרוב." />
       )}
 
-      {hasHistory && (
-        <div className={hasMoreAfterHistory ? "pb-6 mb-6 border-b border-stone-100" : ""}>
-          <h4 className="font-bold text-sm mb-4 flex items-center gap-2 text-stone-900">
-            <TrendingUp size={16} className="text-emerald-700" /> היסטוריית ביצועים (מקסימום לאימון)
-          </h4>
-          <div className="h-48 w-full" dir="ltr">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={historyData}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e7e5e4" />
-                <XAxis dataKey="date" tick={{ fontSize: 10, fill: "#78716c" }} />
-                <YAxis yAxisId="left" tick={{ fontSize: 10, fill: "#78716c" }} width={30} />
-                <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10, fill: "#78716c" }} width={24} allowDecimals={false} />
-                <RechartsTooltip contentStyle={{ backgroundColor: "#fff", borderColor: "#e7e5e4", color: "#1c1917" }} />
-                <Line yAxisId="left" type="monotone" dataKey="reps" name="חזרות" stroke="#047857" strokeWidth={3} dot={{ r: 4 }} />
-                <Line yAxisId="right" type="monotone" dataKey="rir" name="RIR" stroke="#f59e0b" strokeWidth={2} dot={{ r: 3 }} connectNulls={false} />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-      )}
-
-      {hasHeatmapData ? (
-        // Full-bleed against the modal's own p-6 padding (-mx-6) so the map
-        // gets the sheet's entire width to work with on mobile instead of
-        // being capped and centered — "massive" only works edge-to-edge.
-        <div className="-mx-6 px-4 pt-5 pb-2 bg-emerald-50/50">
-          <div className="flex items-center gap-2 mb-4 px-2">
-            <Target size={15} className="text-emerald-700" />
-            <h4 className="font-bold text-[13px] tracking-wide text-stone-500 uppercase">מפת שרירים מעורבים</h4>
-          </div>
-          <AnatomyHeatmap primeMovers={primeMovers} synergists={synergists} className="max-w-2xl mx-auto" />
-        </div>
-      ) : (
-        <ExerciseMuscleMap exercise={exercise} />
-      )}
-
-      {instructionLines.length === 0 && !hasDescription && !hasHistory && !hasHeatmapData && (
-        <div className="text-center text-stone-500 font-medium p-4">אין דגשים או היסטוריה לתרגיל זה.</div>
+      {activeTab === "charts" && (
+        <>
+          {hasHistory ? (
+            <div>
+              <h4 className="font-bold text-sm mb-4 flex items-center gap-2 text-stone-900">
+                <TrendingUp size={16} className="text-emerald-700" /> היסטוריית ביצועים (מקסימום לאימון)
+              </h4>
+              <div className="h-56 w-full" dir="ltr">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={historyData}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e7e5e4" />
+                    <XAxis dataKey="date" tick={{ fontSize: 10, fill: "#78716c" }} />
+                    <YAxis yAxisId="left" tick={{ fontSize: 10, fill: "#78716c" }} width={30} />
+                    <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10, fill: "#78716c" }} width={24} allowDecimals={false} />
+                    <RechartsTooltip contentStyle={{ backgroundColor: "#fff", borderColor: "#e7e5e4", color: "#1c1917" }} />
+                    <Line yAxisId="left" type="monotone" dataKey="reps" name="חזרות" stroke="#047857" strokeWidth={3} dot={{ r: 4 }} />
+                    <Line yAxisId="right" type="monotone" dataKey="rir" name="RIR" stroke="#f59e0b" strokeWidth={2} dot={{ r: 3 }} connectNulls={false} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          ) : (
+            <PlaceholderTabBody icon={<TrendingUp size={32} className="text-stone-300" />} text="אין עדיין מספיק נתונים כדי להציג גרף התקדמות לתרגיל זה." />
+          )}
+        </>
       )}
     </Modal>
   );

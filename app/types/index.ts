@@ -63,6 +63,21 @@ export interface Exercise {
   synergists?: string[];
 }
 
+// A single admin-curated, publicly browsable workout (Explore tab / the
+// no-program-yet onboarding block) — distinct from Package (an unused
+// multi-week admin->patient assignment) and SavedProgram (private,
+// patient-authored). One session's worth of exercises, not a multi-day plan.
+export interface Workout {
+  id: string;
+  title: string;
+  category?: string | null;
+  cover_image_url?: string | null;
+  exercise_ids: string[];
+  is_free: boolean;
+  sort_order: number;
+  created_at: string;
+}
+
 export type PackageStatus = "draft" | "published";
 
 export interface Package {

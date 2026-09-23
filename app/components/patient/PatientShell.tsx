@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { AlertCircle, CalendarDays, Crown, Dumbbell, Home as HomeIcon } from "lucide-react";
+import { AlertCircle, CalendarDays, Compass, Crown, Dumbbell, Home as HomeIcon } from "lucide-react";
 import { useAuth } from "@/app/context/AuthContext";
 import { useHaptics } from "@/app/hooks/useHaptics";
 import { useReminders } from "@/app/hooks/useReminders";
@@ -10,17 +10,20 @@ import { useCuratedFacts } from "@/app/hooks/useCuratedFacts";
 import { usePlanSelection } from "@/app/hooks/usePlanSelection";
 import { useWorkoutSession } from "@/app/hooks/useWorkoutSession";
 import { useSavedPrograms } from "@/app/hooks/useSavedPrograms";
+import { useWorkouts } from "@/app/hooks/useWorkouts";
 import WorkoutPlayer from "@/app/components/patient/workout/WorkoutPlayer";
 import ExerciseInfoModal from "@/app/components/patient/workout/ExerciseInfoModal";
+import PasskeyPrompt from "@/app/components/patient/PasskeyPrompt";
 import PlanTab from "@/app/components/patient/tabs/PlanTab";
 import CalendarTab from "@/app/components/patient/tabs/CalendarTab";
 import DiyBuilderTab from "@/app/components/patient/tabs/DiyBuilderTab";
 import MyWorkoutsScreen from "@/app/components/patient/tabs/MyWorkoutsScreen";
+import ExploreTab from "@/app/components/patient/tabs/ExploreTab";
 import PremiumStoreTab from "@/app/components/patient/tabs/PremiumStoreTab";
 import ProfileTab from "@/app/components/patient/tabs/ProfileTab";
-import type { Exercise, SavedProgram } from "@/app/types";
+import type { Exercise, SavedProgram, Workout } from "@/app/types";
 
-type PatientTab = "plan" | "calendar" | "diy" | "premium" | "profile";
+type PatientTab = "plan" | "calendar" | "diy" | "explore" | "premium" | "profile";
 
 // Orchestrates the whole patient experience: instantiates every patient-side
 // hook exactly once (so WorkoutPlayer and the tabs that need the same data —
@@ -41,6 +44,7 @@ export default function PatientShell() {
   const patientData = usePatientData();
   const planSelection = usePlanSelection(patientData.patientExercises);
   const savedProgramsData = useSavedPrograms();
+  const workoutsData = useWorkouts();
   const { curatedFacts } = useCuratedFacts();
 
   // A live session is always one sitting, so it only ever runs the DIY
@@ -143,9 +147,23 @@ export default function PatientShell() {
     setEditingSavedProgramId(null);
   };
 
+  // Starting a public catalog workout (Explore, or the no-program-yet
+  // onboarding block) loads it into the builder draft as day 1 and runs it
+  // immediately, the same as starting a saved program's day — it's not
+  // persisted as a patient_saved_programs row unless the patient explicitly
+  // saves it from the builder afterward.
+  const handleStartCatalogWorkout = (workout: Workout) => {
+    planSelection.setDiyExercisesByDay({ 1: hydrateExerciseIds(workout.exercise_ids) });
+    planSelection.setDiyActiveDay(1);
+    planSelection.setDiyProgramName(workout.title);
+    planSelection.setIsDiyMode(true);
+    session.startDiyWorkoutNow();
+  };
+
   return (
     <>
       <WorkoutPlayer session={session} triggerHaptic={triggerHaptic} />
+      <PasskeyPrompt />
 
       {/* Locked to the viewport (fixed inset-0, same full-screen-overlay
           pattern WorkoutPlayer already uses) so the outer page can never
@@ -179,6 +197,13 @@ export default function PatientShell() {
               <button onClick={() => switchTab("diy")} className={`flex flex-col items-center justify-center w-16 h-full gap-1 transition-colors ${patientTab === "diy" ? "text-emerald-800" : "text-stone-400 hover:text-stone-600"}`}>
                 <Dumbbell size={22} />
                 <span className="text-[10px] font-bold">בנה אימון</span>
+              </button>
+            )}
+
+            {loggedInPatient.patient_type === "fitness" && (
+              <button onClick={() => switchTab("explore")} className={`flex flex-col items-center justify-center w-16 h-full gap-1 transition-colors ${patientTab === "explore" ? "text-emerald-800" : "text-stone-400 hover:text-stone-600"}`}>
+                <Compass size={22} className={patientTab === "explore" ? "fill-emerald-800/15" : ""} />
+                <span className="text-[10px] font-bold">גלה</span>
               </button>
             )}
 
@@ -273,6 +298,18 @@ export default function PatientShell() {
             />
           )}
 
+          {patientTab === "explore" && (
+            <ExploreTab
+              freeWorkouts={workoutsData.freeWorkouts}
+              newReleases={workoutsData.newReleases}
+              likedWorkouts={workoutsData.likedWorkouts}
+              likedWorkoutIds={workoutsData.likedWorkoutIds}
+              onToggleLike={workoutsData.toggleLike}
+              exerciseCatalog={patientData.exerciseCatalog}
+              onStartWorkout={handleStartCatalogWorkout}
+            />
+          )}
+
           {patientTab === "profile" && (
             <ProfileTab
               workoutLogs={patientData.workoutLogs}
@@ -309,6 +346,9 @@ export default function PatientShell() {
               onViewExerciseInfo={(exercise) => session.setViewingExInfo(exercise)}
               onStartWorkout={session.handleStartClick}
               curatedFacts={curatedFacts}
+              hasAnyAssignedExercises={patientData.patientExercises.length > 0}
+              starterWorkouts={workoutsData.freeWorkouts.slice(0, 3)}
+              onStartCatalogWorkout={handleStartCatalogWorkout}
             />
           )}
 

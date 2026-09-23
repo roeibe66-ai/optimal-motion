@@ -19,7 +19,7 @@ import { useAuth } from "@/app/context/AuthContext";
 import { getTrackAccess } from "@/app/utils/premium";
 import { getExerciseName, getWorkoutMuscleAggregation, type WorkoutMuscleAggregation } from "@/app/utils/format";
 import { AVAILABLE_MUSCLES, DEFAULT_TRACK_GLOW, EQUIPMENT_LIST, TRACK_GLOW_TINTS } from "@/app/constants/catalog";
-import type { AIAssistantContext, CuratedFact, Exercise, WorkoutLog } from "@/app/types";
+import type { AIAssistantContext, CuratedFact, Exercise, Workout, WorkoutLog } from "@/app/types";
 import type { HydratedPatientExercise, SessionExercise } from "@/app/hooks/useWorkoutSession";
 import PatientCoachSheet from "@/app/components/patient/PatientCoachSheet";
 import AnatomyHeatmap from "@/app/components/AnatomyHeatmap";
@@ -43,6 +43,9 @@ interface PlanTabProps {
   onViewExerciseInfo: (exercise: Exercise) => void;
   onStartWorkout: () => void;
   curatedFacts: CuratedFact[];
+  hasAnyAssignedExercises: boolean;
+  starterWorkouts: Workout[];
+  onStartCatalogWorkout: (workout: Workout) => void;
 }
 
 
@@ -121,6 +124,9 @@ export default function PlanTab({
   onViewExerciseInfo,
   onStartWorkout,
   curatedFacts,
+  hasAnyAssignedExercises,
+  starterWorkouts,
+  onStartCatalogWorkout,
 }: PlanTabProps) {
   const { loggedInPatient, lang } = useAuth();
 
@@ -257,7 +263,11 @@ export default function PlanTab({
             diagram on the left, and title/meta/play mirrored for RTL: text
             bottom-right, action button bottom-left. */}
         {todayCat ? (
-          <div className="relative h-[400px] rounded-[2rem] overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.08)] mb-10">
+          // -mx-4 md:-mx-8 cancels out `main`'s own side padding
+          // (PatientShell) so this hero bleeds to the actual viewport edges
+          // instead of sitting inside the page's normal content gutter —
+          // "wide, full-width hero card" only reads as such edge-to-edge.
+          <div className="relative h-[400px] -mx-4 md:-mx-8 rounded-[2rem] overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.08)] mb-10">
             {/* Placeholder hero photo — a live Unsplash hotlink (Edoardo
                 Cuoghi, Unsplash License, unsplash.com/photos/5uzsDVRov2w),
                 not a repo asset. Swap for a real owned asset before this
@@ -304,14 +314,15 @@ export default function PlanTab({
                 right) — same AnatomyHeatmap as the exercise-info sheet, fed
                 the whole day's combined prime_movers/synergists
                 (getWorkoutMuscleAggregation) rather than one exercise's, so
-                it lights up total engagement for the session. A small
-                opaque white card so it pops with full contrast against the
-                hero photo behind it, rather than blending in. Fixed width
-                (AnatomyHeatmap sizes itself via aspect-ratio off that width)
-                is what keeps this a clean thumbnail instead of stretching
-                to fill the overlay. */}
+                it lights up total engagement for the session. No card/
+                border behind it any more — a plain drop-shadow filter
+                (not a background) keeps the outline legible against
+                whatever's directly behind it in the photo without boxing
+                it in. Fixed width (AnatomyHeatmap sizes itself via
+                aspect-ratio off that width) is what keeps this a clean
+                thumbnail instead of stretching to fill the overlay. */}
             {(todayMuscleAggregation.primeMovers.length > 0 || todayMuscleAggregation.synergists.length > 0) && (
-              <div className="absolute top-1/2 left-4 -translate-y-1/2 z-10 w-24 bg-white rounded-2xl p-1.5 shadow-[0_8px_20px_-4px_rgba(0,0,0,0.35)] overflow-hidden">
+              <div className="absolute top-1/2 left-4 -translate-y-1/2 z-10 w-28" style={{ filter: "drop-shadow(0 6px 16px rgba(0,0,0,0.45))" }}>
                 <AnatomyHeatmap primeMovers={todayMuscleAggregation.primeMovers} synergists={todayMuscleAggregation.synergists} />
               </div>
             )}
@@ -338,6 +349,34 @@ export default function PlanTab({
             >
               <Play size={20} className="fill-white text-white" />
             </button>
+          </div>
+        ) : !isDiyMode && !hasAnyAssignedExercises && starterWorkouts.length > 0 ? (
+          // No assigned program at all yet (never just "nothing scheduled
+          // today" — that case still falls through to the plain rest-day
+          // card below) — offer a ready-to-start 3-day split pulled from the
+          // free workout catalog instead of a dead end.
+          <div className="rounded-[2rem] p-7 md:p-9 bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] mb-10">
+            <div className="flex items-center gap-2 mb-1.5">
+              <Sparkles size={18} className="text-emerald-700" />
+              <h3 className="text-lg font-black text-stone-900">התחל עם תוכנית פתיחה</h3>
+            </div>
+            <p className="text-stone-500 text-sm mb-6">עדיין אין לך תוכנית מוקצית. הכנו לך {starterWorkouts.length} ימי אימון להתחלה — אפשר להתחיל מיד.</p>
+            <div className="flex flex-col gap-3">
+              {starterWorkouts.map((w, idx) => (
+                <button
+                  key={w.id}
+                  onClick={() => onStartCatalogWorkout(w)}
+                  className="flex items-center gap-4 bg-stone-50 hover:bg-stone-100 rounded-2xl p-4 text-start transition-colors"
+                >
+                  <div className="w-11 h-11 rounded-full bg-emerald-800 text-white flex items-center justify-center font-black text-sm shrink-0">{idx + 1}</div>
+                  <div className="flex-1 overflow-hidden">
+                    <div className="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wide mb-0.5">יום {idx + 1}</div>
+                    <div className="font-bold text-stone-900 truncate">{w.title}</div>
+                  </div>
+                  <Play size={16} className="text-stone-400 shrink-0" />
+                </button>
+              ))}
+            </div>
           </div>
         ) : (
           <div className="rounded-[2rem] p-10 text-center h-[280px] flex flex-col items-center justify-center relative overflow-hidden mb-10 bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)]">

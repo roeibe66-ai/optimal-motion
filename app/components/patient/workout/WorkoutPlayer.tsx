@@ -50,6 +50,9 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
     setLastMediaExerciseId(session.displayedExercise?.id);
     setActiveMediaIndex(0);
   }
+  // The rest screen's "what does RIR mean" popover — a brief explainer, not
+  // a full Modal (that would be overkill for one sentence of copy).
+  const [showRirInfo, setShowRirInfo] = useState(false);
 
   if (session.showPreWorkout) {
     return (
@@ -441,8 +444,28 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
                 </button>
               </div>
 
-              <div className="flex items-center gap-2">
-                <span className="text-[11px] font-bold text-stone-500 uppercase tracking-wide ml-1">RIR</span>
+              <div className="relative flex items-center gap-2">
+                <span className="text-[11px] font-bold text-stone-500 uppercase tracking-wide">RIR</span>
+                <button
+                  onClick={() => setShowRirInfo((prev) => !prev)}
+                  aria-label="מה זה RIR"
+                  className="text-stone-400 hover:text-stone-600 transition-colors ml-1"
+                >
+                  <Info size={13} />
+                </button>
+
+                {showRirInfo && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setShowRirInfo(false)} />
+                    <div className="absolute bottom-full right-0 mb-3 z-50 w-64 bg-white text-stone-700 rounded-2xl shadow-2xl border border-stone-100 p-4 text-start animate-in fade-in zoom-in-95 duration-150">
+                      <p className="font-black text-stone-900 text-[13px] mb-1.5">מהו RIR?</p>
+                      <p className="text-xs leading-relaxed">
+                        Reps In Reserve — כמה חזרות נוספות היית יכול לבצע בטכניקה תקינה. לדוגמה, RIR 2 אומר שצריך לעצור את הסט כשאתה מרגיש שנשארו לך עוד 2 חזרות בלבד עד הכשל.
+                      </p>
+                    </div>
+                  </>
+                )}
+
                 {RIR_OPTIONS.map((val) => {
                   const isSelected = session.pendingSetRir === val;
                   return (
