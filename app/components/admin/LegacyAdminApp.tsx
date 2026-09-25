@@ -3,12 +3,14 @@
 import { useEffect, useRef, useState } from "react";
 import {
   Activity,
-  AlertTriangle,
   BrainCircuit,
   Calendar,
   Check,
+  ChevronDown,
+  ChevronUp,
   Clock,
   Coffee,
+  Copy,
   DownloadCloud,
   Dumbbell,
   Edit3,
@@ -20,7 +22,6 @@ import {
   History,
   Image as ImageIcon,
   Loader2,
-  Lock,
   Map,
   Mic,
   PenTool,
@@ -30,10 +31,7 @@ import {
   Save,
   Search,
   Sparkles,
-  Target,
   Trash2,
-  TrendingDown,
-  TrendingUp,
   Users,
   Video,
   Wand2,
@@ -41,12 +39,12 @@ import {
 } from "lucide-react";
 import { supabase } from "@/app/lib/supabase";
 import { useAuth } from "@/app/context/AuthContext";
-import { ADMIN_CATEGORY_STYLES, ADMIN_TAGS, AVAILABLE_MUSCLES, DAYS_OF_WEEK, DEFAULT_ADMIN_CATEGORY_STYLE, DIFFICULTY_LEVELS, EQUIPMENT_LIST, NAME_DISPLAY_PREFERENCES, MUSCLE_REGIONS } from "@/app/constants/catalog";
+import { ADMIN_CATEGORY_STYLES, ADMIN_TAGS, AVAILABLE_MUSCLES, DAYS_OF_WEEK, DEFAULT_ADMIN_CATEGORY_STYLE, EQUIPMENT_LIST, MUSCLE_REGIONS } from "@/app/constants/catalog";
 import AdminSidebar from "@/app/components/admin/AdminSidebar";
 import AdminCoPilotDrawer from "@/app/components/admin/AdminCoPilotDrawer";
 import ProgramLibraryTab from "@/app/components/admin/tabs/ProgramLibraryTab";
-import MusclePicker from "@/app/components/admin/MusclePicker";
-import { formatAdminDate, formatCueLines, getExerciseName } from "@/app/utils/format";
+import ExerciseLibraryTab from "@/app/components/admin/tabs/ExerciseLibraryTab";
+import { formatAdminDate, getExerciseName } from "@/app/utils/format";
 import { getAIInsight } from "@/app/utils/scoring";
 import { generateResearchFacts } from "@/app/actions/researchAgent";
 import type { AIAssistantContext, CuratedFact, ResearchFinding } from "@/app/types";
@@ -64,18 +62,6 @@ import type { AIAssistantContext, CuratedFact, ResearchFinding } from "@/app/typ
 /* eslint-disable @typescript-eslint/no-explicit-any -- untyped by design, matching the original's loose style until this side gets its own refactor pass */
 
 const REST_TIME_PRESETS = [30, 60, 90, 120];
-
-// admin_tags (ADMIN_TAGS ids) used to have its own separate multi-select in
-// the builder form, drawing from the exact same ADMIN_TAGS list as the
-// categories picker — a genuine duplicate UI, not just visually similar
-// (confirmed with Roei). Rather than dropping admin_tags (still used
-// elsewhere for filtering: libExerciseTagFilter, assignExerciseTagFilter,
-// builderSearchFilter, the exercise-card lock-icon badges), it's now derived
-// automatically from the categories selection at save time — same
-// underlying ADMIN_TAGS taxonomy, just label vs id, so existing filters keep
-// working with zero extra admin input.
-const deriveAdminTagIds = (categoryLabels: string[]): string[] =>
-  categoryLabels.map((label) => ADMIN_TAGS.find((t) => t.label === label)?.id).filter((id): id is string => Boolean(id));
 
 export default function LegacyAdminApp() {
   const { handleLogout, lang } = useAuth();
@@ -117,24 +103,6 @@ export default function LegacyAdminApp() {
 
   const [crmFilter, setCrmFilter] = useState("all");
 
-  const [exNameHe, setExNameHe] = useState("");
-  const [exNameEn, setExNameEn] = useState("");
-  const [exNameDisplayPreference, setExNameDisplayPreference] = useState<"en" | "he" | "both">("en");
-  const [exCategories, setExCategories] = useState<string[]>([]);
-  const [exDifficultyLevel, setExDifficultyLevel] = useState("");
-  const [exEquipment, setExEquipment] = useState<string[]>([]);
-  const [exDesc, setExDesc] = useState("");
-  const [exGifUrl, setExGifUrl] = useState("");
-  const [exSecondaryGifUrl, setExSecondaryGifUrl] = useState("");
-  const [exPrimaryMuscle, setExPrimaryMuscle] = useState("");
-  const [exSecondaryMuscles, setExSecondaryMuscles] = useState<string[]>([]);
-  const [exPrimeMovers, setExPrimeMovers] = useState<string[]>([]);
-  const [exSynergists, setExSynergists] = useState<string[]>([]);
-  const [exMistake, setExMistake] = useState("");
-  const [exPatientCues, setExPatientCues] = useState("");
-  const [exEasierVersionId, setExEasierVersionId] = useState("");
-  const [exHarderVersionId, setExHarderVersionId] = useState("");
-
   const [curatedFacts, setCuratedFacts] = useState<CuratedFact[]>([]);
   const [researchQuery, setResearchQuery] = useState("");
   const [researchResults, setResearchResults] = useState<ResearchFinding[] | null>(null);
@@ -149,30 +117,7 @@ export default function LegacyAdminApp() {
   // separate table (exercise_internal_notes) rather than a column on
   // exercises, since exercises has a SELECT policy open to all authenticated
   // users and RLS is row-level, not column-level. See the migration comment.
-  const [exInternalNotes, setExInternalNotes] = useState("");
   const [internalNotesByExerciseId, setInternalNotesByExerciseId] = useState<Record<string, string>>({});
-
-  const [editingExId, setEditingExId] = useState<string | null>(null);
-  const [editExForm, setEditExForm] = useState({
-    name_he: "",
-    name_en: "",
-    name_display_preference: "en" as "en" | "he" | "both",
-    categories: [] as string[],
-    difficulty_level: "",
-    equipment: [] as string[],
-    gif_url: "",
-    secondary_gif_url: "",
-    target_muscle: "",
-    secondary_muscles: [] as string[],
-    prime_movers: [] as string[],
-    synergists: [] as string[],
-    common_mistake: "",
-    patient_cues: "",
-    description: "",
-    internal_notes: "",
-    easier_version_id: "",
-    harder_version_id: "",
-  });
 
   const [assignPatientId, setAssignPatientId] = useState("");
   const [assignExerciseId, setAssignExerciseId] = useState("");
@@ -199,7 +144,6 @@ export default function LegacyAdminApp() {
     week: 1,
   });
 
-  const [libExerciseTagFilter, setLibExerciseTagFilter] = useState<string>("all");
   const [assignExerciseTagFilter, setAssignExerciseTagFilter] = useState<string>("all");
 
   const [builderMode, setBuilderMode] = useState<"patient" | "protocol">("patient");
@@ -217,25 +161,47 @@ export default function LegacyAdminApp() {
   const [aiPrompt, setAiPrompt] = useState("");
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [builderSearchFilter, setBuilderSearchFilter] = useState("all");
+  const [builderNameQuery, setBuilderNameQuery] = useState("");
+  const [builderMuscleFilter, setBuilderMuscleFilter] = useState("all");
+  const [builderEquipmentFilter, setBuilderEquipmentFilter] = useState("all");
   const [enablePeriodizationUI, setEnablePeriodizationUI] = useState(false);
+
+  // Which day's accordion is expanded in the timeline — a Set rather than a
+  // single id since more than one day can be open at once (unlike a classic
+  // single-open accordion). Days that already have exercises open by
+  // default so existing content isn't hidden on first load; empty days stay
+  // collapsed until the admin opens them.
+  const [openBuilderDayIds, setOpenBuilderDayIds] = useState<Set<string>>(
+    () => new Set(DAYS_OF_WEEK.filter((d) => (builderPlan[1]?.[d.id]?.length ?? 0) > 0).map((d) => d.id))
+  );
+  // The day the sidebar's "+" quick-add button targets — whichever day the
+  // admin most recently opened, added to, or duplicated into. Defaults to
+  // Sunday so quick-add always has a valid target even before any day has
+  // been touched.
+  const [builderActiveDayId, setBuilderActiveDayId] = useState<string>(DAYS_OF_WEEK[0].id);
 
   const [tacticalReviewMode, setTacticalReviewMode] = useState<any | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
-
-  const filteredLibraryExercises = exercises.filter((e) => {
-    if (libExerciseTagFilter === "all") return true;
-    return e.admin_tags && e.admin_tags.split(",").includes(libExerciseTagFilter);
-  });
 
   const filteredExercisesForAssign = exercises.filter((e) => {
     if (assignExerciseTagFilter === "all") return true;
     return e.admin_tags && e.admin_tags.split(",").includes(assignExerciseTagFilter);
   });
 
+  const normalizedBuilderQuery = builderNameQuery.trim().toLowerCase();
   const filteredExercisesForBuilder = exercises.filter((e) => {
-    if (builderSearchFilter === "all") return true;
-    return e.admin_tags && e.admin_tags.split(",").includes(builderSearchFilter);
+    const matchesTag = builderSearchFilter === "all" || (e.admin_tags && e.admin_tags.split(",").includes(builderSearchFilter));
+    const matchesName =
+      !normalizedBuilderQuery ||
+      (e.name_he ?? "").toLowerCase().includes(normalizedBuilderQuery) ||
+      (e.name_en ?? "").toLowerCase().includes(normalizedBuilderQuery);
+    const matchesMuscle =
+      builderMuscleFilter === "all" ||
+      e.target_muscle === builderMuscleFilter ||
+      (e.secondary_muscles ?? "").split(",").includes(builderMuscleFilter);
+    const matchesEquipment = builderEquipmentFilter === "all" || (e.equipment ?? []).includes(builderEquipmentFilter);
+    return matchesTag && matchesName && matchesMuscle && matchesEquipment;
   });
 
   // Grounds the co-pilot drawer in whatever's actually on screen: the
@@ -358,186 +324,6 @@ export default function LegacyAdminApp() {
     else fetchAdminData();
   };
 
-  // When an exercise is saved with an easier/harder link, mirror the
-  // opposite link back onto the linked exercise (Pull-up.easier = Banded
-  // Pull-up implies Banded Pull-up.harder = Pull-up). If the link changed
-  // away from a previous target, that old target's reciprocal is cleared
-  // too, but only if it still points back at this exercise (so it isn't
-  // clobbered if it was independently repointed elsewhere in the meantime).
-  const syncReciprocalLink = async (thisId: string, oldLinkedId: string | null | undefined, newLinkedId: string | null | undefined, reciprocalField: "easier_version_id" | "harder_version_id") => {
-    if ((oldLinkedId || null) === (newLinkedId || null)) return;
-    if (oldLinkedId) {
-      await supabase.from("exercises").update({ [reciprocalField]: null }).eq("id", oldLinkedId).eq(reciprocalField, thisId);
-    }
-    if (newLinkedId) {
-      await supabase.from("exercises").update({ [reciprocalField]: thisId }).eq("id", newLinkedId);
-    }
-  };
-
-  const handleExerciseSubmit = async (e: any) => {
-    e.preventDefault();
-    if (!exNameHe.trim() && !exNameEn.trim()) return alert("חובה להזין שם תרגיל בעברית או באנגלית (לפחות אחד)");
-    const { data, error } = await supabase
-      .from("exercises")
-      .insert([
-        {
-          name_he: exNameHe || null,
-          name_en: exNameEn || null,
-          name_display_preference: exNameDisplayPreference,
-          categories: exCategories,
-          difficulty_level: exDifficultyLevel || null,
-          equipment: exEquipment,
-          description: exDesc,
-          gif_url: exGifUrl || null,
-          secondary_gif_url: exSecondaryGifUrl || null,
-          target_muscle: exPrimaryMuscle,
-          secondary_muscles: exSecondaryMuscles.join(","),
-          prime_movers: exPrimeMovers,
-          synergists: exSynergists,
-          admin_tags: deriveAdminTagIds(exCategories).join(","),
-          common_mistake: exMistake,
-          patient_cues: exPatientCues,
-          easier_version_id: exEasierVersionId || null,
-          harder_version_id: exHarderVersionId || null,
-        },
-      ])
-      .select()
-      .single();
-    if (error) {
-      alert("שגיאה: " + error.message);
-      return;
-    }
-    if (exInternalNotes.trim()) {
-      const { error: notesError } = await supabase
-        .from("exercise_internal_notes")
-        .upsert({ exercise_id: data.id, notes: exInternalNotes, updated_at: new Date().toISOString() });
-      if (notesError) alert("התרגיל נוצר, אך שמירת ההערות הפנימיות נכשלה: " + notesError.message);
-    }
-    await syncReciprocalLink(data.id, null, exEasierVersionId, "harder_version_id");
-    await syncReciprocalLink(data.id, null, exHarderVersionId, "easier_version_id");
-    alert("תרגיל נוצר!");
-    setExNameHe("");
-    setExNameEn("");
-    setExNameDisplayPreference("en");
-    setExCategories([]);
-    setExDifficultyLevel("");
-    setExEquipment([]);
-    setExDesc("");
-    setExGifUrl("");
-    setExSecondaryGifUrl("");
-    setExPrimaryMuscle("");
-    setExSecondaryMuscles([]);
-    setExPrimeMovers([]);
-    setExSynergists([]);
-    setExMistake("");
-    setExPatientCues("");
-    setExInternalNotes("");
-    setExEasierVersionId("");
-    setExHarderVersionId("");
-    fetchAdminData();
-  };
-
-  const toggleSecondaryMuscle = (id: string, isEditing: boolean = false) => {
-    if (isEditing)
-      setEditExForm((prev) => ({
-        ...prev,
-        secondary_muscles: prev.secondary_muscles.includes(id) ? prev.secondary_muscles.filter((m) => m !== id) : [...prev.secondary_muscles, id],
-      }));
-    else setExSecondaryMuscles((prev) => (prev.includes(id) ? prev.filter((m) => m !== id) : [...prev, id]));
-  };
-
-  const toggleExerciseCategory = (id: string, isEditing: boolean = false) => {
-    if (isEditing)
-      setEditExForm((prev) => ({
-        ...prev,
-        categories: prev.categories.includes(id) ? prev.categories.filter((c) => c !== id) : [...prev.categories, id],
-      }));
-    else setExCategories((prev) => (prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]));
-  };
-
-  const toggleExerciseEquipment = (id: string, isEditing: boolean = false) => {
-    if (isEditing)
-      setEditExForm((prev) => ({
-        ...prev,
-        equipment: prev.equipment.includes(id) ? prev.equipment.filter((eq) => eq !== id) : [...prev.equipment, id],
-      }));
-    else setExEquipment((prev) => (prev.includes(id) ? prev.filter((eq) => eq !== id) : [...prev, id]));
-  };
-
-  const handleStartEditEx = (ex: any) => {
-    setEditingExId(ex.id);
-    setEditExForm({
-      name_he: String(ex.name_he || ""),
-      name_en: String(ex.name_en || ""),
-      name_display_preference: ex.name_display_preference || "en",
-      categories: ex.categories || [],
-      difficulty_level: String(ex.difficulty_level || ""),
-      equipment: ex.equipment || [],
-      gif_url: String(ex.gif_url || ""),
-      secondary_gif_url: String(ex.secondary_gif_url || ""),
-      target_muscle: String(ex.target_muscle || ""),
-      secondary_muscles: ex.secondary_muscles ? String(ex.secondary_muscles).split(",") : [],
-      prime_movers: ex.prime_movers || [],
-      synergists: ex.synergists || [],
-      common_mistake: String(ex.common_mistake || ""),
-      patient_cues: String(ex.patient_cues || ""),
-      description: String(ex.description || ""),
-      internal_notes: internalNotesByExerciseId[ex.id] || "",
-      easier_version_id: String(ex.easier_version_id || ""),
-      harder_version_id: String(ex.harder_version_id || ""),
-    });
-  };
-
-  const handleSaveEditEx = async (id: string) => {
-    if (!editExForm.name_he.trim() && !editExForm.name_en.trim()) return alert("חובה להזין שם תרגיל בעברית או באנגלית (לפחות אחד)");
-    const original = exercises.find((e) => e.id === id);
-    const { error } = await supabase
-      .from("exercises")
-      .update({
-        name_he: editExForm.name_he || null,
-        name_en: editExForm.name_en || null,
-        name_display_preference: editExForm.name_display_preference,
-        categories: editExForm.categories,
-        difficulty_level: editExForm.difficulty_level || null,
-        equipment: editExForm.equipment,
-        description: editExForm.description,
-        gif_url: editExForm.gif_url || null,
-        secondary_gif_url: editExForm.secondary_gif_url || null,
-        target_muscle: editExForm.target_muscle,
-        secondary_muscles: editExForm.secondary_muscles.join(","),
-        prime_movers: editExForm.prime_movers,
-        synergists: editExForm.synergists,
-        admin_tags: deriveAdminTagIds(editExForm.categories).join(","),
-        common_mistake: editExForm.common_mistake,
-        patient_cues: editExForm.patient_cues,
-        easier_version_id: editExForm.easier_version_id || null,
-        harder_version_id: editExForm.harder_version_id || null,
-      })
-      .eq("id", id);
-    if (error) {
-      alert("שגיאה בעדכון: " + error.message);
-      return;
-    }
-    const { error: notesError } = await supabase
-      .from("exercise_internal_notes")
-      .upsert({ exercise_id: id, notes: editExForm.internal_notes, updated_at: new Date().toISOString() });
-    if (notesError) alert("התרגיל עודכן, אך שמירת ההערות הפנימיות נכשלה: " + notesError.message);
-    await syncReciprocalLink(id, original?.easier_version_id, editExForm.easier_version_id || null, "harder_version_id");
-    await syncReciprocalLink(id, original?.harder_version_id, editExForm.harder_version_id || null, "easier_version_id");
-    setEditingExId(null);
-    fetchAdminData();
-  };
-
-  const handleDeleteEx = async (id: string) => {
-    if (!confirm("האם אתה בטוח שברצונך למחוק תרגיל זה לצמיתות ממאגר התרגילים?")) return;
-    const { error } = await supabase.from("exercises").delete().eq("id", id);
-    if (error) alert("לא ניתן למחוק את התרגיל מכיוון שהוא משויך כבר לפרוטוקול או למטופל פעיל. הסר אותו קודם משם.");
-    else {
-      alert("התרגיל נמחק בהצלחה!");
-      fetchAdminData();
-    }
-  };
-
   const handleAssignSingle = async (e: any) => {
     e.preventDefault();
     if (!assignPatientId || !assignExerciseId) return alert("חובה לבחור מטופל ותרגיל");
@@ -618,26 +404,69 @@ export default function LegacyAdminApp() {
     e.dataTransfer.setData("ex_id", ex.id);
   };
 
+  // Shared by drag-and-drop, the sidebar's "+" quick-add button, and
+  // day duplication — appends one exercise (with fresh default set/rep
+  // numbers and its own temp_id) to a day in the currently selected week,
+  // then opens that day and marks it "active" so the result is immediately
+  // visible and further quick-adds keep landing in the same place.
+  const addExerciseToDay = (dayId: string, ex: any) => {
+    setBuilderPlan((prev) => {
+      const currentWeekBlocks = prev[builderSelectedWeek] || getInitialDays();
+      return {
+        ...prev,
+        [builderSelectedWeek]: {
+          ...currentWeekBlocks,
+          [dayId]: [...(currentWeekBlocks[dayId] || []), { ...ex, temp_id: Math.random().toString(), sets: 3, reps: 10, rir: null, is_time: false, block: "A", rest_time_seconds: 60 }],
+        },
+      };
+    });
+    setOpenBuilderDayIds((prev) => new Set(prev).add(dayId));
+    setBuilderActiveDayId(dayId);
+  };
+
   const handleDrop = (e: any, dayId: string) => {
     e.preventDefault();
     const exId = e.dataTransfer.getData("ex_id");
     const ex = exercises.find((e) => e.id === exId);
-    if (ex) {
-      setBuilderPlan((prev) => {
-        const currentWeekBlocks = prev[builderSelectedWeek] || getInitialDays();
-        return {
-          ...prev,
-          [builderSelectedWeek]: {
-            ...currentWeekBlocks,
-            [dayId]: [...currentWeekBlocks[dayId], { ...ex, temp_id: Math.random().toString(), sets: 3, reps: 10, rir: null, is_time: false, block: "A", rest_time_seconds: 60 }],
-          },
-        };
-      });
-    }
+    if (ex) addExerciseToDay(dayId, ex);
   };
 
   const handleDragOver = (e: any) => {
     e.preventDefault();
+  };
+
+  // Toggles one day's accordion open/closed and marks it as the active
+  // quick-add target regardless of which way it toggled — collapsing a day
+  // you were just working in shouldn't change where the next "+" click
+  // lands.
+  const toggleBuilderDayOpen = (dayId: string) => {
+    setOpenBuilderDayIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(dayId)) next.delete(dayId);
+      else next.add(dayId);
+      return next;
+    });
+    setBuilderActiveDayId(dayId);
+  };
+
+  // Copies every exercise from one day into the first still-empty day of
+  // the same week (fresh temp_ids so removing/editing one copy doesn't
+  // affect the other) — DAYS_OF_WEEK is a fixed Sunday-Saturday set, so
+  // "a new day block" means the next open slot in that set, not an
+  // arbitrary extra day.
+  const duplicateBuilderDay = (sourceDayId: string) => {
+    const currentWeekBlocks = builderPlan[builderSelectedWeek] || getInitialDays();
+    const sourceItems = currentWeekBlocks[sourceDayId] || [];
+    if (sourceItems.length === 0) return alert("אין תרגילים ביום הזה לשכפול.");
+    const targetDay = DAYS_OF_WEEK.find((d) => d.id !== sourceDayId && (currentWeekBlocks[d.id]?.length ?? 0) === 0);
+    if (!targetDay) return alert("כל ימי השבוע כבר מכילים תרגילים בשבוע הזה — פנה יום ריק כדי לשכפל אליו.");
+    const duplicatedItems = sourceItems.map((ex: any) => ({ ...ex, temp_id: Math.random().toString() }));
+    setBuilderPlan((prev) => {
+      const weekBlocks = prev[builderSelectedWeek] || getInitialDays();
+      return { ...prev, [builderSelectedWeek]: { ...weekBlocks, [targetDay.id]: duplicatedItems } };
+    });
+    setOpenBuilderDayIds((prev) => new Set(prev).add(targetDay.id));
+    setBuilderActiveDayId(targetDay.id);
   };
 
   const removeBuilderExercise = (dayId: string, tempId: string) => {
@@ -1191,10 +1020,20 @@ export default function LegacyAdminApp() {
 
             <div className="flex flex-col lg:flex-row gap-5 flex-1 min-h-[500px]">
               <div className="w-full lg:w-[340px] lg:shrink-0 bg-[#1c1c1e] rounded-3xl border border-stone-800 flex flex-col overflow-hidden">
-                <div className="p-5 border-b border-stone-800">
-                  <h3 className="font-extrabold text-white mb-3 flex items-center gap-2 text-sm">
+                <div className="p-5 border-b border-stone-800 space-y-2.5">
+                  <h3 className="font-extrabold text-white mb-1 flex items-center gap-2 text-sm">
                     <ImageIcon size={16} className="text-teal-400" /> ספריית תרגילים
                   </h3>
+                  <div className="relative">
+                    <Search size={14} className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-stone-500" />
+                    <input
+                      type="text"
+                      value={builderNameQuery}
+                      onChange={(e) => setBuilderNameQuery(e.target.value)}
+                      placeholder="חפש תרגיל לפי שם..."
+                      className="w-full bg-stone-950 border border-stone-800 p-2.5 pr-9 rounded-xl text-xs font-bold text-white placeholder:text-stone-600 outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500/30"
+                    />
+                  </div>
                   <select value={builderSearchFilter} onChange={(e) => setBuilderSearchFilter(e.target.value)} className="w-full bg-stone-950 border border-stone-800 p-2.5 rounded-xl text-xs font-bold text-stone-300 outline-none">
                     <option value="all">-- כל התגיות --</option>
                     {ADMIN_TAGS.map((t) => (
@@ -1203,8 +1042,31 @@ export default function LegacyAdminApp() {
                       </option>
                     ))}
                   </select>
+                  <div className="grid grid-cols-2 gap-2">
+                    <select value={builderMuscleFilter} onChange={(e) => setBuilderMuscleFilter(e.target.value)} className="w-full bg-stone-950 border border-stone-800 p-2.5 rounded-xl text-[11px] font-bold text-stone-300 outline-none">
+                      <option value="all">-- שריר --</option>
+                      {MUSCLE_REGIONS.map((region) => (
+                        <optgroup key={region.id} label={region.label}>
+                          {AVAILABLE_MUSCLES.filter((m) => region.muscleIds.includes(m.id)).map((m) => (
+                            <option key={m.id} value={m.id}>
+                              {m.label}
+                            </option>
+                          ))}
+                        </optgroup>
+                      ))}
+                    </select>
+                    <select value={builderEquipmentFilter} onChange={(e) => setBuilderEquipmentFilter(e.target.value)} className="w-full bg-stone-950 border border-stone-800 p-2.5 rounded-xl text-[11px] font-bold text-stone-300 outline-none">
+                      <option value="all">-- ציוד --</option>
+                      {EQUIPMENT_LIST.map((eq) => (
+                        <option key={eq.id} value={eq.id}>
+                          {eq.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
                 <div className="flex-1 overflow-y-auto p-3.5 space-y-2.5">
+                  {filteredExercisesForBuilder.length === 0 && <p className="text-center text-stone-500 text-xs font-semibold p-4">אין תרגילים העונים לסינון.</p>}
                   {filteredExercisesForBuilder.map((ex) => {
                     const style = ADMIN_CATEGORY_STYLES[ex.categories?.[0]] ?? DEFAULT_ADMIN_CATEGORY_STYLE;
                     return (
@@ -1218,12 +1080,20 @@ export default function LegacyAdminApp() {
                           <GripVertical size={18} />
                         </div>
                         <div className="w-[38px] h-[38px] rounded-[10px] shrink-0" style={{ background: `linear-gradient(150deg, ${style.glow}, #1c1c1e)` }}></div>
-                        <div className="min-w-0">
+                        <div className="min-w-0 flex-1">
                           <h4 className="font-extrabold text-white text-xs leading-tight truncate">{getExerciseName(ex, lang)}</h4>
                           <span className="text-[9px] font-extrabold px-2 py-0.5 rounded-full mt-1 inline-block" style={{ color: style.text, background: style.bg }}>
                             {(ex.categories || []).join(" / ")}
                           </span>
                         </div>
+                        <button
+                          type="button"
+                          onClick={() => addExerciseToDay(builderActiveDayId, ex)}
+                          title={`הוסף ליום ${DAYS_OF_WEEK.find((d) => d.id === builderActiveDayId)?.label ?? ""}`}
+                          className="shrink-0 w-7 h-7 rounded-full bg-teal-500/15 text-teal-400 hover:bg-teal-500 hover:text-stone-950 flex items-center justify-center transition-colors"
+                        >
+                          <Plus size={14} />
+                        </button>
                       </div>
                     );
                   })}
@@ -1322,23 +1192,42 @@ export default function LegacyAdminApp() {
                     const currentWeekBlocks = builderPlan[builderSelectedWeek] || getInitialDays();
                     const currentDayItems = currentWeekBlocks[day.id] || [];
                     const hasItems = currentDayItems.length > 0;
+                    const isOpen = openBuilderDayIds.has(day.id);
+                    const isActiveDay = builderActiveDayId === day.id;
 
                     return (
                       <div
                         key={day.id}
                         onDragOver={handleDragOver}
                         onDrop={(e) => handleDrop(e, day.id)}
-                        className={`border-2 border-dashed rounded-[1.375rem] p-4.5 transition-colors flex flex-col ${hasItems ? "border-teal-500/30 bg-teal-500/[0.04]" : "border-stone-800 bg-[#161311]"}`}
+                        className={`border-2 border-dashed rounded-[1.375rem] p-4.5 transition-colors flex flex-col ${hasItems ? "border-teal-500/30 bg-teal-500/[0.04]" : "border-stone-800 bg-[#161311]"} ${
+                          isActiveDay ? "ring-1 ring-teal-500/40" : ""
+                        }`}
                       >
-                        <h4 className="font-black mb-3.5 flex items-center gap-3">
-                          <div className={`px-4 py-1.5 rounded-[10px] flex items-center justify-center font-extrabold text-[13px] border ${hasItems ? "bg-teal-500 text-stone-950 border-teal-400" : "bg-stone-950 text-stone-300 border-stone-800"}`}>
-                            יום {day.label}
-                          </div>
-                          {!hasItems && <span className="text-xs font-semibold text-stone-500">גרור תרגילים לכאן</span>}
-                        </h4>
+                        <div className="flex items-center gap-2">
+                          <button type="button" onClick={() => toggleBuilderDayOpen(day.id)} className="flex-1 flex items-center gap-3 text-start">
+                            {isOpen ? <ChevronUp size={16} className="text-stone-500 shrink-0" /> : <ChevronDown size={16} className="text-stone-500 shrink-0" />}
+                            <div className={`px-4 py-1.5 rounded-[10px] flex items-center justify-center font-extrabold text-[13px] border ${hasItems ? "bg-teal-500 text-stone-950 border-teal-400" : "bg-stone-950 text-stone-300 border-stone-800"}`}>
+                              יום {day.label}
+                            </div>
+                            {hasItems ? (
+                              <span className="text-xs font-bold text-stone-500">{currentDayItems.length} תרגילים</span>
+                            ) : (
+                              <span className="text-xs font-semibold text-stone-500">גרור תרגילים לכאן</span>
+                            )}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => duplicateBuilderDay(day.id)}
+                            title="שכפל יום לתוך יום ריק אחר"
+                            className="shrink-0 p-2 text-stone-500 hover:text-teal-400 hover:bg-teal-500/10 rounded-xl transition-colors"
+                          >
+                            <Copy size={15} />
+                          </button>
+                        </div>
 
-                        {hasItems && (
-                          <div className="space-y-2">
+                        {isOpen && hasItems && (
+                          <div className="space-y-2 mt-3.5">
                             {currentDayItems.map((ex: any) => (
                               <div key={ex.temp_id} className="bg-[#161311] p-2.5 rounded-2xl border border-stone-800 flex flex-wrap items-center gap-2.5">
                                 <h5 className="font-extrabold text-white text-[13px] flex-1 min-w-[120px] line-clamp-1">{getExerciseName(ex, lang)}</h5>
@@ -1430,691 +1319,7 @@ export default function LegacyAdminApp() {
         {adminTab === "program_library" && <ProgramLibraryTab packages={packages} exercises={exercises} patients={patients} onRefresh={fetchAdminData} />}
 
         {adminTab === "exercises" && (
-          <div className="max-w-6xl mx-auto animate-in fade-in">
-            <header className="mb-10 hidden md:block">
-              <h1 className="text-3xl md:text-4xl font-black text-white tracking-tight">ספריית התרגילים</h1>
-              <p className="text-[13px] text-stone-500 mt-1.5">ניהול מאגר התרגילים המרכזי — משמש את בונה הפרוטוקולים ואת בונה ה-DIY של המטופלים.</p>
-            </header>
-            <div className="bg-[#1c1c1e] rounded-[1.75rem] border border-stone-800 p-8 md:p-10 mb-12">
-              <h2 className="text-lg font-extrabold text-white mb-8 border-b-2 border-teal-500 pb-3 inline-block">הוספת תרגיל חדש</h2>
-              <form onSubmit={handleExerciseSubmit} className="flex flex-col gap-6">
-                <div className="flex flex-col md:flex-row gap-6">
-                  <div className="flex-1">
-                    <label className="block text-[10px] font-extrabold text-stone-500 mb-2 uppercase tracking-wider">שם תרגיל (עברית, אופציונלי)</label>
-                    <input
-                      type="text"
-                      value={exNameHe}
-                      onChange={(e) => setExNameHe(e.target.value)}
-                      placeholder="לדוגמה: פשיטת ברך במכונה"
-                      className="w-full border-b-2 border-stone-800 p-2 bg-transparent text-white placeholder:text-stone-600 focus:border-teal-500 focus:ring-1 focus:ring-teal-500/30 outline-none"
-                    />
-                  </div>
-                  <div className="flex-1">
-                    <label className="block text-[10px] font-extrabold text-stone-500 mb-2 uppercase tracking-wider">שם תרגיל (אנגלית, אופציונלי)</label>
-                    <input
-                      type="text"
-                      value={exNameEn}
-                      onChange={(e) => setExNameEn(e.target.value)}
-                      placeholder="e.g. Leg Extension"
-                      className="w-full border-b-2 border-stone-800 p-2 bg-transparent text-white placeholder:text-stone-600 focus:border-teal-500 focus:ring-1 focus:ring-teal-500/30 outline-none text-left"
-                      dir="ltr"
-                    />
-                  </div>
-                  <div className="flex-1">
-                    <label className="block text-[10px] font-extrabold text-stone-500 mb-2 uppercase tracking-wider">שם מוצג כברירת מחדל</label>
-                    <select
-                      value={exNameDisplayPreference}
-                      onChange={(e) => setExNameDisplayPreference(e.target.value as "en" | "he" | "both")}
-                      className="w-full border-b-2 border-stone-800 p-2 bg-transparent text-white font-bold focus:border-teal-500 focus:ring-1 focus:ring-teal-500/30 outline-none"
-                    >
-                      {NAME_DISPLAY_PREFERENCES.map((p) => (
-                        <option key={p.id} value={p.id} className="bg-[#1c1c1e]">
-                          {p.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-                <div className="flex flex-col md:flex-row gap-6">
-                  <div className="flex-[2]">
-                    <label className="block text-[10px] font-extrabold text-stone-500 mb-2 uppercase tracking-wider">קטגוריות (ניתן לבחור כמה)</label>
-                    <div className="flex flex-wrap gap-2">
-                      {ADMIN_TAGS.map((tag) => {
-                        const isSelected = exCategories.includes(tag.label);
-                        return (
-                          <button
-                            key={tag.id}
-                            type="button"
-                            onClick={() => toggleExerciseCategory(tag.label)}
-                            className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all border ${
-                              isSelected ? "bg-teal-500 text-stone-950 border-teal-400 shadow-sm" : "bg-stone-950 text-stone-300 border-stone-800 hover:bg-stone-900"
-                            }`}
-                          >
-                            {tag.label}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                  <div className="flex-1">
-                    <label className="block text-[10px] font-extrabold text-stone-500 mb-2 uppercase tracking-wider">רמת קושי</label>
-                    <select
-                      value={exDifficultyLevel}
-                      onChange={(e) => setExDifficultyLevel(e.target.value)}
-                      className="w-full border-b-2 border-stone-800 p-2 bg-transparent text-white font-bold focus:border-teal-500 focus:ring-1 focus:ring-teal-500/30 outline-none"
-                    >
-                      <option value="" className="bg-[#1c1c1e]">
-                        -- לא צוין --
-                      </option>
-                      {DIFFICULTY_LEVELS.map((d) => (
-                        <option key={d.id} value={d.id} className="bg-[#1c1c1e]">
-                          {d.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-[10px] font-extrabold text-stone-500 mb-2 uppercase tracking-wider flex items-center gap-1.5">
-                    <Dumbbell size={12} /> ציוד נדרש (ניתן לבחור כמה)
-                  </label>
-                  <div className="flex flex-wrap gap-2">
-                    {EQUIPMENT_LIST.map((eq) => {
-                      const isSelected = exEquipment.includes(eq.id);
-                      return (
-                        <button
-                          key={eq.id}
-                          type="button"
-                          onClick={() => toggleExerciseEquipment(eq.id)}
-                          className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all border ${
-                            isSelected ? "bg-teal-500 text-stone-950 border-teal-400 shadow-sm" : "bg-stone-950 text-stone-300 border-stone-800 hover:bg-stone-900"
-                          }`}
-                        >
-                          {eq.label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-[10px] font-extrabold text-stone-500 mb-2 uppercase tracking-wider">קישור לגיף או תמונה (URL)</label>
-                  <input
-                    type="url"
-                    value={exGifUrl}
-                    onChange={(e) => setExGifUrl(e.target.value)}
-                    placeholder="https://... (אופציונלי)"
-                    className="w-full border-b-2 border-stone-800 p-2 bg-transparent text-white placeholder:text-stone-600 focus:border-teal-500 focus:ring-1 focus:ring-teal-500/30 outline-none text-left"
-                    dir="ltr"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-extrabold text-stone-500 mb-2 uppercase tracking-wider">קישור מדיה - זווית נוספת (אופציונלי)</label>
-                  <input
-                    type="url"
-                    value={exSecondaryGifUrl}
-                    onChange={(e) => setExSecondaryGifUrl(e.target.value)}
-                    placeholder="https://..."
-                    className="w-full border-b-2 border-stone-800 p-2 bg-transparent text-white placeholder:text-stone-600 focus:border-teal-500 focus:ring-1 focus:ring-teal-500/30 outline-none text-left"
-                    dir="ltr"
-                  />
-                </div>
-
-                <div className="bg-teal-500/[0.06] p-5 rounded-2xl border border-teal-500/20 flex flex-col md:flex-row gap-6">
-                  <div className="flex-1 border-b md:border-b-0 md:border-l border-teal-500/20 pb-4 md:pb-0 md:pl-6">
-                    <label className="block text-sm font-bold text-teal-400 mb-2 flex items-center gap-2">
-                      <Target size={18} /> שריר מטרה (אגוניסט)
-                    </label>
-                    <select value={exPrimaryMuscle} onChange={(e) => setExPrimaryMuscle(e.target.value)} className="w-full border-b-2 border-teal-500/30 p-2 bg-transparent focus:border-teal-500 focus:ring-1 focus:ring-teal-500/30 outline-none text-white font-bold" required>
-                      <option value="" className="bg-[#1c1c1e]">
-                        -- בחר שריר מרכזי --
-                      </option>
-                      {MUSCLE_REGIONS.map((region) => (
-                        <optgroup key={region.id} label={region.label} className="bg-[#1c1c1e]">
-                          {AVAILABLE_MUSCLES.filter((m) => region.muscleIds.includes(m.id)).map((m) => (
-                            <option key={m.id} value={m.id} className="bg-[#1c1c1e]">
-                              {m.label}
-                            </option>
-                          ))}
-                        </optgroup>
-                      ))}
-                    </select>
-                    <p className="text-[10px] text-teal-500/80 mt-2 font-medium">* לפיו המערכת תחפש תרגילים חלופיים.</p>
-                  </div>
-                  <div className="flex-[2]">
-                    <label className="block text-sm font-bold text-teal-400 mb-2">שרירים מייצבים (סינרגיסטים)</label>
-                    <div className="flex flex-col gap-2.5">
-                      {MUSCLE_REGIONS.map((region) => {
-                        const muscles = AVAILABLE_MUSCLES.filter((m) => region.muscleIds.includes(m.id) && m.id !== exPrimaryMuscle);
-                        if (muscles.length === 0) return null;
-                        return (
-                          <div key={region.id}>
-                            <div className="text-[10px] font-bold text-stone-500 mb-1">{region.label}</div>
-                            <div className="flex flex-wrap gap-2">
-                              {muscles.map((m) => {
-                                const isSelected = exSecondaryMuscles.includes(m.id);
-                                return (
-                                  <button
-                                    key={m.id}
-                                    type="button"
-                                    onClick={() => toggleSecondaryMuscle(m.id)}
-                                    className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all border ${
-                                      isSelected ? "bg-teal-500 text-stone-950 border-teal-400 shadow-sm" : "bg-stone-950 text-stone-300 border-stone-800 hover:bg-stone-900"
-                                    }`}
-                                  >
-                                    {m.label}
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-bold text-teal-400 mb-2 flex items-center gap-2">
-                    <Target size={18} /> מפת שרירים (Heatmap)
-                  </label>
-                  <MusclePicker
-                    primeMovers={exPrimeMovers}
-                    synergists={exSynergists}
-                    onChange={({ primeMovers, synergists }) => {
-                      setExPrimeMovers(primeMovers);
-                      setExSynergists(synergists);
-                    }}
-                  />
-                </div>
-
-                <div className="bg-indigo-500/[0.06] p-5 rounded-2xl border border-indigo-500/20 flex flex-col md:flex-row gap-6">
-                  <div className="flex-1">
-                    <label className="block text-sm font-bold text-indigo-400 mb-2 flex items-center gap-2">
-                      <TrendingDown size={18} /> גרסה קלה יותר (Progression / קל)
-                    </label>
-                    <select
-                      value={exEasierVersionId}
-                      onChange={(e) => setExEasierVersionId(e.target.value)}
-                      className="w-full border-b-2 border-indigo-500/30 p-2 bg-transparent focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30 outline-none text-white font-bold"
-                    >
-                      <option value="" className="bg-[#1c1c1e]">
-                        -- ללא --
-                      </option>
-                      {exercises.map((ex) => (
-                        <option key={ex.id} value={ex.id} className="bg-[#1c1c1e]">
-                          {getExerciseName(ex, lang)}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="flex-1">
-                    <label className="block text-sm font-bold text-indigo-400 mb-2 flex items-center gap-2">
-                      <TrendingUp size={18} /> גרסה קשה יותר (Progression / קשה)
-                    </label>
-                    <select
-                      value={exHarderVersionId}
-                      onChange={(e) => setExHarderVersionId(e.target.value)}
-                      className="w-full border-b-2 border-indigo-500/30 p-2 bg-transparent focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/30 outline-none text-white font-bold"
-                    >
-                      <option value="" className="bg-[#1c1c1e]">
-                        -- ללא --
-                      </option>
-                      {exercises.map((ex) => (
-                        <option key={ex.id} value={ex.id} className="bg-[#1c1c1e]">
-                          {getExerciseName(ex, lang)}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                <div className="bg-stone-950 p-5 rounded-2xl border border-stone-800">
-                  <label className="block text-sm font-bold text-stone-400 mb-3 flex items-center gap-2">
-                    <Lock size={16} /> הערות פנימיות לצוות (לאדמין בלבד, לא מוצג למטופלים)
-                  </label>
-                  <textarea
-                    value={exInternalNotes}
-                    onChange={(e) => setExInternalNotes(e.target.value)}
-                    placeholder="הערות קליניות, שיקולים פנימיים וכו'"
-                    className="w-full min-h-[120px] border-b-2 border-stone-800 p-2 bg-transparent text-white placeholder:text-stone-600 focus:border-teal-500 focus:ring-1 focus:ring-teal-500/30 outline-none"
-                    rows={4}
-                  />
-                </div>
-
-                <div className="bg-emerald-500/[0.06] p-5 rounded-2xl border border-emerald-500/20">
-                  <label className="block text-sm font-bold text-emerald-400 mb-2 flex items-center gap-2">
-                    <Check size={18} /> דגשים קליניים (Clinical Cues, אופציונלי)
-                  </label>
-                  <textarea
-                    value={exPatientCues}
-                    onChange={(e) => setExPatientCues(e.target.value)}
-                    placeholder={"שורה אחת לכל דגש, לדוגמה:\nשמור על גב ישר\nנשוף בזמן המאמץ"}
-                    className="w-full min-h-[120px] border-b-2 border-emerald-500/30 p-2 bg-transparent text-white placeholder:text-stone-600 focus:border-emerald-400 outline-none"
-                    rows={4}
-                  />
-                  <p className="text-[10px] text-emerald-500/80 mt-2 font-medium">* כל שורה תוצג למטופל עם ✅ בתחילתה.</p>
-                </div>
-
-                <div className="bg-red-500/[0.06] p-5 rounded-2xl border border-red-500/20">
-                  <label className="block text-sm font-bold text-red-400 mb-2 flex items-center gap-2">
-                    <AlertTriangle size={18} /> טעויות נפוצות (אופציונלי)
-                  </label>
-                  <textarea
-                    value={exMistake}
-                    onChange={(e) => setExMistake(e.target.value)}
-                    placeholder={"שורה אחת לכל טעות, לדוגמה:\nאל תיתן לברך לקרוס פנימה\nאל תנעל מרפקים בקצה התנועה"}
-                    className="w-full min-h-[120px] border-b-2 border-red-500/30 p-2 bg-transparent text-white placeholder:text-stone-600 focus:border-red-400 outline-none"
-                    rows={4}
-                  />
-                  <p className="text-[10px] text-red-500/80 mt-2 font-medium">* כל שורה תוצג למטופל עם ❌ בתחילתה.</p>
-                </div>
-                <div>
-                  <label className="block text-[10px] font-extrabold text-stone-500 mb-2 uppercase tracking-wider">תיאור / הנחיות ביצוע (אופציונלי)</label>
-                  <textarea
-                    value={exDesc}
-                    onChange={(e) => setExDesc(e.target.value)}
-                    className="w-full min-h-[120px] border-b-2 border-stone-800 p-2 bg-transparent text-white focus:border-teal-500 focus:ring-1 focus:ring-teal-500/30 outline-none"
-                    rows={4}
-                  />
-                </div>
-                <button type="submit" className="bg-teal-500 text-stone-950 px-10 py-3.5 rounded-2xl font-black w-full md:w-fit self-end hover:bg-teal-400 transition-colors">
-                  שמור במאגר
-                </button>
-              </form>
-            </div>
-
-            <div className="mb-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-t border-stone-800 pt-8 mt-4">
-              <h2 className="text-xl font-black text-white flex items-center gap-2">
-                מאגר תרגילים <span className="text-teal-400 text-base font-extrabold">({filteredLibraryExercises.length})</span>
-              </h2>
-              <div className="flex flex-wrap gap-1.5 bg-[#1c1c1e] p-1.5 rounded-2xl border border-stone-800">
-                <button
-                  onClick={() => setLibExerciseTagFilter("all")}
-                  className={`px-4 py-2 text-xs font-extrabold rounded-xl transition-colors ${libExerciseTagFilter === "all" ? "bg-white text-stone-950" : "text-stone-400 hover:bg-stone-800"}`}
-                >
-                  הכל
-                </button>
-                {ADMIN_TAGS.map((tag) => (
-                  <button
-                    key={tag.id}
-                    onClick={() => setLibExerciseTagFilter(tag.id)}
-                    className={`px-4 py-2 text-xs font-extrabold rounded-xl transition-colors flex items-center gap-1 ${
-                      libExerciseTagFilter === tag.id ? "bg-teal-500 text-stone-950" : "text-stone-400 hover:bg-stone-800"
-                    }`}
-                  >
-                    <Lock size={11} /> {tag.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredLibraryExercises.length === 0 && (
-                <div className="col-span-full text-center p-12 bg-[#1c1c1e]/50 rounded-3xl border border-stone-800">
-                  <ImageIcon size={40} className="mx-auto text-stone-600 mb-4" />
-                  <h3 className="text-xl font-bold text-white">אין תרגילים העונים לסינון</h3>
-                  <p className="text-stone-500">נסה לבחור תגית אחרת או להוסיף תרגיל חדש.</p>
-                </div>
-              )}
-              {filteredLibraryExercises.map((ex) => {
-                const style = ADMIN_CATEGORY_STYLES[ex.categories?.[0]] ?? DEFAULT_ADMIN_CATEGORY_STYLE;
-                return (
-                  <div key={ex.id} className="bg-[#1c1c1e] rounded-3xl border border-stone-800 overflow-hidden flex flex-col group relative">
-                    <div className="h-[150px] relative overflow-hidden" style={{ background: `linear-gradient(150deg, ${style.glow}, #1c1c1e 75%)` }}>
-                      <div className="absolute inset-0" style={{ background: `radial-gradient(circle at 70% 20%, ${style.radial}, transparent 55%)` }}></div>
-                      {ex.gif_url ? (
-                        <div className="absolute inset-0 flex items-center justify-center p-6">
-                          {ex.gif_url.toLowerCase().includes(".mp4") || ex.gif_url.toLowerCase().includes(".webm") ? (
-                            <video src={ex.gif_url} autoPlay muted playsInline loop className="max-w-full max-h-full rounded-xl bg-white/95 object-contain p-1.5 shadow-lg group-hover:scale-105 transition-transform duration-500" />
-                          ) : (
-                            <img src={ex.gif_url} alt={getExerciseName(ex, lang)} className="max-w-full max-h-full rounded-xl bg-white/95 object-contain p-1.5 shadow-lg group-hover:scale-105 transition-transform duration-500" />
-                          )}
-                        </div>
-                      ) : (
-                        <div className="absolute inset-0 flex items-center justify-center text-stone-500 text-xs font-bold">אין מדיה</div>
-                      )}
-                      <div className="absolute top-3.5 right-3.5 bg-white/95 text-stone-950 text-[11px] font-extrabold px-3 py-1.5 rounded-full">{(ex.categories || []).join(" / ")}</div>
-                    </div>
-                    <div className="p-5 flex-1 flex flex-col">
-                      {editingExId === ex.id ? (
-                        <div className="flex flex-col gap-3">
-                          <input
-                            type="text"
-                            value={editExForm.name_he}
-                            onChange={(e) => setEditExForm({ ...editExForm, name_he: e.target.value })}
-                            className="border-b border-stone-700 bg-transparent text-white font-bold outline-none"
-                            placeholder="שם תרגיל (עברית)"
-                          />
-                          <input
-                            type="text"
-                            value={editExForm.name_en}
-                            onChange={(e) => setEditExForm({ ...editExForm, name_en: e.target.value })}
-                            className="border-b border-stone-700 bg-transparent text-white font-bold outline-none text-left"
-                            dir="ltr"
-                            placeholder="Exercise name (English, optional)"
-                          />
-
-                          <div>
-                            <label className="text-[9px] font-extrabold text-stone-500 mb-1 uppercase tracking-wider block">שם מוצג כברירת מחדל</label>
-                            <select
-                              value={editExForm.name_display_preference}
-                              onChange={(e) => setEditExForm({ ...editExForm, name_display_preference: e.target.value as "en" | "he" | "both" })}
-                              className="w-full border-b border-stone-700 bg-transparent text-white p-1 text-xs outline-none"
-                            >
-                              {NAME_DISPLAY_PREFERENCES.map((p) => (
-                                <option key={p.id} value={p.id} className="bg-[#1c1c1e]">
-                                  {p.label}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-
-                          <div>
-                            <label className="text-[9px] font-extrabold text-stone-500 mb-1 uppercase tracking-wider block">קטגוריות</label>
-                            <div className="flex flex-wrap gap-1">
-                              {ADMIN_TAGS.map((tag) => {
-                                const isSelected = editExForm.categories.includes(tag.label);
-                                return (
-                                  <button
-                                    key={tag.id}
-                                    type="button"
-                                    onClick={() => toggleExerciseCategory(tag.label, true)}
-                                    className={`text-[10px] px-2 py-1 rounded-md border border-stone-700 ${isSelected ? "bg-teal-500 text-stone-950 border-teal-400" : "bg-stone-950 text-stone-400"}`}
-                                  >
-                                    {tag.label}
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          </div>
-
-                          <div>
-                            <label className="text-[9px] font-extrabold text-stone-500 mb-1 uppercase tracking-wider block">רמת קושי</label>
-                            <select
-                              value={editExForm.difficulty_level}
-                              onChange={(e) => setEditExForm({ ...editExForm, difficulty_level: e.target.value })}
-                              className="w-full border-b border-stone-700 bg-transparent text-white p-1 text-xs outline-none"
-                            >
-                              <option value="" className="bg-[#1c1c1e]">
-                                -- לא צוין --
-                              </option>
-                              {DIFFICULTY_LEVELS.map((d) => (
-                                <option key={d.id} value={d.id} className="bg-[#1c1c1e]">
-                                  {d.label}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-
-                          <div>
-                            <label className="text-[9px] font-extrabold text-stone-500 mb-1 uppercase tracking-wider block">ציוד נדרש</label>
-                            <div className="flex flex-wrap gap-1">
-                              {EQUIPMENT_LIST.map((eq) => {
-                                const isSelected = editExForm.equipment.includes(eq.id);
-                                return (
-                                  <button
-                                    key={eq.id}
-                                    type="button"
-                                    onClick={() => toggleExerciseEquipment(eq.id, true)}
-                                    className={`text-[10px] px-2 py-1 rounded-md border border-stone-700 ${isSelected ? "bg-teal-500 text-stone-950 border-teal-400" : "bg-stone-950 text-stone-400"}`}
-                                  >
-                                    {eq.label}
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          </div>
-
-                          <input
-                            type="url"
-                            value={editExForm.gif_url}
-                            onChange={(e) => setEditExForm({ ...editExForm, gif_url: e.target.value })}
-                            className="border-b border-stone-700 bg-transparent text-white text-sm outline-none text-left"
-                            dir="ltr"
-                            placeholder="קישור לוידאו (אופציונלי)"
-                          />
-                          <div>
-                            <label className="block text-[9px] font-extrabold text-stone-500 mb-1 uppercase tracking-wider">קישור מדיה - זווית נוספת (אופציונלי)</label>
-                            <input
-                              type="url"
-                              value={editExForm.secondary_gif_url}
-                              onChange={(e) => setEditExForm({ ...editExForm, secondary_gif_url: e.target.value })}
-                              className="w-full border-b border-stone-700 bg-transparent text-white text-sm outline-none text-left"
-                              dir="ltr"
-                              placeholder="https://..."
-                            />
-                          </div>
-
-                          <div className="mt-2">
-                            <label className="text-xs font-bold text-stone-400">שריר מרכזי</label>
-                            <select
-                              value={editExForm.target_muscle}
-                              onChange={(e) => setEditExForm({ ...editExForm, target_muscle: e.target.value })}
-                              className="w-full border-b border-stone-700 bg-transparent text-white p-1 text-xs outline-none"
-                            >
-                              <option value="" className="bg-[#1c1c1e]">
-                                -- שריר מרכזי --
-                              </option>
-                              {MUSCLE_REGIONS.map((region) => (
-                                <optgroup key={region.id} label={region.label} className="bg-[#1c1c1e]">
-                                  {AVAILABLE_MUSCLES.filter((m) => region.muscleIds.includes(m.id)).map((m) => (
-                                    <option key={m.id} value={m.id} className="bg-[#1c1c1e]">
-                                      {m.label}
-                                    </option>
-                                  ))}
-                                </optgroup>
-                              ))}
-                            </select>
-                          </div>
-
-                          <div className="flex flex-col gap-2 mt-1">
-                            {MUSCLE_REGIONS.map((region) => {
-                              const muscles = AVAILABLE_MUSCLES.filter((m) => region.muscleIds.includes(m.id) && m.id !== editExForm.target_muscle);
-                              if (muscles.length === 0) return null;
-                              return (
-                                <div key={region.id}>
-                                  <div className="text-[9px] font-bold text-stone-500 mb-1">{region.label}</div>
-                                  <div className="flex flex-wrap gap-1">
-                                    {muscles.map((m) => {
-                                      const isSelected = editExForm.secondary_muscles.includes(m.id);
-                                      return (
-                                        <button key={m.id} onClick={() => toggleSecondaryMuscle(m.id, true)} className={`text-[10px] px-2 py-1 rounded-md border border-stone-700 ${isSelected ? "bg-teal-500 text-stone-950 border-teal-400" : "bg-stone-950 text-stone-400"}`}>
-                                          {m.label}
-                                        </button>
-                                      );
-                                    })}
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-
-                          <div className="mt-2 pt-2 border-t border-stone-800">
-                            <label className="text-[10px] font-bold text-teal-400 mb-1 flex items-center gap-1">
-                              <Target size={10} /> מפת שרירים (Heatmap)
-                            </label>
-                            <MusclePicker
-                              primeMovers={editExForm.prime_movers}
-                              synergists={editExForm.synergists}
-                              onChange={({ primeMovers, synergists }) => setEditExForm((prev) => ({ ...prev, prime_movers: primeMovers, synergists }))}
-                            />
-                          </div>
-
-                          <div className="mt-2 pt-2 border-t border-stone-800 flex flex-col gap-2">
-                            <div>
-                              <label className="text-[10px] font-bold text-indigo-400 mb-1 flex items-center gap-1">
-                                <TrendingDown size={10} /> גרסה קלה יותר (Progression / קל)
-                              </label>
-                              <select
-                                value={editExForm.easier_version_id}
-                                onChange={(e) => setEditExForm({ ...editExForm, easier_version_id: e.target.value })}
-                                className="w-full border-b border-indigo-500/30 bg-transparent text-white p-1 text-xs outline-none"
-                              >
-                                <option value="" className="bg-[#1c1c1e]">
-                                  -- ללא --
-                                </option>
-                                {exercises
-                                  .filter((e) => e.id !== ex.id)
-                                  .map((e) => (
-                                    <option key={e.id} value={e.id} className="bg-[#1c1c1e]">
-                                      {getExerciseName(e, lang)}
-                                    </option>
-                                  ))}
-                              </select>
-                            </div>
-                            <div>
-                              <label className="text-[10px] font-bold text-indigo-400 mb-1 flex items-center gap-1">
-                                <TrendingUp size={10} /> גרסה קשה יותר (Progression / קשה)
-                              </label>
-                              <select
-                                value={editExForm.harder_version_id}
-                                onChange={(e) => setEditExForm({ ...editExForm, harder_version_id: e.target.value })}
-                                className="w-full border-b border-indigo-500/30 bg-transparent text-white p-1 text-xs outline-none"
-                              >
-                                <option value="" className="bg-[#1c1c1e]">
-                                  -- ללא --
-                                </option>
-                                {exercises
-                                  .filter((e) => e.id !== ex.id)
-                                  .map((e) => (
-                                    <option key={e.id} value={e.id} className="bg-[#1c1c1e]">
-                                      {getExerciseName(e, lang)}
-                                    </option>
-                                  ))}
-                              </select>
-                            </div>
-                          </div>
-                          <div>
-                            <label className="text-[9px] font-extrabold text-emerald-500 mb-1 uppercase tracking-wider block">דגשים קליניים (שורה לכל דגש, ✅)</label>
-                            <textarea
-                              value={editExForm.patient_cues}
-                              onChange={(e) => setEditExForm({ ...editExForm, patient_cues: e.target.value })}
-                              className="w-full min-h-[120px] border border-emerald-700/40 bg-transparent text-white rounded-lg p-2 text-xs outline-none"
-                              placeholder={"שמור על גב ישר\nנשוף בזמן המאמץ"}
-                              rows={4}
-                            />
-                          </div>
-                          <div>
-                            <label className="text-[9px] font-extrabold text-red-500 mb-1 uppercase tracking-wider block">טעויות נפוצות (שורה לכל טעות, ❌)</label>
-                            <textarea
-                              value={editExForm.common_mistake}
-                              onChange={(e) => setEditExForm({ ...editExForm, common_mistake: e.target.value })}
-                              className="w-full min-h-[120px] border border-red-500/30 bg-transparent text-white rounded-lg p-2 text-xs outline-none"
-                              placeholder={"אל תיתן לברך לקרוס פנימה"}
-                              rows={4}
-                            />
-                          </div>
-                          <textarea
-                            value={editExForm.description}
-                            onChange={(e) => setEditExForm({ ...editExForm, description: e.target.value })}
-                            className="w-full min-h-[120px] border border-stone-700 bg-transparent text-white rounded-lg p-2 text-xs mt-2 outline-none"
-                            placeholder="תיאור / הנחיות ביצוע"
-                            rows={4}
-                          />
-                          <div className="mt-2 pt-2 border-t border-stone-800">
-                            <label className="text-[10px] font-bold text-stone-500 mb-1 flex items-center gap-1">
-                              <Lock size={10} /> הערות פנימיות (לאדמין בלבד)
-                            </label>
-                            <textarea
-                              value={editExForm.internal_notes}
-                              onChange={(e) => setEditExForm({ ...editExForm, internal_notes: e.target.value })}
-                              className="w-full min-h-[120px] border border-stone-700 bg-transparent text-white rounded-lg p-2 text-xs outline-none"
-                              placeholder="הערות קליניות, שיקולים פנימיים וכו'"
-                              rows={4}
-                            />
-                          </div>
-                          <div className="flex gap-2 mt-2">
-                            <button onClick={() => handleSaveEditEx(ex.id)} className="flex-1 bg-teal-500 text-stone-950 py-2 rounded-xl text-xs font-bold">
-                              שמור
-                            </button>
-                            <button onClick={() => setEditingExId(null)} className="flex-1 bg-stone-800 text-stone-300 py-2 rounded-xl text-xs font-bold">
-                              ביטול
-                            </button>
-                          </div>
-                        </div>
-                      ) : (
-                        <>
-                          <h3 className="text-[15px] font-extrabold text-white mb-2">{getExerciseName(ex, lang)}</h3>
-
-                          {ex.admin_tags && (
-                            <div className="flex flex-wrap gap-1 mb-2.5">
-                              {ex.admin_tags.split(",").filter(Boolean).map((tagId: string) => {
-                                const tagLabel = ADMIN_TAGS.find((t) => t.id === tagId)?.label || tagId;
-                                return (
-                                  <span key={tagId} className="bg-stone-950 text-stone-400 px-2.5 py-1 rounded-full text-[9px] font-extrabold border border-stone-800 flex items-center gap-1">
-                                    <Lock size={8} />
-                                    {tagLabel}
-                                  </span>
-                                );
-                              })}
-                            </div>
-                          )}
-
-                          {ex.difficulty_level && (
-                            <p className="text-[11px] font-bold text-amber-400 mb-1.5 flex items-center gap-1.5">
-                              {DIFFICULTY_LEVELS.find((d) => d.id === ex.difficulty_level)?.label || ex.difficulty_level}
-                            </p>
-                          )}
-                          {ex.target_muscle && (
-                            <p className="text-[11px] font-bold text-teal-400 mb-1.5 flex items-center gap-1.5">
-                              <Target size={11} /> מרכזי: {AVAILABLE_MUSCLES.find((m) => m.id === ex.target_muscle)?.label || ex.target_muscle}
-                            </p>
-                          )}
-                          {ex.equipment && ex.equipment.length > 0 && (
-                            <div className="flex flex-wrap gap-1 mb-1.5">
-                              {ex.equipment.map((eqId: string) => (
-                                <span key={eqId} className="bg-stone-950 text-stone-300 px-2 py-0.5 rounded-md text-[10px] font-bold border border-stone-800 flex items-center gap-1">
-                                  <Dumbbell size={9} />
-                                  {EQUIPMENT_LIST.find((e) => e.id === eqId)?.label || eqId}
-                                </span>
-                              ))}
-                            </div>
-                          )}
-                          {formatCueLines(ex.patient_cues, "✅").map((line, i) => (
-                            <p key={`cue-${i}`} className="text-[11px] font-bold text-emerald-400 mb-1 leading-relaxed">
-                              {line.emoji} {line.text}
-                            </p>
-                          ))}
-                          {formatCueLines(ex.common_mistake, "❌").map((line, i) => (
-                            <p key={`mistake-${i}`} className="text-[11px] font-bold text-red-400 mb-1 leading-relaxed">
-                              {line.emoji} {line.text}
-                            </p>
-                          ))}
-                          {ex.easier_version_id && (
-                            <p className="text-[11px] font-bold text-indigo-400 mb-1.5 flex items-center gap-1.5">
-                              <TrendingDown size={11} /> קל יותר: {(() => {
-                                const linked = exercises.find((e) => e.id === ex.easier_version_id);
-                                return linked ? getExerciseName(linked, lang) : "—";
-                              })()}
-                            </p>
-                          )}
-                          {ex.harder_version_id && (
-                            <p className="text-[11px] font-bold text-indigo-400 mb-1.5 flex items-center gap-1.5">
-                              <TrendingUp size={11} /> קשה יותר: {(() => {
-                                const linked = exercises.find((e) => e.id === ex.harder_version_id);
-                                return linked ? getExerciseName(linked, lang) : "—";
-                              })()}
-                            </p>
-                          )}
-                          <p className="text-[13px] text-stone-500 font-medium leading-relaxed mt-1 flex-1">{ex.description}</p>
-                          <div className="flex gap-2 mt-3 pt-3 border-t border-stone-800">
-                            <button onClick={() => handleStartEditEx(ex)} className="flex-1 flex items-center justify-center gap-1 text-stone-400 hover:text-teal-400 hover:bg-teal-500/10 py-2 rounded-lg transition-colors">
-                              <Edit3 size={16} />
-                              <span className="text-xs font-bold">ערוך</span>
-                            </button>
-                            <button onClick={() => handleDeleteEx(ex.id)} className="flex-1 flex items-center justify-center gap-1 text-stone-400 hover:text-red-400 hover:bg-red-500/10 py-2 rounded-lg transition-colors">
-                              <Trash2 size={16} />
-                              <span className="text-xs font-bold">מחק</span>
-                            </button>
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+          <ExerciseLibraryTab exercises={exercises} internalNotesByExerciseId={internalNotesByExerciseId} lang={lang} onRefresh={fetchAdminData} />
         )}
 
         {adminTab === "assign" && (

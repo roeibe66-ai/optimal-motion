@@ -16,7 +16,7 @@ import type { Exercise } from "@/app/types";
 import Modal from "@/app/components/ui/Modal";
 import ExerciseMuscleMap from "@/app/components/patient/ExerciseMuscleMap";
 import AnatomyHeatmap from "@/app/components/AnatomyHeatmap";
-import { formatCueLines, getExerciseName, type CueLine } from "@/app/utils/format";
+import { formatCueLines, getExerciseName, pickLangText, type CueLine } from "@/app/utils/format";
 import { EQUIPMENT_LIST } from "@/app/constants/catalog";
 import { useExerciseHistory } from "@/app/hooks/useExerciseHistory";
 
@@ -87,8 +87,11 @@ export default function ExerciseInfoModal({ exercise, historyData, onClose }: Ex
   // section ("הנחיות"/Instructions), rather than the two separately-colored
   // cards this used to be. The ✅/❌ prefix on each line (from formatCueLines)
   // is what signals positive vs. negative now, not card color.
-  const instructionLines = [...formatCueLines(exercise.patient_cues, "✅"), ...formatCueLines(exercise.common_mistake, "❌")];
-  const hasDescription = !!exercise.description && exercise.description.trim() !== "" && exercise.description.trim() !== ".";
+  const description = pickLangText(exercise.description, exercise.description_en, lang);
+  const patientCues = pickLangText(exercise.patient_cues, exercise.cues_en, lang);
+  const commonMistake = pickLangText(exercise.common_mistake, exercise.mistakes_en, lang);
+  const instructionLines = [...formatCueLines(patientCues, "✅"), ...formatCueLines(commonMistake, "❌")];
+  const hasDescription = !!description && description.trim() !== "" && description.trim() !== ".";
   const hasHistory = historyData.length > 0;
 
   // prime_movers/synergists (the new heatmap tagging) take priority when an
@@ -144,7 +147,7 @@ export default function ExerciseInfoModal({ exercise, historyData, onClose }: Ex
         <>
           {hasDescription && (
             <p className={`text-start text-stone-600 leading-relaxed text-lg font-medium pb-6 ${hasMoreAfterDescription ? "mb-6 border-b border-stone-100" : ""}`}>
-              {exercise.description}
+              {description}
             </p>
           )}
 

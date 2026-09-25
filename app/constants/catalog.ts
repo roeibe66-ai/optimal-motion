@@ -128,6 +128,7 @@ export const EQUIPMENT_LIST = [
   { id: "dumbbells", label: "משקולות" },
   { id: "bodyweight", label: "משקל גוף (ללא ציוד)" },
   { id: "ab_wheel", label: "Ab Wheel" },
+  { id: "resistance_band", label: "גומיית התנגדות" },
 ];
 
 export const DAYS_OF_WEEK = [

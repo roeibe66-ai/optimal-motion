@@ -29,6 +29,19 @@ export function getExerciseName(exercise: Pick<Exercise, "name_he" | "name_en" |
   return he || en;
 }
 
+// Same he/en-with-fallback resolution as getExerciseName, for the plainer
+// free-text fields (description, patient_cues, common_mistake) that don't
+// have their own per-exercise name_display_preference-style override — the
+// viewer's `lang` alone decides, falling back to whichever language
+// actually has content so an English-only viewer still sees a Hebrew-only
+// field rather than nothing.
+export function pickLangText(he: string | null | undefined, en: string | null | undefined, lang: Lang): string {
+  const heText = he?.trim() || "";
+  const enText = en?.trim() || "";
+  if (lang === "en" && enText) return enText;
+  return heText || enText;
+}
+
 export interface CueLine {
   emoji: "✅" | "❌";
   text: string;
