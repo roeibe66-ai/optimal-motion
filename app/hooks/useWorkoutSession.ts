@@ -5,14 +5,19 @@ import { supabase } from "@/app/lib/supabase";
 import { useAuth } from "@/app/context/AuthContext";
 import type { HapticType } from "@/app/hooks/useHaptics";
 import { getExerciseName } from "@/app/utils/format";
-import type { Exercise, PatientExercise, SessionPerformanceEntry, WorkoutLog } from "@/app/types";
+import type { Exercise, PatientExercise, SessionPerformanceEntry, WorkoutFormat, WorkoutLog } from "@/app/types";
 
 // A PatientExercise as it's actually consumed here: already joined with its
 // Exercise (that join happens in usePatientData, which filters out any
 // assignment whose exercise failed to resolve before this hook ever sees it).
 // program_name is joined client-side from patient_programs (see
 // usePatientData). Optional because the offline plan cache can predate it.
-export type HydratedPatientExercise = PatientExercise & { exercise: Exercise; program_name?: string };
+export type HydratedPatientExercise = PatientExercise & {
+  exercise: Exercise;
+  program_name?: string;
+  program_format?: WorkoutFormat; // "amrap" = run in the AMRAP player
+  program_time_cap_seconds?: number | null;
+};
 
 // Title for rows the patient saved themselves from the DIY builder — those
 // have no admin program (program_id is null).
@@ -21,6 +26,16 @@ export const SELF_BUILT_PROGRAM_NAME = "האימונים שלי";
 // The patient's plan is grouped by the named program the admin assigned
 // (not by exercise category): the program name is the workout's title.
 export const programNameOf = (pe: HydratedPatientExercise) => pe.program_name ?? SELF_BUILT_PROGRAM_NAME;
+
+// patient_exercises.week null = "every week" (a workout the patient pinned
+// to a weekday from Explore recurs in each week of their plan).
+export const isInWeek = (pe: { week: number | null }, week: number) => pe.week == null || pe.week === week;
+
+// The plan's real weeks (ignoring every-week rows); at least [1].
+export const planWeeksOf = (rows: { week: number | null }[]) => {
+  const weeks = Array.from(new Set(rows.map((r) => r.week).filter((w): w is number => w != null))).sort((a, b) => a - b);
+  return weeks.length > 0 ? weeks : [1];
+};
 
 // One entry in the active session's block grid. Plan-based sets are
 // HydratedPatientExercise as-is; a DIY session synthesizes objects with this
@@ -57,6 +72,10 @@ interface UseWorkoutSessionParams {
   selectedDayFilter: string;
   isDiyMode: boolean;
   diySelectedExercises: Exercise[];
+  // A ready-made workout from Explore, run through the DIY path but with the
+  // admin's own blocks/sets/reps instead of the DIY builder's 3x10 default.
+  // Never offered for promotion into the weekly plan, and logged under its title.
+  adHocSession?: { title: string; exercises: SessionExercise[] } | null;
   diyScheduleDay: string;
   onExitDiyMode: () => void; // owned by the future useDiyBuilder hook
   triggerHaptic: (type: HapticType) => void;
@@ -78,6 +97,7 @@ export function useWorkoutSession({
   selectedDayFilter,
   isDiyMode,
   diySelectedExercises,
+  adHocSession = null,
   diyScheduleDay,
   onExitDiyMode,
   triggerHaptic,
@@ -139,7 +159,7 @@ export function useWorkoutSession({
 
   // --- Derived session data (recomputed each render, same as the original) ---
 
-  const weekFilteredPatientExercises = patientExercises.filter((pe) => (pe.week || 1) === activePatientWeek);
+  const weekFilteredPatientExercises = patientExercises.filter((pe) => isInWeek(pe, activePatientWeek));
 
   // The program picker on the Plan tab's overview screen — every distinct
   // assigned program in the currently-selected week (regardless of the
@@ -157,7 +177,13 @@ export function useWorkoutSession({
 
   const blocksMap: Record<string, SessionExercise[]> = {};
 
-  if (isDiyMode) {
+  if (isDiyMode && adHocSession) {
+    adHocSession.exercises.forEach((se) => {
+      const b = se.block || "A";
+      if (!blocksMap[b]) blocksMap[b] = [];
+      blocksMap[b].push(se);
+    });
+  } else if (isDiyMode) {
     diySelectedExercises.forEach((ex, idx) => {
       const blockLetter = String.fromCharCode(65 + idx);
       blocksMap[blockLetter] = [
@@ -552,7 +578,7 @@ export function useWorkoutSession({
       return;
     }
 
-    if (isDiyMode) {
+    if (isDiyMode && !adHocSession) {
       if (confirm("האם לשמור את האימון שבנית כחלק קבוע מהתוכנית השבועית שלך?")) {
         const inserts = diySelectedExercises.map((ex, idx) => ({
           patient_id: loggedInPatient.id,
@@ -571,7 +597,7 @@ export function useWorkoutSession({
     const { error } = await supabase.from("workout_logs").insert([
       {
         patient_id: loggedInPatient.id,
-        category: isDiyMode ? "אימון עצמאי" : selectedCategory,
+        category: isDiyMode ? (adHocSession?.title ?? "אימון עצמאי") : selectedCategory,
         rpe: rpeScore,
         pain_before: loggedInPatient.patient_type === "fitness" ? null : painBefore,
         pain_after: loggedInPatient.patient_type === "fitness" ? null : postPain,

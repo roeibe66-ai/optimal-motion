@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/app/lib/supabase";
 import { useAuth } from "@/app/context/AuthContext";
 import type { HydratedPatientExercise } from "@/app/hooks/useWorkoutSession";
-import type { Exercise, PatientExercise, WorkoutLog } from "@/app/types";
+import type { Exercise, PatientExercise, WorkoutFormat, WorkoutLog } from "@/app/types";
 
 // Fetches everything the patient side needs: this patient's assigned
 // exercises (joined with the exercise catalog client-side, matching the
@@ -37,9 +37,9 @@ export function usePatientData() {
       supabase.from("patient_exercises").select("*").eq("patient_id", loggedInPatient.id),
       supabase.from("exercises").select("*"),
       supabase.from("workout_logs").select("*").eq("patient_id", loggedInPatient.id).order("created_at", { ascending: false }),
-      supabase.from("patient_programs").select("id, name").eq("patient_id", loggedInPatient.id),
+      supabase.from("patient_programs").select("id, name, format, time_cap_seconds").eq("patient_id", loggedInPatient.id),
     ]);
-    const programNameById = new Map((programs.data ?? []).map((p) => [p.id as string, p.name as string]));
+    const programById = new Map((programs.data ?? []).map((p) => [p.id as string, p as { name: string; format: WorkoutFormat; time_cap_seconds: number | null }]));
 
     const exerciseRows = (exs.data ?? []) as Exercise[];
     const assignmentRows = (assigns.data ?? []) as PatientExercise[];
@@ -51,8 +51,10 @@ export function usePatientData() {
           exercise: exerciseRows.find((e) => e.id === assignment.exercise_id),
         }))
         .map((a) => {
-          const programName = a.program_id ? programNameById.get(a.program_id) : undefined;
-          return programName ? { ...a, program_name: programName } : a;
+          const program = a.program_id ? programById.get(a.program_id) : undefined;
+          return program
+            ? { ...a, program_name: program.name, program_format: program.format, program_time_cap_seconds: program.time_cap_seconds }
+            : a;
         })
         .filter((a): a is HydratedPatientExercise => !!a.exercise);
 

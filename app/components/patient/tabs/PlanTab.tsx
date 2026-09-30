@@ -8,6 +8,7 @@ import {
   Info,
   MoreHorizontal,
   Play,
+  Plus,
   Sparkles,
   Timer,
   User,
@@ -16,7 +17,7 @@ import {
 import { useAuth } from "@/app/context/AuthContext";
 import { getExerciseName, getWorkoutMuscleAggregation, type WorkoutMuscleAggregation } from "@/app/utils/format";
 import { AVAILABLE_MUSCLES, DEFAULT_TRACK_GLOW, EQUIPMENT_LIST, TRACK_GLOW_TINTS } from "@/app/constants/catalog";
-import type { AIAssistantContext, CuratedFact, Exercise, Workout, WorkoutLog } from "@/app/types";
+import type { AIAssistantContext, CuratedFact, Exercise, ExploreProgram, WorkoutLog } from "@/app/types";
 import { programNameOf, type HydratedPatientExercise, type SessionExercise } from "@/app/hooks/useWorkoutSession";
 import PatientCoachSheet from "@/app/components/patient/PatientCoachSheet";
 import AnatomyHeatmap from "@/app/components/AnatomyHeatmap";
@@ -39,8 +40,8 @@ interface PlanTabProps {
   onStartWorkout: () => void;
   curatedFacts: CuratedFact[];
   hasAnyAssignedExercises: boolean;
-  starterWorkouts: Workout[];
-  onStartCatalogWorkout: (workout: Workout) => void;
+  starterPrograms: ExploreProgram[];
+  onAddStarterProgram: (programId: string) => Promise<boolean>;
 }
 
 
@@ -118,8 +119,8 @@ export default function PlanTab({
   onStartWorkout,
   curatedFacts,
   hasAnyAssignedExercises,
-  starterWorkouts,
-  onStartCatalogWorkout,
+  starterPrograms,
+  onAddStarterProgram,
 }: PlanTabProps) {
   const { loggedInPatient, lang } = useAuth();
 
@@ -312,30 +313,30 @@ export default function PlanTab({
               <Play size={20} className="fill-fg text-fg" />
             </button>
           </div>
-        ) : !isDiyMode && !hasAnyAssignedExercises && starterWorkouts.length > 0 ? (
-          // No assigned program at all yet (never just "nothing scheduled
-          // today" — that case still falls through to the plain rest-day
-          // card below) — offer a ready-to-start 3-day split pulled from the
-          // free workout catalog instead of a dead end.
+        ) : !isDiyMode && !hasAnyAssignedExercises && starterPrograms.length > 0 ? (
+          // No program at all yet (never just "nothing scheduled today" —
+          // that case still falls through to the plain rest-day card below)
+          // — offer free published programs from Explore to add in one tap,
+          // instead of a dead end.
           <div className="on-light rounded-[2rem] p-7 md:p-9 bg-surface shadow-card mb-10">
             <div className="flex items-center gap-2 mb-1.5">
               <Sparkles size={18} className="text-accent-fg" />
               <h3 className="text-lg font-black text-fg">התחל עם תוכנית פתיחה</h3>
             </div>
-            <p className="text-muted text-sm mb-6">עדיין אין לך תוכנית מוקצית. הכנו לך {starterWorkouts.length} ימי אימון להתחלה — אפשר להתחיל מיד.</p>
+            <p className="text-muted text-sm mb-6">עדיין אין לך תוכנית. בחר תוכנית חינמית להתחלה — היא תתווסף לתוכניות שלך ותופיע כאן.</p>
             <div className="flex flex-col gap-3">
-              {starterWorkouts.map((w, idx) => (
+              {starterPrograms.map((w, idx) => (
                 <button
                   key={w.id}
-                  onClick={() => onStartCatalogWorkout(w)}
+                  onClick={() => onAddStarterProgram(String(w.id))}
                   className="on-light flex items-center gap-4 bg-surface-alt hover:bg-line rounded-2xl p-4 text-start transition-colors"
                 >
                   <div className="w-11 h-11 rounded-full bg-accent text-on-accent flex items-center justify-center font-black text-sm shrink-0">{idx + 1}</div>
                   <div className="flex-1 overflow-hidden">
-                    <div className="text-[10px] font-extrabold text-accent-fg uppercase tracking-wide mb-0.5">יום {idx + 1}</div>
+                    <div className="text-[10px] font-extrabold text-accent-fg uppercase tracking-wide mb-0.5">תוכנית חינמית</div>
                     <div className="font-bold text-fg truncate">{w.title}</div>
                   </div>
-                  <Play size={16} className="text-muted shrink-0" />
+                  <Plus size={16} className="text-muted shrink-0" />
                 </button>
               ))}
             </div>
@@ -480,7 +481,11 @@ export default function PlanTab({
           return (
             <>
               <div className="mb-8">
-                <span className="bg-fg/10 text-muted font-bold px-2.5 py-1 rounded-md text-[10px] uppercase tracking-widest mb-3 inline-block">קלאסי</span>
+                <span className="bg-fg/10 text-muted font-bold px-2.5 py-1 rounded-md text-[10px] uppercase tracking-widest mb-3 inline-block">
+                  {displayedExercises[0]?.program_format === "amrap"
+                    ? `AMRAP · ${Math.round((displayedExercises[0].program_time_cap_seconds ?? 0) / 60)} דק׳`
+                    : "קלאסי"}
+                </span>
                 <h1 className="text-4xl font-black text-fg tracking-tight leading-tight mb-2">{isDiyMode ? diyProgramName : selectedCategory}</h1>
                 <p className="text-muted text-sm font-medium">
                   שבוע {activePatientWeek} - אימון {selectedDayFilter === "all" ? "1" : selectedDayFilter} - {new Date().toLocaleDateString("he-IL", { weekday: "short", month: "short", day: "numeric" })}
@@ -539,7 +544,7 @@ export default function PlanTab({
                         </div>
                         <div className="flex-1 overflow-hidden py-1">
                           <div className="text-muted text-xs font-bold mb-1 flex items-center gap-1">
-                            {assignment.sets} סטים x {assignment.is_time ? `${assignment.reps}"` : `${assignment.reps} חזרות`}
+                            {"program_format" in assignment && assignment.program_format === "amrap" ? "בכל סבב: " : `${assignment.sets} סטים x `}{assignment.is_time ? `${assignment.reps}"` : `${assignment.reps} חזרות`}
                             {assignment.rir && <span className="on-light bg-surface-alt text-muted px-1.5 py-0.5 rounded text-[8px] ml-1">RIR {assignment.rir}</span>}
                           </div>
                           <h4 className="text-fg font-bold truncate">{getExerciseName(assignment.exercise, lang)}</h4>

@@ -72,29 +72,55 @@ export interface Exercise {
   synergists?: string[];
 }
 
-// A single admin-curated, publicly browsable workout (Explore tab / the
-// no-program-yet onboarding block) — distinct from Package (an unused
-// multi-week admin->patient assignment) and SavedProgram (private,
-// patient-authored). One session's worth of exercises, not a multi-day plan.
+export type PackageStatus = "draft" | "published";
+
+export type WorkoutFormat = "standard" | "amrap";
+
+// One exercise inside an admin-built workout (workouts.items). For AMRAP,
+// reps/is_time are per round and sets/rir/rest/block are unused.
+export interface WorkoutItem {
+  exercise_id: string;
+  block?: string;
+  sets?: number;
+  reps: number;
+  is_time: boolean;
+  rir?: number | null;
+  rest_time_seconds?: number;
+}
+
+// A single workout built in the admin "workout builder" tab and published
+// to Explore — a regular sets/reps session or a time-capped AMRAP. Distinct
+// from Package (a multi-week program template).
 export interface Workout {
   id: string;
   title: string;
-  category?: string | null;
-  cover_image_url?: string | null;
-  exercise_ids: string[];
+  description?: string | null;
+  format: WorkoutFormat;
+  time_cap_seconds?: number | null; // required for AMRAP
+  status: PackageStatus;
   is_free: boolean;
-  sort_order: number;
+  items: WorkoutItem[];
+  exercise_ids: string[]; // kept in sync with items
+  cover_image_url?: string | null;
   created_at: string;
+  updated_at?: string;
 }
 
-export type PackageStatus = "draft" | "published";
-
+// A program template built in the admin builder ("protocol" mode). Once
+// published it's listed in the patient Explore tab; free ones can be added
+// to a patient's own programs (add_published_package_to_my_programs RPC).
 export interface Package {
   id: string;
   title: string;
   description?: string;
   status: PackageStatus;
+  is_free: boolean;
   created_at?: string;
+}
+
+// A published template as the Explore tab shows it, with its exercise rows.
+export interface ExploreProgram extends Package {
+  exercises: PackageExercise[];
 }
 
 export interface PackageExercise {
@@ -125,6 +151,11 @@ export interface PatientProgram {
   id: string;
   patient_id: string;
   name: string;
+  source_package_id?: string | number | null; // template it was copied from, if any
+  source_workout_id?: string | null; // Explore workout it was copied from, if any
+  is_self_added?: boolean; // added by the patient from Explore (they may remove it)
+  format?: WorkoutFormat; // "amrap" programs run in the AMRAP player
+  time_cap_seconds?: number | null;
   created_at: string;
 }
 
@@ -140,7 +171,7 @@ export interface PatientExercise {
   rir: number | null;
   notes?: string;
   is_time: boolean;
-  week: number;
+  week: number | null; // null = every week (a workout the patient pinned to a weekday)
   scheduled_days?: string | null; // comma-separated DAYS_OF_WEEK ids, or null for "every day"
   rest_time_seconds: number;
 }
@@ -161,6 +192,8 @@ export interface WorkoutLog {
   pain_after: number | null;
   pain_areas?: string | null; // comma-separated react-body-highlighter muscle ids
   performance_data?: string | null; // JSON-stringified SessionPerformanceEntry[]
+  result_rounds?: number | null; // AMRAP: completed rounds
+  result_extra_reps?: number | null; // AMRAP: reps into the unfinished round
   created_at: string;
 }
 

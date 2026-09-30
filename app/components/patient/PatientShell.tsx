@@ -10,7 +10,7 @@ import { useCuratedFacts } from "@/app/hooks/useCuratedFacts";
 import { usePlanSelection } from "@/app/hooks/usePlanSelection";
 import { useWorkoutSession } from "@/app/hooks/useWorkoutSession";
 import { useSavedPrograms } from "@/app/hooks/useSavedPrograms";
-import { useWorkouts } from "@/app/hooks/useWorkouts";
+import { useExplorePrograms } from "@/app/hooks/useExplorePrograms";
 import WorkoutPlayer from "@/app/components/patient/workout/WorkoutPlayer";
 import ExerciseInfoModal from "@/app/components/patient/workout/ExerciseInfoModal";
 import PasskeyPrompt from "@/app/components/patient/PasskeyPrompt";
@@ -22,6 +22,8 @@ import ExploreTab from "@/app/components/patient/tabs/ExploreTab";
 import PremiumStoreTab from "@/app/components/patient/tabs/PremiumStoreTab";
 import ProfileTab from "@/app/components/patient/tabs/ProfileTab";
 import type { Exercise, SavedProgram, Workout } from "@/app/types";
+import type { SessionExercise } from "@/app/hooks/useWorkoutSession";
+import AmrapPlayer, { type AmrapSessionConfig, type AmrapStation } from "@/app/components/patient/workout/AmrapPlayer";
 
 type PatientTab = "plan" | "calendar" | "diy" | "explore" | "premium" | "profile";
 
@@ -38,13 +40,18 @@ export default function PatientShell() {
   const [patientTab, setPatientTab] = useState<PatientTab>("plan");
   const [showMyWorkouts, setShowMyWorkouts] = useState(false);
   const [editingSavedProgramId, setEditingSavedProgramId] = useState<string | null>(null);
+  // A regular Explore workout running through the player with its own
+  // blocks/sets/reps (see useWorkoutSession's adHocSession).
+  const [adHocSession, setAdHocSession] = useState<{ title: string; exercises: SessionExercise[] } | null>(null);
+  // An AMRAP running in AmrapPlayer (from Explore, or an AMRAP program in the plan).
+  const [amrapConfig, setAmrapConfig] = useState<AmrapSessionConfig | null>(null);
 
   const { hapticsEnabled, setHapticsEnabled, triggerHaptic } = useHaptics();
   const reminders = useReminders(triggerHaptic);
   const patientData = usePatientData();
   const planSelection = usePlanSelection(patientData.patientExercises);
   const savedProgramsData = useSavedPrograms();
-  const workoutsData = useWorkouts();
+  const explore = useExplorePrograms();
   const { curatedFacts } = useCuratedFacts();
 
   // A live session is always one sitting, so it only ever runs the DIY
@@ -62,7 +69,11 @@ export default function PatientShell() {
     isDiyMode: planSelection.isDiyMode,
     diySelectedExercises: diyActiveDayExercises,
     diyScheduleDay: planSelection.diyScheduleDay,
-    onExitDiyMode: planSelection.exitDiyMode,
+    adHocSession,
+    onExitDiyMode: () => {
+      planSelection.exitDiyMode();
+      setAdHocSession(null);
+    },
     triggerHaptic,
     onWorkoutLogged: patientData.refetch,
   });
@@ -147,22 +158,82 @@ export default function PatientShell() {
     setEditingSavedProgramId(null);
   };
 
-  // Starting a public catalog workout (Explore, or the no-program-yet
-  // onboarding block) loads it into the builder draft as day 1 and runs it
-  // immediately, the same as starting a saved program's day — it's not
-  // persisted as a patient_saved_programs row unless the patient explicitly
-  // saves it from the builder afterward.
-  const handleStartCatalogWorkout = (workout: Workout) => {
-    planSelection.setDiyExercisesByDay({ 1: hydrateExerciseIds(workout.exercise_ids) });
-    planSelection.setDiyActiveDay(1);
-    planSelection.setDiyProgramName(workout.title);
+  // Adding a published template (Explore, or the no-program-yet onboarding
+  // block) copies it into the patient's programs server-side; the plan is
+  // then refetched so it shows on Home right away.
+  const handleAddExploreProgram = async (programId: string) => {
+    const ok = await explore.addToMyPrograms(programId);
+    if (ok) await patientData.refetch();
+    return ok;
+  };
+
+  const exerciseById = (id: string) => patientData.exerciseCatalog.find((ex) => ex.id === id);
+
+  // "Start now" on an Explore workout: AMRAP opens the AMRAP player; a
+  // regular workout runs through the normal player with the admin's own
+  // blocks/sets/reps, logged under the workout's title.
+  const handleStartExploreWorkout = (workout: Workout) => {
+    if (workout.format === "amrap") {
+      const stations: AmrapStation[] = workout.items
+        .map((item) => {
+          const exercise = exerciseById(item.exercise_id);
+          return exercise ? { exercise, reps: item.reps, is_time: item.is_time } : null;
+        })
+        .filter((st): st is AmrapStation => st !== null);
+      if (stations.length === 0 || !workout.time_cap_seconds) return;
+      setAmrapConfig({ title: workout.title, timeCapSeconds: workout.time_cap_seconds, stations });
+      return;
+    }
+    const exercises: SessionExercise[] = workout.items
+      .map((item, idx) => {
+        const exercise = exerciseById(item.exercise_id);
+        if (!exercise) return null;
+        return {
+          id: `workout_${workout.id}_${idx}`,
+          exercise,
+          sets: item.sets ?? 3,
+          reps: item.reps,
+          rir: item.rir ?? null,
+          is_time: item.is_time,
+          block: item.block || String.fromCharCode(65 + idx),
+          rest_time_seconds: item.rest_time_seconds ?? 60,
+        };
+      })
+      .filter((se): se is SessionExercise => se !== null);
+    if (exercises.length === 0) return;
+    setAdHocSession({ title: workout.title, exercises });
     planSelection.setIsDiyMode(true);
     session.startDiyWorkoutNow();
+  };
+
+  // "Start workout" on the Plan tab: an AMRAP program (a workout the patient
+  // pinned to a day) runs in the AMRAP player; everything else as before.
+  const handleStartPlanWorkout = () => {
+    const rows = session.displayedExercises;
+    const amrapRow = rows.find((pe) => pe.program_format === "amrap");
+    if (amrapRow && amrapRow.program_time_cap_seconds) {
+      setAmrapConfig({
+        title: amrapRow.program_name ?? "AMRAP",
+        timeCapSeconds: amrapRow.program_time_cap_seconds,
+        stations: rows.map((pe) => ({ exercise: pe.exercise, reps: Number(pe.reps) || 0, is_time: pe.is_time })),
+      });
+      return;
+    }
+    session.handleStartClick();
+  };
+
+  const handleRemoveExploreProgram = async (programId: string) => {
+    const ok = await explore.removeFromMyPrograms(programId);
+    if (ok) await patientData.refetch();
+    return ok;
   };
 
   return (
     <>
       <WorkoutPlayer session={session} triggerHaptic={triggerHaptic} />
+      {amrapConfig && (
+        <AmrapPlayer config={amrapConfig} triggerHaptic={triggerHaptic} onClose={() => setAmrapConfig(null)} onLogged={patientData.refetch} />
+      )}
       <PasskeyPrompt />
 
       {/* Locked to the viewport (fixed inset-0, same full-screen-overlay
@@ -300,13 +371,25 @@ export default function PatientShell() {
 
           {patientTab === "explore" && (
             <ExploreTab
-              freeWorkouts={workoutsData.freeWorkouts}
-              newReleases={workoutsData.newReleases}
-              likedWorkouts={workoutsData.likedWorkouts}
-              likedWorkoutIds={workoutsData.likedWorkoutIds}
-              onToggleLike={workoutsData.toggleLike}
+              freePrograms={explore.freePrograms}
+              premiumPrograms={explore.premiumPrograms}
+              likedPrograms={explore.likedPrograms}
+              likedProgramIds={explore.likedProgramIds}
+              addedPrograms={explore.addedPrograms}
+              onToggleLike={explore.toggleLike}
+              onAddProgram={handleAddExploreProgram}
+              onRemoveProgram={handleRemoveExploreProgram}
               exerciseCatalog={patientData.exerciseCatalog}
-              onStartWorkout={handleStartCatalogWorkout}
+              workouts={explore.workouts}
+              likedWorkouts={explore.likedWorkouts}
+              likedWorkoutIds={explore.likedWorkoutIds}
+              onToggleWorkoutLike={explore.toggleWorkoutLike}
+              onStartWorkout={handleStartExploreWorkout}
+              onAddWorkoutToDay={async (workoutId, dayId) => {
+                const ok = await explore.addWorkoutToDay(workoutId, dayId);
+                if (ok) await patientData.refetch();
+                return ok;
+              }}
             />
           )}
 
@@ -342,11 +425,11 @@ export default function PatientShell() {
               blocksMap={session.blocksMap}
               blocksKeys={session.blocksKeys}
               onViewExerciseInfo={(exercise) => session.setViewingExInfo(exercise)}
-              onStartWorkout={session.handleStartClick}
+              onStartWorkout={handleStartPlanWorkout}
               curatedFacts={curatedFacts}
               hasAnyAssignedExercises={patientData.patientExercises.length > 0}
-              starterWorkouts={workoutsData.freeWorkouts.slice(0, 3)}
-              onStartCatalogWorkout={handleStartCatalogWorkout}
+              starterPrograms={explore.freePrograms.slice(0, 3)}
+              onAddStarterProgram={handleAddExploreProgram}
             />
           )}
 

@@ -1,46 +1,139 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { Compass, Dumbbell, Flame, Heart, Sparkles } from "lucide-react";
+import { CalendarPlus, Check, Compass, Crown, Dumbbell, Flame, Heart, Lock, Play, Plus, Timer } from "lucide-react";
 import Modal from "@/app/components/ui/Modal";
-import { DEFAULT_DIY_CATEGORY_STYLE, DIY_CATEGORY_STYLES } from "@/app/constants/catalog";
+import { DAYS_OF_WEEK } from "@/app/constants/catalog";
 import { getExerciseName } from "@/app/utils/format";
 import { useAuth } from "@/app/context/AuthContext";
-import type { Exercise, Workout } from "@/app/types";
+import type { Exercise, ExploreProgram, Workout } from "@/app/types";
 
 interface ExploreTabProps {
-  freeWorkouts: Workout[];
-  newReleases: Workout[];
+  freePrograms: ExploreProgram[];
+  premiumPrograms: ExploreProgram[];
+  likedPrograms: ExploreProgram[];
+  likedProgramIds: Set<string>;
+  addedPrograms: Map<string, { programId: string; isSelfAdded: boolean }>;
+  onToggleLike: (programId: string) => void;
+  onAddProgram: (programId: string) => Promise<boolean>;
+  onRemoveProgram: (programId: string) => Promise<boolean>;
+  exerciseCatalog: Exercise[];
+  workouts: Workout[];
   likedWorkouts: Workout[];
   likedWorkoutIds: Set<string>;
-  onToggleLike: (workoutId: string) => void;
-  exerciseCatalog: Exercise[];
+  onToggleWorkoutLike: (workoutId: string) => void;
   onStartWorkout: (workout: Workout) => void;
+  onAddWorkoutToDay: (workoutId: string, dayId: string) => Promise<boolean>;
+}
+
+const workoutFormatLabel = (w: Workout) => (w.format === "amrap" ? `AMRAP · ${Math.round((w.time_cap_seconds ?? 0) / 60)} דק׳` : `${w.items.length} תרגילים`);
+
+const workoutItemLabel = (w: Workout, item: Workout["items"][number]) => {
+  const amount = `${item.reps} ${item.is_time ? "שנ׳" : "חזרות"}`;
+  return w.format === "amrap" ? `${amount} בכל סבב` : `${item.sets ?? 3} × ${amount}`;
+};
+
+function coverGifForWorkout(workout: Workout, exerciseCatalog: Exercise[]) {
+  if (workout.cover_image_url) return workout.cover_image_url;
+  for (const item of workout.items) {
+    const url = exerciseCatalog.find((ex) => ex.id === item.exercise_id)?.gif_url;
+    if (url && !/\.(mp4|webm)$/i.test(url)) return url;
+  }
+  return null;
 }
 
 function WorkoutCard({
   workout,
+  coverUrl,
   isLiked,
   onToggleLike,
   onOpen,
 }: {
   workout: Workout;
+  coverUrl: string | null;
   isLiked: boolean;
   onToggleLike: () => void;
   onOpen: () => void;
 }) {
-  const style = (workout.category && DIY_CATEGORY_STYLES[workout.category]) || DEFAULT_DIY_CATEGORY_STYLE;
+  return (
+    <button
+      onClick={onOpen}
+      className="on-light min-w-[180px] w-[180px] shrink-0 rounded-3xl overflow-hidden bg-surface text-start shadow-card border border-line hover:-translate-y-0.5 hover:shadow-[0_16px_32px_-8px_color-mix(in_srgb,var(--shadow-ink)_12%,transparent)] active:scale-[0.97] transition-all duration-200 ease-out"
+    >
+      <div className="on-light h-[110px] relative bg-surface-alt">
+        {coverUrl ? (
+          <img src={coverUrl} alt="" className="absolute inset-0 w-full h-full object-contain p-2" />
+        ) : (
+          <div className="absolute inset-0" style={{ background: "radial-gradient(circle at 70% 20%, color-mix(in srgb, var(--accent) 22%, transparent), transparent 70%)" }} />
+        )}
+        <div
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleLike();
+          }}
+          role="button"
+          aria-label={isLiked ? "הסר לייק" : "אהבתי"}
+          className="on-light absolute top-2.5 left-2.5 w-8 h-8 rounded-full bg-surface backdrop-blur-md flex items-center justify-center shadow-sm active:scale-90 transition-transform"
+        >
+          <Heart size={15} className={isLiked ? "fill-accent-fg text-accent-fg" : "text-muted"} />
+        </div>
+        {!workout.is_free && (
+          <span className="absolute top-2.5 right-2.5 bg-warm text-on-accent text-[9px] font-black px-2 py-1 rounded-full uppercase tracking-wide">פרימיום</span>
+        )}
+      </div>
+      <div className="p-3.5 flex flex-col gap-1.5">
+        <h4 className="font-extrabold text-[13px] text-fg truncate">{workout.title}</h4>
+        <span className={`text-[10px] font-extrabold w-fit ${workout.format === "amrap" ? "px-2 py-0.5 rounded-full bg-accent/15 text-accent-fg" : "text-muted"}`}>
+          {workoutFormatLabel(workout)}
+        </span>
+      </div>
+    </button>
+  );
+}
+
+// "3 שבועות · 4 ימי אימון" — distinct weeks, and distinct training days in week 1.
+function programShape(program: ExploreProgram) {
+  const weeks = new Set(program.exercises.map((e) => e.week || 1));
+  const firstWeek = Math.min(...weeks);
+  const days = new Set(program.exercises.filter((e) => (e.week || 1) === firstWeek).map((e) => e.scheduled_days || "0"));
+  return { weeks: weeks.size, days: days.size, firstWeek };
+}
+
+function coverGifFor(program: ExploreProgram, exerciseCatalog: Exercise[]) {
+  for (const row of program.exercises) {
+    const url = exerciseCatalog.find((ex) => ex.id === row.exercise_id)?.gif_url;
+    if (url && !/\.(mp4|webm)$/i.test(url)) return url;
+  }
+  return null;
+}
+
+function ProgramCard({
+  program,
+  coverUrl,
+  isLiked,
+  isAdded,
+  onToggleLike,
+  onOpen,
+}: {
+  program: ExploreProgram;
+  coverUrl: string | null;
+  isLiked: boolean;
+  isAdded: boolean;
+  onToggleLike: () => void;
+  onOpen: () => void;
+}) {
+  const { weeks, days } = programShape(program);
 
   return (
     <button
       onClick={onOpen}
       className="on-light min-w-[180px] w-[180px] shrink-0 rounded-3xl overflow-hidden bg-surface text-start shadow-card border border-line hover:-translate-y-0.5 hover:shadow-[0_16px_32px_-8px_color-mix(in_srgb,var(--shadow-ink)_12%,transparent)] active:scale-[0.97] transition-all duration-200 ease-out"
     >
-      <div className="h-[110px] relative">
-        {workout.cover_image_url ? (
-          <img src={workout.cover_image_url} alt="" className="absolute inset-0 w-full h-full object-cover" />
+      <div className="on-light h-[110px] relative bg-surface-alt">
+        {coverUrl ? (
+          <img src={coverUrl} alt="" className="absolute inset-0 w-full h-full object-contain p-2" />
         ) : (
-          <div className="absolute inset-0" style={{ background: `radial-gradient(circle at 70% 20%, ${style.bg}, ${style.border} 120%)` }} />
+          <div className="absolute inset-0" style={{ background: "radial-gradient(circle at 70% 20%, color-mix(in srgb, var(--accent) 22%, transparent), transparent 70%)" }} />
         )}
 
         <div
@@ -55,7 +148,7 @@ function WorkoutCard({
           <Heart size={15} className={isLiked ? "fill-accent-fg text-accent-fg" : "text-muted"} />
         </div>
 
-        {!workout.is_free && (
+        {!program.is_free && (
           <span className="absolute top-2.5 right-2.5 bg-warm text-on-accent text-[9px] font-black px-2 py-1 rounded-full uppercase tracking-wide">
             פרימיום
           </span>
@@ -63,134 +156,313 @@ function WorkoutCard({
       </div>
 
       <div className="p-3.5 flex flex-col gap-1.5">
-        <h4 className="font-extrabold text-[13px] text-fg truncate">{workout.title}</h4>
-        <div className="flex items-center gap-1.5">
-          {workout.category && (
-            <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full whitespace-nowrap" style={{ background: style.bg, color: style.text }}>
-              {workout.category}
-            </span>
-          )}
-          <span className="text-[10px] font-bold text-muted">{workout.exercise_ids.length} תרגילים</span>
-        </div>
+        <h4 className="font-extrabold text-[13px] text-fg truncate">{program.title}</h4>
+        <span className="text-[10px] font-bold text-muted">
+          {weeks > 1 ? `${weeks} שבועות · ` : ""}
+          {days} ימי אימון
+        </span>
+        {isAdded && (
+          <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full w-fit bg-accent/15 text-accent-fg flex items-center gap-1">
+            <Check size={10} /> בתוכניות שלך
+          </span>
+        )}
       </div>
     </button>
   );
 }
 
-function WorkoutCarousel({
+function ProgramCarousel<T = ExploreProgram>({
   title,
   icon,
-  workoutsList,
-  likedWorkoutIds,
-  onToggleLike,
-  onOpen,
+  list,
+  render,
 }: {
   title: string;
   icon: ReactNode;
-  workoutsList: Workout[];
-  likedWorkoutIds: Set<string>;
-  onToggleLike: (id: string) => void;
-  onOpen: (workout: Workout) => void;
+  list: T[];
+  render: (item: T) => ReactNode;
 }) {
-  if (workoutsList.length === 0) return null;
+  if (list.length === 0) return null;
   return (
     <div className="mb-8">
       <div className="flex items-center gap-2 mb-3.5">
         {icon}
         <h3 className="text-[13px] font-extrabold tracking-widest text-muted uppercase">{title}</h3>
       </div>
-      <div className="flex gap-3.5 overflow-x-auto no-scrollbar pb-1">
-        {workoutsList.map((w) => (
-          <WorkoutCard key={w.id} workout={w} isLiked={likedWorkoutIds.has(w.id)} onToggleLike={() => onToggleLike(w.id)} onOpen={() => onOpen(w)} />
-        ))}
-      </div>
+      <div className="flex gap-3.5 overflow-x-auto no-scrollbar pb-1">{list.map(render)}</div>
     </div>
   );
 }
 
-// Bottom-nav "Explore" tab: horizontal carousels of admin-curated public
-// workouts (workouts/workout_likes — see the 20260923100000 migration),
-// with a like/heart toggle per card and a lightweight read-only preview
-// (reusing Modal's bottom-sheet chrome) that can hand a workout straight to
-// the DIY session-launch flow already used by saved programs.
-export default function ExploreTab({ freeWorkouts, newReleases, likedWorkouts, likedWorkoutIds, onToggleLike, exerciseCatalog, onStartWorkout }: ExploreTabProps) {
-  const { lang } = useAuth();
-  const [previewWorkout, setPreviewWorkout] = useState<Workout | null>(null);
+// Bottom-nav "Explore" tab: every program template the admin published in
+// the program library. Free ones can be added to the patient's own programs
+// (a full copy of every week/day, shown on Home like an assigned program);
+// premium ones show a contact CTA instead. Assigned-by-admin copies of the
+// same template show as "already in your programs".
+export default function ExploreTab({
+  freePrograms,
+  premiumPrograms,
+  likedPrograms,
+  likedProgramIds,
+  addedPrograms,
+  onToggleLike,
+  onAddProgram,
+  onRemoveProgram,
+  exerciseCatalog,
+  workouts,
+  likedWorkouts,
+  likedWorkoutIds,
+  onToggleWorkoutLike,
+  onStartWorkout,
+  onAddWorkoutToDay,
+}: ExploreTabProps) {
+  const { lang, loggedInPatient } = useAuth();
+  const [preview, setPreview] = useState<ExploreProgram | null>(null);
+  const [workoutPreview, setWorkoutPreview] = useState<Workout | null>(null);
+  // The "add to a day in my plan" picker inside the workout preview.
+  const [pickDayFor, setPickDayFor] = useState<string | null>(null);
+  const [isBusy, setIsBusy] = useState(false);
 
-  const previewExercises = previewWorkout
-    ? previewWorkout.exercise_ids.map((id) => exerciseCatalog.find((ex) => ex.id === id)).filter((ex): ex is Exercise => !!ex)
+  const renderWorkoutCard = (workout: Workout) => (
+    <WorkoutCard
+      key={workout.id}
+      workout={workout}
+      coverUrl={coverGifForWorkout(workout, exerciseCatalog)}
+      isLiked={likedWorkoutIds.has(String(workout.id))}
+      onToggleLike={() => onToggleWorkoutLike(String(workout.id))}
+      onOpen={() => {
+        setPickDayFor(null);
+        setWorkoutPreview(workout);
+      }}
+    />
+  );
+
+  const handleAddWorkoutToDay = async (dayId: string) => {
+    if (!workoutPreview) return;
+    setIsBusy(true);
+    const ok = await onAddWorkoutToDay(String(workoutPreview.id), dayId);
+    setIsBusy(false);
+    if (ok) {
+      const dayLabel = DAYS_OF_WEEK.find((d) => d.id === dayId)?.label ?? "";
+      alert(`"${workoutPreview.title}" נוסף לתוכנית שלך בכל יום ${dayLabel}.`);
+      setPickDayFor(null);
+      setWorkoutPreview(null);
+    }
+  };
+
+  const contactForPremium = (title: string) => {
+    if (!loggedInPatient?.email_verified) {
+      return alert("עליך לאמת את כתובת המייל שלך לפני שתוכל לרכוש תוכניות. בדוק את תיבת הדואר הנכנס שלך.");
+    }
+    window.open(`https://wa.me/972504441094?text=${encodeURIComponent(`היי רועי, אני באפליקציה ואשמח לפתוח את: ${title}.`)}`, "_blank");
+  };
+
+  const renderCard = (program: ExploreProgram) => (
+    <ProgramCard
+      key={program.id}
+      program={program}
+      coverUrl={coverGifFor(program, exerciseCatalog)}
+      isLiked={likedProgramIds.has(String(program.id))}
+      isAdded={addedPrograms.has(String(program.id))}
+      onToggleLike={() => onToggleLike(String(program.id))}
+      onOpen={() => setPreview(program)}
+    />
+  );
+
+  const previewAdded = preview ? addedPrograms.get(String(preview.id)) : undefined;
+  const previewShape = preview ? programShape(preview) : null;
+  // First week's training days, in DAYS_OF_WEEK order, each with its exercises.
+  const previewDays = preview && previewShape
+    ? DAYS_OF_WEEK.map((day) => ({
+        day,
+        exercises: preview.exercises
+          .filter((e) => (e.week || 1) === previewShape.firstWeek && (e.scheduled_days || "0") === day.id)
+          .map((e) => exerciseCatalog.find((ex) => ex.id === e.exercise_id))
+          .filter((ex): ex is Exercise => !!ex),
+      })).filter((d) => d.exercises.length > 0)
     : [];
+
+  const handleAdd = async () => {
+    if (!preview) return;
+    setIsBusy(true);
+    await onAddProgram(String(preview.id));
+    setIsBusy(false);
+  };
+
+  const handleRemove = async () => {
+    if (!preview || !confirm(`להסיר את "${preview.title}" מהתוכניות שלך?`)) return;
+    setIsBusy(true);
+    await onRemoveProgram(String(preview.id));
+    setIsBusy(false);
+  };
+
+  const handleContactForPremium = () => {
+    if (preview) contactForPremium(preview.title);
+  };
 
   return (
     <div className="animate-in fade-in duration-500">
       <div className="mb-6">
         <h2 className="text-2xl md:text-3xl font-black text-fg tracking-tight mb-1.5 flex items-center gap-2">
-          <Compass size={24} className="text-accent-fg" /> גלה אימונים
+          <Compass size={24} className="text-accent-fg" /> גלה אימונים ותוכניות
         </h2>
-        <p className="text-muted text-[13px] md:text-sm">עיין באימונים מוכנים מהמאגר, שמור מה שאהבת והתחל מיד.</p>
+        <p className="text-muted text-[13px] md:text-sm">אימונים לביצוע מיידי ותוכניות מוכנות — הוסף לתוכנית שלך והם יופיעו במסך הבית.</p>
       </div>
 
-      <WorkoutCarousel
-        title="אימונים שאהבתי"
-        icon={<Heart size={13} className="fill-accent text-accent-fg" />}
-        workoutsList={likedWorkouts}
-        likedWorkoutIds={likedWorkoutIds}
-        onToggleLike={onToggleLike}
-        onOpen={setPreviewWorkout}
-      />
+      <ProgramCarousel<Workout> title="אימונים שאהבתי" icon={<Heart size={13} className="fill-accent text-accent-fg" />} list={likedWorkouts} render={renderWorkoutCard} />
+      <ProgramCarousel<Workout> title="אימונים" icon={<Timer size={13} className="text-accent-fg" />} list={workouts} render={renderWorkoutCard} />
 
-      <WorkoutCarousel
-        title="אימונים חינמיים"
-        icon={<Dumbbell size={13} className="text-accent-fg" />}
-        workoutsList={freeWorkouts}
-        likedWorkoutIds={likedWorkoutIds}
-        onToggleLike={onToggleLike}
-        onOpen={setPreviewWorkout}
-      />
+      <ProgramCarousel title="תוכניות שאהבתי" icon={<Heart size={13} className="fill-accent text-accent-fg" />} list={likedPrograms} render={renderCard} />
+      <ProgramCarousel title="תוכניות חינמיות" icon={<Dumbbell size={13} className="text-accent-fg" />} list={freePrograms} render={renderCard} />
+      <ProgramCarousel title="תוכניות פרימיום" icon={<Crown size={13} className="text-warm-fg" />} list={premiumPrograms} render={renderCard} />
 
-      <WorkoutCarousel
-        title="חדש באתר"
-        icon={<Sparkles size={13} className="text-warm-fg" />}
-        workoutsList={newReleases}
-        likedWorkoutIds={likedWorkoutIds}
-        onToggleLike={onToggleLike}
-        onOpen={setPreviewWorkout}
-      />
-
-      {freeWorkouts.length === 0 && newReleases.length === 0 && (
+      {freePrograms.length === 0 && premiumPrograms.length === 0 && workouts.length === 0 && (
         <div className="on-light bg-surface p-10 rounded-[2rem] shadow-card text-center flex flex-col items-center gap-2">
           <Flame size={26} className="text-muted" />
-          <p className="text-muted text-sm">אין עדיין אימונים זמינים לעיון. חזור בקרוב!</p>
+          <p className="text-muted text-sm">אין עדיין אימונים או תוכניות זמינים לעיון. חזור בקרוב!</p>
         </div>
       )}
 
-      {previewWorkout && (
-        <Modal onClose={() => setPreviewWorkout(null)} title="תצוגה מקדימה" icon={<Dumbbell size={20} className="text-accent-fg" />}>
-          <h4 className="text-start font-black text-xl tracking-tight mb-1 text-fg">{previewWorkout.title}</h4>
-          {previewWorkout.category && <p className="text-start text-muted text-xs font-bold mb-5">{previewWorkout.category}</p>}
+      {preview && previewShape && (
+        <Modal onClose={() => setPreview(null)} title="תצוגה מקדימה" icon={<Dumbbell size={20} className="text-accent-fg" />}>
+          <h4 className="text-start font-black text-xl tracking-tight mb-1 text-fg">{preview.title}</h4>
+          <p className="text-start text-muted text-xs font-bold mb-2">
+            {previewShape.weeks > 1 ? `${previewShape.weeks} שבועות · ` : ""}
+            {previewShape.days} ימי אימון בשבוע
+            {!preview.is_free && " · פרימיום"}
+          </p>
+          {preview.description && <p className="text-start text-muted text-sm leading-relaxed mb-5">{preview.description}</p>}
 
-          <div className="flex flex-col gap-2 mb-6">
-            {previewExercises.map((ex) => (
-              <div key={ex.id} className="on-light flex items-center gap-3 bg-surface-alt rounded-2xl p-3">
-                {ex.gif_url ? (
-                  <img src={ex.gif_url} alt={getExerciseName(ex, lang)} className="on-light w-11 h-11 rounded-xl bg-surface object-contain p-0.5 shrink-0" />
-                ) : (
-                  <div className="on-light w-11 h-11 rounded-xl bg-surface-alt shrink-0" />
-                )}
-                <span className="text-sm font-bold text-fg truncate">{getExerciseName(ex, lang)}</span>
+          <div className="flex flex-col gap-4 mb-6">
+            {previewDays.map(({ day, exercises }) => (
+              <div key={day.id}>
+                <div className="text-[11px] font-extrabold text-accent-fg mb-2">יום {day.label}</div>
+                <div className="flex flex-col gap-2">
+                  {exercises.map((ex, idx) => (
+                    <div key={`${ex.id}-${idx}`} className="on-light flex items-center gap-3 bg-surface-alt rounded-2xl p-3">
+                      {ex.gif_url ? (
+                        <img src={ex.gif_url} alt={getExerciseName(ex, lang)} className="on-light w-11 h-11 rounded-xl bg-surface object-contain p-0.5 shrink-0" />
+                      ) : (
+                        <div className="on-light w-11 h-11 rounded-xl bg-surface shrink-0" />
+                      )}
+                      <span className="text-sm font-bold text-fg truncate">{getExerciseName(ex, lang)}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
             ))}
           </div>
 
-          <button
-            onClick={() => {
-              onStartWorkout(previewWorkout);
-              setPreviewWorkout(null);
-            }}
-            className="w-full bg-btn-primary hover:bg-btn-primary-hover active:bg-btn-primary-active text-btn-primary-fg font-black text-sm py-3.5 rounded-2xl transition-colors"
-          >
-            התחל אימון זה
-          </button>
+          {previewAdded ? (
+            <div className="flex flex-col gap-2">
+              <div className="w-full bg-accent/15 text-accent-fg font-black text-sm py-3.5 rounded-2xl flex items-center justify-center gap-2">
+                <Check size={16} /> התוכנית נמצאת בתוכניות שלך — מופיעה במסך הבית
+              </div>
+              {previewAdded.isSelfAdded && (
+                <button
+                  onClick={handleRemove}
+                  disabled={isBusy}
+                  className="w-full bg-transparent border-[1.5px] border-btn-secondary text-accent-fg hover:bg-btn-secondary-hover font-bold text-sm py-3 rounded-2xl transition-colors disabled:bg-disabled disabled:text-disabled-fg"
+                >
+                  הסר מהתוכניות שלי
+                </button>
+              )}
+            </div>
+          ) : preview.is_free ? (
+            <button
+              onClick={handleAdd}
+              disabled={isBusy}
+              className="w-full bg-btn-primary hover:bg-btn-primary-hover active:bg-btn-primary-active text-btn-primary-fg font-black text-sm py-3.5 rounded-2xl transition-colors flex items-center justify-center gap-2 disabled:bg-disabled disabled:text-disabled-fg disabled:hover:bg-disabled"
+            >
+              <Plus size={16} /> הוסף לתוכניות שלי
+            </button>
+          ) : (
+            <button
+              onClick={handleContactForPremium}
+              className="w-full bg-warm hover:brightness-110 text-on-accent font-black text-sm py-3.5 rounded-2xl transition-colors flex items-center justify-center gap-2"
+            >
+              <Lock size={16} /> תוכנית פרימיום — לפתיחה צור קשר
+            </button>
+          )}
+        </Modal>
+      )}
+      {workoutPreview && (
+        <Modal onClose={() => setWorkoutPreview(null)} title="תצוגה מקדימה" icon={<Timer size={20} className="text-accent-fg" />}>
+          <h4 className="text-start font-black text-xl tracking-tight mb-1 text-fg">{workoutPreview.title}</h4>
+          <p className="text-start text-muted text-xs font-bold mb-2">
+            {workoutPreview.format === "amrap"
+              ? `AMRAP · ${Math.round((workoutPreview.time_cap_seconds ?? 0) / 60)} דקות — כמה שיותר סבבים`
+              : `${workoutPreview.items.length} תרגילים`}
+            {!workoutPreview.is_free && " · פרימיום"}
+          </p>
+          {workoutPreview.description && <p className="text-start text-muted text-sm leading-relaxed mb-5">{workoutPreview.description}</p>}
+
+          <div className="flex flex-col gap-2 mb-6">
+            {workoutPreview.items.map((item, idx) => {
+              const ex = exerciseCatalog.find((e) => e.id === item.exercise_id);
+              if (!ex) return null;
+              return (
+                <div key={`${item.exercise_id}-${idx}`} className="on-light flex items-center gap-3 bg-surface-alt rounded-2xl p-3">
+                  {ex.gif_url ? (
+                    <img src={ex.gif_url} alt={getExerciseName(ex, lang)} className="on-light w-11 h-11 rounded-xl bg-surface object-contain p-0.5 shrink-0" />
+                  ) : (
+                    <div className="on-light w-11 h-11 rounded-xl bg-surface shrink-0" />
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm font-bold text-fg truncate">{getExerciseName(ex, lang)}</div>
+                    <div className="text-[11px] font-bold text-accent-fg tabular-nums">{workoutItemLabel(workoutPreview, item)}</div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {!workoutPreview.is_free ? (
+            <button
+              onClick={() => contactForPremium(workoutPreview.title)}
+              className="w-full bg-warm hover:brightness-110 text-on-accent font-black text-sm py-3.5 rounded-2xl transition-colors flex items-center justify-center gap-2"
+            >
+              <Lock size={16} /> אימון פרימיום — לפתיחה צור קשר
+            </button>
+          ) : pickDayFor === String(workoutPreview.id) ? (
+            <div className="flex flex-col gap-3">
+              <p className="text-sm font-bold text-fg text-start">באיזה יום בשבוע? האימון יחזור בכל שבוע בתוכנית שלך.</p>
+              <div className="grid grid-cols-7 gap-1.5">
+                {DAYS_OF_WEEK.map((day) => (
+                  <button
+                    key={day.id}
+                    onClick={() => handleAddWorkoutToDay(day.id)}
+                    disabled={isBusy}
+                    aria-label={`יום ${day.label}`}
+                    className="on-light py-3 rounded-xl bg-surface-alt border border-line text-fg font-black text-sm hover:bg-accent hover:text-on-accent transition-colors disabled:opacity-50"
+                  >
+                    {day.he_short}
+                  </button>
+                ))}
+              </div>
+              <button onClick={() => setPickDayFor(null)} className="text-sm font-bold text-muted hover:text-fg">
+                ביטול
+              </button>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={() => {
+                  onStartWorkout(workoutPreview);
+                  setWorkoutPreview(null);
+                }}
+                className="w-full bg-btn-primary hover:bg-btn-primary-hover active:bg-btn-primary-active text-btn-primary-fg font-black text-sm py-3.5 rounded-2xl transition-colors flex items-center justify-center gap-2"
+              >
+                <Play size={16} /> התחל עכשיו
+              </button>
+              <button
+                onClick={() => setPickDayFor(String(workoutPreview.id))}
+                className="w-full bg-transparent border-[1.5px] border-btn-secondary text-accent-fg hover:bg-btn-secondary-hover font-bold text-sm py-3 rounded-2xl transition-colors flex items-center justify-center gap-2"
+              >
+                <CalendarPlus size={16} /> הוסף ליום בתוכנית שלי
+              </button>
+            </div>
+          )}
         </Modal>
       )}
     </div>

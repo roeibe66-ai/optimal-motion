@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { CheckCircle2, Dumbbell, FileDown, Loader2, Play, Send, Trash2, X } from "lucide-react";
+import { CheckCircle2, Crown, Dumbbell, FileDown, Loader2, Play, Send, Trash2, X } from "lucide-react";
 import { supabase } from "@/app/lib/supabase";
 import type { Exercise, Package, PackageExercise, Patient } from "@/app/types";
 import ProgramSimulatorModal from "@/app/components/admin/tabs/ProgramSimulatorModal";
@@ -16,8 +16,9 @@ interface ProgramLibraryTabProps {
 
 // Every template built in the drag-and-drop builder ("protocol" mode) lands
 // in `packages` — this tab is where they're actually managed afterward:
-// publish/unpublish, assign a copy to a real patient, delete, or run the
-// exact patient-facing player against one without leaving the admin console.
+// publish/unpublish (published = listed in the patient Explore tab), mark
+// free/premium, assign a copy to a real patient, delete, or run the exact
+// patient-facing player against one without leaving the admin console.
 export default function ProgramLibraryTab({ packages, exercises, patients, onRefresh }: ProgramLibraryTabProps) {
   const [packageExercises, setPackageExercises] = useState<PackageExercise[]>([]);
   const [isLoadingExercises, setIsLoadingExercises] = useState(true);
@@ -49,6 +50,14 @@ export default function ProgramLibraryTab({ packages, exercises, patients, onRef
     else onRefresh();
   };
 
+  const handleToggleFree = async (pkg: Package) => {
+    setBusyPackageId(pkg.id);
+    const { error } = await supabase.from("packages").update({ is_free: !pkg.is_free }).eq("id", pkg.id);
+    setBusyPackageId(null);
+    if (error) alert("שגיאה: " + error.message);
+    else onRefresh();
+  };
+
   const handleDelete = async (pkg: Package) => {
     if (!confirm(`למחוק לצמיתות את התבנית "${pkg.title}"? הפעולה אינה הפיכה.`)) return;
     setBusyPackageId(pkg.id);
@@ -72,7 +81,7 @@ export default function ProgramLibraryTab({ packages, exercises, patients, onRef
     // Every assignment is a named program — the name is what the patient sees.
     const { data: program, error: programErr } = await supabase
       .from("patient_programs")
-      .insert([{ patient_id: patientId, name: programName }])
+      .insert([{ patient_id: patientId, name: programName, source_package_id: pkg.id }])
       .select()
       .single();
     if (programErr) return alert("שגיאה ביצירת התוכנית: " + programErr.message);
@@ -133,13 +142,22 @@ export default function ProgramLibraryTab({ packages, exercises, patients, onRef
                     <h3 className="text-lg font-black text-fg truncate">{pkg.title}</h3>
                     {pkg.description && <p className="text-sm text-muted mt-1 line-clamp-2">{pkg.description}</p>}
                   </div>
-                  <span
-                    className={`shrink-0 text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-1 rounded-full ${
-                      isPublished ? "bg-accent/15 text-accent-fg" : "bg-surface-alt text-muted"
-                    }`}
-                  >
-                    {isPublished ? "פורסם" : "טיוטה"}
-                  </span>
+                  <div className="shrink-0 flex flex-col items-end gap-1.5">
+                    <span
+                      className={`text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-1 rounded-full ${
+                        isPublished ? "bg-accent/15 text-accent-fg" : "bg-surface-alt text-muted"
+                      }`}
+                    >
+                      {isPublished ? "מפורסם בטאב גלה" : "טיוטה"}
+                    </span>
+                    <span
+                      className={`text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-1 rounded-full ${
+                        pkg.is_free ? "bg-surface-alt text-muted" : "bg-warm text-on-accent"
+                      }`}
+                    >
+                      {pkg.is_free ? "חינמי" : "פרימיום"}
+                    </span>
+                  </div>
                 </div>
 
                 <div className="text-xs font-bold text-muted">{exerciseCount} תרגילים</div>
@@ -164,7 +182,14 @@ export default function ProgramLibraryTab({ packages, exercises, patients, onRef
                     disabled={isBusy}
                     className="on-light flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-surface-alt text-fg text-xs font-bold hover:bg-line transition-colors disabled:opacity-30"
                   >
-                    <CheckCircle2 size={13} /> {isPublished ? "בטל פרסום" : "פרסם"}
+                    <CheckCircle2 size={13} /> {isPublished ? "הסר מגלה" : "פרסם לגלה"}
+                  </button>
+                  <button
+                    onClick={() => handleToggleFree(pkg)}
+                    disabled={isBusy}
+                    className="on-light flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-surface-alt text-fg text-xs font-bold hover:bg-line transition-colors disabled:opacity-30"
+                  >
+                    <Crown size={13} /> {pkg.is_free ? "הפוך לפרימיום" : "הפוך לחינמי"}
                   </button>
                   <button
                     onClick={() => setExportingPackage(pkg)}

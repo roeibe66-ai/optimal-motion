@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { CalendarDays, CheckCircle2, ChevronLeft, ChevronRight } from "lucide-react";
-import { programNameOf, type HydratedPatientExercise } from "@/app/hooks/useWorkoutSession";
+import { isInWeek, planWeeksOf, programNameOf, type HydratedPatientExercise } from "@/app/hooks/useWorkoutSession";
 import type { WorkoutLog } from "@/app/types";
 import { PROGRAM_TAG_STYLE } from "@/app/constants/catalog";
 
@@ -58,7 +58,7 @@ export default function CalendarTab({ patientExercises, workoutLogs, patientId, 
   // prop). Defaults to today so the sheet isn't empty on first load.
   const [selectedDate, setSelectedDate] = useState<Date | null>(() => new Date());
 
-  const availableWeeks = Array.from(new Set(patientExercises.map((ex) => ex.week || 1))).sort((a, b) => a - b);
+  const availableWeeks = planWeeksOf(patientExercises);
 
   // programStartDate is always a valid ISO string - PatientShell falls back
   // to "now" there if loggedInPatient.created_at is ever missing, so this
@@ -109,7 +109,7 @@ export default function CalendarTab({ patientExercises, workoutLogs, patientId, 
   const selectedDayId = selectedDate ? selectedDate.getDay().toString() : null;
   const selectedDayExercises =
     selectedWeek !== null && selectedDayId !== null
-      ? patientExercises.filter((pe) => (pe.week || 1) === selectedWeek && matchesScheduledDay(pe, selectedDayId))
+      ? patientExercises.filter((pe) => isInWeek(pe, selectedWeek) && matchesScheduledDay(pe, selectedDayId))
       : [];
   const selectedDayCategories = Array.from(new Set(selectedDayExercises.map(programNameOf)));
 
@@ -160,7 +160,7 @@ export default function CalendarTab({ patientExercises, workoutLogs, patientId, 
           const scheduledCategories =
             week === null
               ? []
-              : Array.from(new Set(patientExercises.filter((pe) => (pe.week || 1) === week && matchesScheduledDay(pe, dayId)).map(programNameOf)));
+              : Array.from(new Set(patientExercises.filter((pe) => isInWeek(pe, week) && matchesScheduledDay(pe, dayId)).map(programNameOf)));
           const isCompleted = completedDateKeys.has(toDateKey(date));
           const isClickable = scheduledCategories.length > 0 && week !== null;
           const isSelected = selectedDate !== null && isSameDay(date, selectedDate);

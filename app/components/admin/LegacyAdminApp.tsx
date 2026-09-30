@@ -43,6 +43,7 @@ import { useAuth } from "@/app/context/AuthContext";
 import { ADMIN_CATEGORY_STYLES, ADMIN_TAGS, AVAILABLE_MUSCLES, DAYS_OF_WEEK, DEFAULT_ADMIN_CATEGORY_STYLE, EQUIPMENT_LIST, MUSCLE_REGIONS } from "@/app/constants/catalog";
 import AdminSidebar from "@/app/components/admin/AdminSidebar";
 import AdminCoPilotDrawer from "@/app/components/admin/AdminCoPilotDrawer";
+import WorkoutBuilderTab from "@/app/components/admin/tabs/WorkoutBuilderTab";
 import ProgramLibraryTab from "@/app/components/admin/tabs/ProgramLibraryTab";
 import ExerciseLibraryTab from "@/app/components/admin/tabs/ExerciseLibraryTab";
 import { formatAdminDate, getExerciseName } from "@/app/utils/format";
@@ -1370,6 +1371,8 @@ export default function LegacyAdminApp() {
           </div>
         )}
 
+        {adminTab === "workout_builder" && <WorkoutBuilderTab exercises={exercises} lang={lang} />}
+
         {adminTab === "program_library" && <ProgramLibraryTab packages={packages} exercises={exercises} patients={patients} onRefresh={fetchAdminData} />}
 
         {adminTab === "exercises" && (
@@ -1517,7 +1520,7 @@ export default function LegacyAdminApp() {
                               <div className="flex flex-col gap-2">
                                 <div className="flex flex-wrap gap-2 text-sm font-medium text-muted">
                                   <span className="on-light bg-surface-alt px-3 py-1 rounded-lg border border-line">
-                                    שבוע: <strong className="text-fg">{assign.week || 1}</strong>
+                                    שבוע: <strong className="text-fg">{assign.week ?? "כל שבוע"}</strong>
                                   </span>
                                   <span className="on-light bg-surface-alt px-3 py-1 rounded-lg border border-line">
                                     בלוק: <strong className="text-fg">{assign.block || "A"}</strong>

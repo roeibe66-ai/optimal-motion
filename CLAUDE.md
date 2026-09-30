@@ -24,7 +24,7 @@ Actual feature code lives under `app/components/`, organized by domain:
 - `app/components/admin/` — practitioner/admin console (`LegacyAdminApp`,
   `AdminSidebar`, `AdminCoPilotDrawer`, `ExerciseFormModal`, `MusclePicker`, ...).
   `LegacyAdminApp` is gradually shedding tabs into `app/components/admin/tabs/`
-  (`ExerciseLibraryTab`, `ProgramLibraryTab`, `ProgramPdfExport`,
+  (`ExerciseLibraryTab`, `ProgramLibraryTab`, `WorkoutBuilderTab`, `ProgramPdfExport`,
   `ProgramSimulatorModal`) — follow that precedent (extracted tab component +
   a shared `*FormModal`) rather than adding new inline tab blocks to the legacy file.
 - `app/components/patient/` — patient-facing app (`PatientShell` + tabs: `PlanTab`,
@@ -32,7 +32,7 @@ Actual feature code lives under `app/components/`, organized by domain:
   `ProfileTab`, ...)
 - `app/components/marketing/` — landing/login/register/reset-password pages
 - `app/hooks/` — data & session hooks (`usePatientData`, `useAuthSession`,
-  `useWorkoutSession`, `useSavedPrograms`, `useWorkouts`, `useExerciseHistory`,
+  `useWorkoutSession`, `useSavedPrograms`, `useExplorePrograms`, `useExerciseHistory`,
   `usePasskeys`, `useReminders`, `useHaptics`, `usePlanSelection`,
   `useAIAssistantChat`, `useCuratedFacts`)
 - `app/actions/` — server actions (`researchAgent.ts`, `aiAssistant.ts`, `passkeyAuth.ts`)
@@ -49,8 +49,8 @@ must run before a session exists, e.g. the passkey login lookup in
 `patients`, `exercises`, `packages`, `package_exercises`, `patient_programs` (named
 programs assigned to a patient — `patient_exercises.program_id` points at one; the
 program name is the workout title the patient sees), `patient_exercises`,
-`workout_logs`, `patient_saved_programs`, `patient_passkeys`, `workouts`,
-`workout_likes`, `curated_facts`, `exercise_internal_notes`. Migrations live under
+`workout_logs`, `patient_saved_programs`, `patient_passkeys`, `package_likes`, `workouts`/`workout_likes`
+(legacy, emptied — Explore now lists published `packages`), `curated_facts`, `exercise_internal_notes`. Migrations live under
 `supabase/migrations/`.
 
 **Auth is real Supabase Auth** (email/password + Google OAuth + WebAuthn passkeys),

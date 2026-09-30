@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { Exercise } from "@/app/types";
-import type { HydratedPatientExercise } from "@/app/hooks/useWorkoutSession";
+import { planWeeksOf, type HydratedPatientExercise } from "@/app/hooks/useWorkoutSession";
 
 // Everything the Plan/DIY tabs let the patient pick: which week/category/day
 // they're viewing, and the exercises/filters/name for a DIY workout being
@@ -35,7 +35,7 @@ export function usePlanSelection(patientExercises: HydratedPatientExercise[]) {
   const [diyScheduleDay, setDiyScheduleDay] = useState(new Date().getDay().toString());
   const [diyProgramName, setDiyProgramName] = useState("תוכנית מותאמת אישית");
 
-  const availablePatientWeeks = Array.from(new Set(patientExercises.map((ex) => ex.week || 1))).sort((a, b) => a - b);
+  const availablePatientWeeks = planWeeksOf(patientExercises);
   const activePatientWeek = availablePatientWeeks.includes(patientSelectedWeek) ? patientSelectedWeek : availablePatientWeeks[0] || 1;
 
   const addDiyDay = () => {
