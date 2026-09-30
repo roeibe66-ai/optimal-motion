@@ -93,19 +93,19 @@ export default function ProgramLibraryTab({ packages, exercises, patients, onRef
   return (
     <div className="max-w-6xl mx-auto animate-in fade-in">
       <header className="mb-10 hidden md:block">
-        <h1 className="text-3xl md:text-4xl font-black text-white tracking-tight">ספריית תוכניות</h1>
-        <p className="text-stone-500 font-medium mt-2">נהל, שגר ובדוק את התבניות שבנית בבונה החכם.</p>
+        <h1 className="text-3xl md:text-4xl font-black text-on-dark tracking-tight">ספריית תוכניות</h1>
+        <p className="text-on-dark-muted font-medium mt-2">נהל, שגר ובדוק את התבניות שבנית בבונה החכם.</p>
       </header>
 
       {isLoadingExercises && packages.length > 0 && (
-        <div className="flex items-center gap-2 text-stone-500 text-sm mb-6">
+        <div className="flex items-center gap-2 text-on-dark-muted text-sm mb-6">
           <Loader2 size={14} className="animate-spin" /> טוען תרגילי תבניות...
         </div>
       )}
 
       {packages.length === 0 ? (
-        <div className="text-center p-14 text-stone-500 bg-[#1c1c1e] rounded-[1.75rem] border border-stone-800">
-          <Dumbbell size={36} className="mx-auto mb-4 text-stone-700" />
+        <div className="on-light text-center p-14 text-on-light-muted bg-surface rounded-[1.75rem] border border-line-light">
+          <Dumbbell size={36} className="mx-auto mb-4 text-on-light-muted" />
           עדיין לא נבנו תבניות. עבור ל&quot;בונה חכם &amp; פרוטוקולים&quot; ושמור תבנית ראשונה.
         </div>
       ) : (
@@ -117,56 +117,56 @@ export default function ProgramLibraryTab({ packages, exercises, patients, onRef
             const isBusy = busyPackageId === pkg.id;
 
             return (
-              <div key={pkg.id} className="bg-[#1c1c1e] rounded-[1.75rem] border border-stone-800 p-6 flex flex-col gap-4 hover:border-stone-700 transition-colors">
+              <div key={pkg.id} className="on-light bg-surface rounded-[1.75rem] border border-line-light p-6 flex flex-col gap-4 hover:border-line-input transition-colors">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <h3 className="text-lg font-black text-white truncate">{pkg.title}</h3>
-                    {pkg.description && <p className="text-sm text-stone-500 mt-1 line-clamp-2">{pkg.description}</p>}
+                    <h3 className="text-lg font-black text-on-light truncate">{pkg.title}</h3>
+                    {pkg.description && <p className="text-sm text-on-light-muted mt-1 line-clamp-2">{pkg.description}</p>}
                   </div>
                   <span
                     className={`shrink-0 text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-1 rounded-full ${
-                      isPublished ? "bg-teal-500/15 text-teal-400" : "bg-stone-500/15 text-stone-400"
+                      isPublished ? "bg-accent/15 text-accent-on-light" : "bg-surface-alt text-on-light-muted"
                     }`}
                   >
                     {isPublished ? "פורסם" : "טיוטה"}
                   </span>
                 </div>
 
-                <div className="text-xs font-bold text-stone-500">{exerciseCount} תרגילים</div>
+                <div className="text-xs font-bold text-on-light-muted">{exerciseCount} תרגילים</div>
 
-                <div className="flex flex-wrap gap-2 mt-auto pt-2 border-t border-stone-800">
+                <div className="flex flex-wrap gap-2 mt-auto pt-2 border-t border-line-light">
                   <button
                     onClick={() => setSimulatingPackage(pkg)}
                     disabled={exerciseCount === 0}
-                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-teal-500 text-stone-950 text-xs font-extrabold hover:bg-teal-400 transition-colors disabled:opacity-30 disabled:pointer-events-none"
+                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-accent text-accent-ink text-xs font-extrabold hover:bg-accent-hover active:bg-accent-active transition-colors disabled:bg-elevated disabled:text-on-dark-muted disabled:hover:bg-elevated disabled:pointer-events-none"
                   >
                     <Play size={13} fill="currentColor" /> הרץ / בדוק
                   </button>
                   <button
                     onClick={() => setAssigningPackage(pkg)}
                     disabled={exerciseCount === 0}
-                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white/5 text-white text-xs font-bold hover:bg-white/10 transition-colors disabled:opacity-30 disabled:pointer-events-none"
+                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-surface-alt text-on-light text-xs font-bold hover:bg-line-light transition-colors disabled:opacity-30 disabled:pointer-events-none"
                   >
                     <Send size={13} /> שיוך למטופל
                   </button>
                   <button
                     onClick={() => handleTogglePublish(pkg)}
                     disabled={isBusy}
-                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white/5 text-stone-300 text-xs font-bold hover:bg-white/10 transition-colors disabled:opacity-30"
+                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-surface-alt text-on-light text-xs font-bold hover:bg-line-light transition-colors disabled:opacity-30"
                   >
                     <CheckCircle2 size={13} /> {isPublished ? "בטל פרסום" : "פרסם"}
                   </button>
                   <button
                     onClick={() => setExportingPackage(pkg)}
                     disabled={exerciseCount === 0}
-                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white/5 text-stone-300 text-xs font-bold hover:bg-white/10 transition-colors disabled:opacity-30 disabled:pointer-events-none"
+                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-surface-alt text-on-light text-xs font-bold hover:bg-line-light transition-colors disabled:opacity-30 disabled:pointer-events-none"
                   >
                     <FileDown size={13} /> PDF
                   </button>
                   <button
                     onClick={() => handleDelete(pkg)}
                     disabled={isBusy}
-                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-red-500/10 text-red-400 text-xs font-bold hover:bg-red-500/20 transition-colors disabled:opacity-30 mr-auto"
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-danger text-on-danger text-xs font-bold hover:brightness-110 transition-colors disabled:opacity-30 mr-auto"
                   >
                     <Trash2 size={13} />
                   </button>
@@ -221,29 +221,29 @@ function AssignModal({ patients, pkg, onClose, onAssign }: AssignModalProps) {
   };
 
   return (
-    <div className="fixed inset-0 z-[250] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-[#1c1c1e] border border-stone-800 rounded-[1.75rem] p-7 w-full max-w-sm">
+    <div className="fixed inset-0 z-[250] bg-shell/70 backdrop-blur-sm flex items-center justify-center p-4">
+      <div className="bg-elevated border border-line-dark rounded-[1.75rem] p-7 w-full max-w-sm">
         <div className="flex items-start justify-between mb-5">
           <div>
-            <h3 className="text-lg font-black text-white">שיוך תבנית למטופל</h3>
-            <p className="text-sm text-stone-500 mt-1">{pkg.title}</p>
+            <h3 className="text-lg font-black text-on-dark">שיוך תבנית למטופל</h3>
+            <p className="text-sm text-on-dark-muted mt-1">{pkg.title}</p>
           </div>
-          <button onClick={onClose} className="text-stone-500 hover:text-white">
+          <button onClick={onClose} className="text-on-dark-muted hover:text-on-dark">
             <X size={20} />
           </button>
         </div>
 
-        <label className="block text-[10px] font-extrabold text-stone-400 mb-2 uppercase tracking-wider">בחר מטופל</label>
+        <label className="block text-[10px] font-extrabold text-on-dark-muted mb-2 uppercase tracking-wider">בחר מטופל</label>
         <select
           value={patientId}
           onChange={(e) => setPatientId(e.target.value)}
-          className="w-full border-b-2 border-teal-500 p-2 outline-none font-bold text-white bg-transparent mb-6"
+          className="w-full border-b-2 border-line-light p-2 outline-none font-bold text-on-light bg-surface mb-6 focus:border-focus focus:ring-2 focus:ring-focus"
         >
-          <option value="" className="bg-stone-950">
+          <option value="" className="bg-surface">
             -- בחר מטופל --
           </option>
           {patients.map((p) => (
-            <option key={p.id} value={p.id} className="bg-stone-950">
+            <option key={p.id} value={p.id} className="bg-surface">
               {p.full_name}
             </option>
           ))}
@@ -252,7 +252,7 @@ function AssignModal({ patients, pkg, onClose, onAssign }: AssignModalProps) {
         <button
           onClick={submit}
           disabled={!patientId || isSaving}
-          className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-teal-500 text-stone-950 font-extrabold disabled:opacity-40"
+          className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-accent text-accent-ink font-extrabold disabled:bg-elevated disabled:text-on-dark-muted disabled:hover:bg-elevated"
         >
           {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
           שגר תוכנית

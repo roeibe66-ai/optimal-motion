@@ -14,9 +14,10 @@ interface AnatomyHeatmapProps {
 // regardless of whatever the app's general accent color happens to be, so
 // this stays a muted brick-red even while brand-terracotta itself keeps
 // driving buttons/nav/tabs elsewhere.
-const MUSCLE_HIGHLIGHT_COLOR = "#A53021";
+const PRIME_MOVER_COLOR = "var(--muscle-primary)";
+const SYNERGIST_COLOR = "var(--muscle-secondary)";
 const PRIME_OPACITY = 0.85;
-const SYNERGIST_OPACITY = 0.35;
+const SYNERGIST_OPACITY = 0.85; // tiers are now told apart by hue (teal vs warm), not opacity
 const DEFAULT_ASPECT = "1536 / 1024";
 
 // Reverse of MUSCLE_SVG_PATH_MAP: SVG path id -> AVAILABLE_MUSCLES id. Built
@@ -44,8 +45,10 @@ const PATH_ID_TO_MUSCLE: Record<string, string> = Object.fromEntries(
 //
 // Each path's fill is then set imperatively (not via React path props) once
 // mounted, and again whenever the tagged muscles change:
-//   - Prime mover: muted brick-red (#A53021) at 85% fill opacity.
-//   - Synergist: the same brick-red at 35% fill opacity.
+//   - Prime mover: --muscle-primary at PRIME_OPACITY.
+//   - Synergist: --muscle-secondary at SYNERGIST_OPACITY.
+//   Set through `style.fill` (not the fill attribute) so the CSS variables
+//   resolve.
 //   - Untagged: fill="transparent" — only the black outline (and the photo
 //     behind it) shows.
 // The svg's internal ids (`cp` for the clip-path, `Image` for the photo
@@ -107,13 +110,13 @@ export default function AnatomyHeatmap({ primeMovers, synergists, className }: A
     container.querySelectorAll("path[id]").forEach((pathEl) => {
       const muscleId = PATH_ID_TO_MUSCLE[pathEl.id];
       if (muscleId && primeSet.has(muscleId)) {
-        pathEl.setAttribute("fill", MUSCLE_HIGHLIGHT_COLOR);
+        (pathEl as SVGPathElement).style.fill = PRIME_MOVER_COLOR;
         pathEl.setAttribute("fill-opacity", String(PRIME_OPACITY));
       } else if (muscleId && synergistSet.has(muscleId)) {
-        pathEl.setAttribute("fill", MUSCLE_HIGHLIGHT_COLOR);
+        (pathEl as SVGPathElement).style.fill = SYNERGIST_COLOR;
         pathEl.setAttribute("fill-opacity", String(SYNERGIST_OPACITY));
       } else {
-        pathEl.setAttribute("fill", "transparent");
+        (pathEl as SVGPathElement).style.fill = "transparent";
         pathEl.removeAttribute("fill-opacity");
       }
     });
@@ -124,7 +127,7 @@ export default function AnatomyHeatmap({ primeMovers, synergists, className }: A
       {svgMarkup && <div ref={containerRef} className="absolute inset-0 w-full h-full" dangerouslySetInnerHTML={{ __html: svgMarkup }} />}
 
       {loadFailed && (
-        <div className="absolute inset-0 flex items-center justify-center text-xs font-bold text-stone-400 bg-stone-50/80">
+        <div className="absolute inset-0 flex items-center justify-center text-xs font-bold text-on-dark-muted bg-elevated/80">
           לא ניתן לטעון את שכבת השרירים
         </div>
       )}

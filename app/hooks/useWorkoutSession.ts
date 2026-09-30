@@ -120,6 +120,13 @@ export function useWorkoutSession({
   const [pendingSetRir, setPendingSetRir] = useState<number | null>(null);
   const [repAdjustments, setRepAdjustments] = useState<Record<string, { reps: number; rir: number | null }>>({});
 
+  // Admin Run/Test feedback: a brief confirmation whenever a write would
+  // normally happen but got skipped because isSimulation is true — so the
+  // admin sees the same "it worked" feedback a real patient would, without a
+  // real workout_logs/patient_exercises row ever being created. See
+  // handleFinishAction and submitFinalFeedback's isSimulation branch below.
+  const [simulationToast, setSimulationToast] = useState<string | null>(null);
+
   // --- Derived session data (recomputed each render, same as the original) ---
 
   const weekFilteredPatientExercises = patientExercises.filter((pe) => (pe.week || 1) === activePatientWeek);
@@ -225,6 +232,7 @@ export function useWorkoutSession({
           rir: pendingSetRir ?? undefined,
         },
       ]);
+      if (isSimulation) setSimulationToast("סימולציה: הסט נרשם בהצלחה");
     }
 
     // actualRepsLogged/pendingSetRir are deliberately NOT cleared here — the
@@ -528,6 +536,7 @@ export function useWorkoutSession({
       triggerHaptic("success");
       setFeedbackPhase("done");
       setSelectedPainAreas([]);
+      setSimulationToast("סימולציה: האימון הושלם (לא נשמר)");
       return;
     }
 
@@ -676,5 +685,10 @@ export function useWorkoutSession({
     viewingExInfo,
     setViewingExInfo,
     exHistoryData,
+
+    // admin Run/Test simulation
+    isSimulation,
+    simulationToast,
+    dismissSimulationToast: () => setSimulationToast(null),
   };
 }

@@ -144,36 +144,36 @@ function ExerciseCombobox({
       <button
         type="button"
         onClick={() => setIsOpen((prev) => !prev)}
-        className="w-full flex items-center justify-between gap-2 border-b-2 border-indigo-500/30 p-2 bg-transparent text-start focus:border-indigo-500 outline-none"
+        className="w-full flex items-center justify-between gap-2 border-b-2 border-accent/30 p-2 bg-transparent text-start focus:border-focus-on-light outline-none"
       >
-        <span className={`truncate ${selected ? "text-white font-bold" : "text-stone-500"}`}>{selected ? getExerciseName(selected, lang) : placeholder}</span>
-        <ChevronDown size={14} className="text-stone-500 shrink-0" />
+        <span className={`truncate ${selected ? "text-on-light font-bold" : "text-on-light-muted"}`}>{selected ? getExerciseName(selected, lang) : placeholder}</span>
+        <ChevronDown size={14} className="text-on-light-muted shrink-0" />
       </button>
 
       {isOpen && (
-        <div className="absolute z-10 mt-1.5 w-full bg-[#1c1c1e] border border-stone-800 rounded-xl shadow-2xl overflow-hidden">
-          <div className="p-2 border-b border-stone-800">
+        <div className="on-light absolute z-10 mt-1.5 w-full bg-surface border border-line-light rounded-xl shadow-2xl overflow-hidden">
+          <div className="p-2 border-b border-line-light">
             <input
               autoFocus
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="הקלד לחיפוש..."
-              className="w-full bg-stone-950 border border-stone-800 text-white text-sm rounded-lg px-3 py-2 outline-none focus:border-indigo-500"
+              className="w-full bg-surface-alt border border-line-input text-on-light text-sm rounded-lg px-3 py-2 outline-none focus:border-focus-on-light"
             />
           </div>
           <div className="max-h-56 overflow-y-auto">
-            <button type="button" onClick={() => select("")} className="w-full text-start px-3 py-2 text-sm text-stone-400 hover:bg-stone-800 transition-colors">
+            <button type="button" onClick={() => select("")} className="w-full text-start px-3 py-2 text-sm text-on-light-muted hover:bg-line-light transition-colors">
               -- ללא --
             </button>
-            {filteredOptions.length === 0 && <p className="px-3 py-3 text-xs text-stone-500">אין תוצאות</p>}
+            {filteredOptions.length === 0 && <p className="px-3 py-3 text-xs text-on-light-muted">אין תוצאות</p>}
             {filteredOptions.map((o) => (
               <button
                 key={o.id}
                 type="button"
                 onClick={() => select(o.id)}
                 className={`w-full text-start px-3 py-2 text-sm truncate transition-colors ${
-                  o.id === value ? "bg-indigo-500/15 text-indigo-300 font-bold" : "text-white hover:bg-stone-800"
+                  o.id === value ? "bg-accent/15 text-accent-on-light font-bold" : "text-on-light hover:bg-line-light"
                 }`}
               >
                 {getExerciseName(o, lang)}
@@ -273,50 +273,50 @@ export default function ExerciseFormModal({ exercise, exercises, internalNotes, 
   };
 
   return (
-    <div className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center" onClick={onClose}>
+    <div className="fixed inset-0 z-[60] bg-shell/60 backdrop-blur-sm flex items-end sm:items-center justify-center" onClick={onClose}>
       <div
-        className="bg-[#161311] border border-stone-800 w-full sm:max-w-3xl sm:rounded-[2rem] rounded-t-[2rem] max-h-[92vh] flex flex-col animate-in slide-in-from-bottom sm:zoom-in-95 duration-200"
+        className="bg-elevated border border-line-dark w-full sm:max-w-3xl sm:rounded-[2rem] rounded-t-[2rem] max-h-[92vh] flex flex-col animate-in slide-in-from-bottom sm:zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between p-6 border-b border-stone-800 shrink-0">
-          <h2 className="text-lg font-extrabold text-white">{isEditing ? "עריכת תרגיל" : "הוספת תרגיל חדש"}</h2>
-          <button onClick={onClose} className="p-2 text-stone-500 hover:text-white transition-colors" aria-label="סגור">
+        <div className="flex items-center justify-between p-6 border-b border-line-dark shrink-0">
+          <h2 className="text-lg font-extrabold text-on-dark">{isEditing ? "עריכת תרגיל" : "הוספת תרגיל חדש"}</h2>
+          <button onClick={onClose} className="p-2 text-on-dark-muted hover:text-on-dark transition-colors" aria-label="סגור">
             <X size={20} />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="flex flex-col gap-6 p-6 md:p-8 overflow-y-auto">
+        <form onSubmit={handleSubmit} className="on-light flex flex-col gap-6 p-6 md:p-8 overflow-y-auto bg-surface text-on-light">
           <div className="flex flex-col md:flex-row gap-6">
             <div className="flex-1">
-              <label className="block text-[10px] font-extrabold text-stone-500 mb-2 uppercase tracking-wider">שם תרגיל (עברית, אופציונלי)</label>
+              <label className="block text-[10px] font-extrabold text-on-light-muted mb-2 uppercase tracking-wider">שם תרגיל (עברית, אופציונלי)</label>
               <input
                 type="text"
                 value={form.name_he}
                 onChange={(e) => set("name_he", e.target.value)}
                 placeholder="לדוגמה: פשיטת ברך במכונה"
-                className="w-full border-b-2 border-stone-800 p-2 bg-transparent text-white placeholder:text-stone-600 focus:border-teal-500 focus:ring-1 focus:ring-teal-500/30 outline-none"
+                className="w-full border-b-2 border-line-input p-2 bg-transparent text-on-light placeholder:text-on-light-muted focus:border-focus-on-light focus:ring-2 focus:ring-focus-on-light outline-none"
               />
             </div>
             <div className="flex-1">
-              <label className="block text-[10px] font-extrabold text-stone-500 mb-2 uppercase tracking-wider">שם תרגיל (אנגלית, אופציונלי)</label>
+              <label className="block text-[10px] font-extrabold text-on-light-muted mb-2 uppercase tracking-wider">שם תרגיל (אנגלית, אופציונלי)</label>
               <input
                 type="text"
                 value={form.name_en}
                 onChange={(e) => set("name_en", e.target.value)}
                 placeholder="e.g. Leg Extension"
-                className="w-full border-b-2 border-stone-800 p-2 bg-transparent text-white placeholder:text-stone-600 focus:border-teal-500 focus:ring-1 focus:ring-teal-500/30 outline-none text-left"
+                className="w-full border-b-2 border-line-input p-2 bg-transparent text-on-light placeholder:text-on-light-muted focus:border-focus-on-light focus:ring-2 focus:ring-focus-on-light outline-none text-left"
                 dir="ltr"
               />
             </div>
             <div className="flex-1">
-              <label className="block text-[10px] font-extrabold text-stone-500 mb-2 uppercase tracking-wider">שם מוצג כברירת מחדל</label>
+              <label className="block text-[10px] font-extrabold text-on-light-muted mb-2 uppercase tracking-wider">שם מוצג כברירת מחדל</label>
               <select
                 value={form.name_display_preference}
                 onChange={(e) => set("name_display_preference", e.target.value as NameDisplayPreference)}
-                className="w-full border-b-2 border-stone-800 p-2 bg-transparent text-white font-bold focus:border-teal-500 focus:ring-1 focus:ring-teal-500/30 outline-none"
+                className="w-full border-b-2 border-line-input p-2 bg-transparent text-on-light font-bold focus:border-focus-on-light focus:ring-2 focus:ring-focus-on-light outline-none"
               >
                 {NAME_DISPLAY_PREFERENCES.map((p) => (
-                  <option key={p.id} value={p.id} className="bg-[#1c1c1e]">
+                  <option key={p.id} value={p.id} className="bg-surface">
                     {p.label}
                   </option>
                 ))}
@@ -326,7 +326,7 @@ export default function ExerciseFormModal({ exercise, exercises, internalNotes, 
 
           <div className="flex flex-col md:flex-row gap-6">
             <div className="flex-[2]">
-              <label className="block text-[10px] font-extrabold text-stone-500 mb-2 uppercase tracking-wider">קטגוריות (ניתן לבחור כמה)</label>
+              <label className="block text-[10px] font-extrabold text-on-light-muted mb-2 uppercase tracking-wider">קטגוריות (ניתן לבחור כמה)</label>
               <div className="flex flex-wrap gap-2">
                 {ADMIN_TAGS.map((tag) => {
                   const isSelected = form.categories.includes(tag.label);
@@ -336,7 +336,7 @@ export default function ExerciseFormModal({ exercise, exercises, internalNotes, 
                       type="button"
                       onClick={() => toggleInArray("categories", tag.label)}
                       className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all border ${
-                        isSelected ? "bg-teal-500 text-stone-950 border-teal-400 shadow-sm" : "bg-stone-950 text-stone-300 border-stone-800 hover:bg-stone-900"
+                        isSelected ? "bg-accent text-accent-ink border-accent shadow-sm" : "bg-surface-alt text-on-light border-line-light hover:bg-line-light"
                       }`}
                     >
                       {tag.label}
@@ -346,17 +346,17 @@ export default function ExerciseFormModal({ exercise, exercises, internalNotes, 
               </div>
             </div>
             <div className="flex-1">
-              <label className="block text-[10px] font-extrabold text-stone-500 mb-2 uppercase tracking-wider">רמת קושי</label>
+              <label className="block text-[10px] font-extrabold text-on-light-muted mb-2 uppercase tracking-wider">רמת קושי</label>
               <select
                 value={form.difficulty_level}
                 onChange={(e) => set("difficulty_level", e.target.value)}
-                className="w-full border-b-2 border-stone-800 p-2 bg-transparent text-white font-bold focus:border-teal-500 focus:ring-1 focus:ring-teal-500/30 outline-none"
+                className="w-full border-b-2 border-line-input p-2 bg-transparent text-on-light font-bold focus:border-focus-on-light focus:ring-2 focus:ring-focus-on-light outline-none"
               >
-                <option value="" className="bg-[#1c1c1e]">
+                <option value="" className="bg-surface">
                   -- לא צוין --
                 </option>
                 {DIFFICULTY_LEVELS.map((d) => (
-                  <option key={d.id} value={d.id} className="bg-[#1c1c1e]">
+                  <option key={d.id} value={d.id} className="bg-surface">
                     {d.label}
                   </option>
                 ))}
@@ -365,7 +365,7 @@ export default function ExerciseFormModal({ exercise, exercises, internalNotes, 
           </div>
 
           <div>
-            <label className="block text-[10px] font-extrabold text-stone-500 mb-2 uppercase tracking-wider flex items-center gap-1.5">
+            <label className="block text-[10px] font-extrabold text-on-light-muted mb-2 uppercase tracking-wider flex items-center gap-1.5">
               <Dumbbell size={12} /> ציוד נדרש (ניתן לבחור כמה)
             </label>
             <div className="flex flex-wrap gap-2">
@@ -377,7 +377,7 @@ export default function ExerciseFormModal({ exercise, exercises, internalNotes, 
                     type="button"
                     onClick={() => toggleInArray("equipment", eq.id)}
                     className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all border ${
-                      isSelected ? "bg-teal-500 text-stone-950 border-teal-400 shadow-sm" : "bg-stone-950 text-stone-300 border-stone-800 hover:bg-stone-900"
+                      isSelected ? "bg-accent text-accent-ink border-accent shadow-sm" : "bg-surface-alt text-on-light border-line-light hover:bg-line-light"
                     }`}
                   >
                     {eq.label}
@@ -388,62 +388,62 @@ export default function ExerciseFormModal({ exercise, exercises, internalNotes, 
           </div>
 
           <div>
-            <label className="block text-[10px] font-extrabold text-stone-500 mb-2 uppercase tracking-wider">קישור לגיף או תמונה (URL)</label>
+            <label className="block text-[10px] font-extrabold text-on-light-muted mb-2 uppercase tracking-wider">קישור לגיף או תמונה (URL)</label>
             <input
               type="url"
               value={form.gif_url}
               onChange={(e) => set("gif_url", e.target.value)}
               placeholder="https://... (אופציונלי)"
-              className="w-full border-b-2 border-stone-800 p-2 bg-transparent text-white placeholder:text-stone-600 focus:border-teal-500 focus:ring-1 focus:ring-teal-500/30 outline-none text-left"
+              className="w-full border-b-2 border-line-input p-2 bg-transparent text-on-light placeholder:text-on-light-muted focus:border-focus-on-light focus:ring-2 focus:ring-focus-on-light outline-none text-left"
               dir="ltr"
             />
           </div>
           <div>
-            <label className="block text-[10px] font-extrabold text-stone-500 mb-2 uppercase tracking-wider">קישור מדיה - זווית נוספת (אופציונלי)</label>
+            <label className="block text-[10px] font-extrabold text-on-light-muted mb-2 uppercase tracking-wider">קישור מדיה - זווית נוספת (אופציונלי)</label>
             <input
               type="url"
               value={form.secondary_gif_url}
               onChange={(e) => set("secondary_gif_url", e.target.value)}
               placeholder="https://..."
-              className="w-full border-b-2 border-stone-800 p-2 bg-transparent text-white placeholder:text-stone-600 focus:border-teal-500 focus:ring-1 focus:ring-teal-500/30 outline-none text-left"
+              className="w-full border-b-2 border-line-input p-2 bg-transparent text-on-light placeholder:text-on-light-muted focus:border-focus-on-light focus:ring-2 focus:ring-focus-on-light outline-none text-left"
               dir="ltr"
             />
           </div>
 
-          <div className="bg-teal-500/[0.06] p-5 rounded-2xl border border-teal-500/20 flex flex-col md:flex-row gap-6">
-            <div className="flex-1 border-b md:border-b-0 md:border-l border-teal-500/20 pb-4 md:pb-0 md:pl-6">
-              <label className="block text-sm font-bold text-teal-400 mb-2 flex items-center gap-2">
+          <div className="bg-accent/5 p-5 rounded-2xl border border-accent/20 flex flex-col md:flex-row gap-6">
+            <div className="flex-1 border-b md:border-b-0 md:border-l border-accent/20 pb-4 md:pb-0 md:pl-6">
+              <label className="block text-sm font-bold text-accent-on-light mb-2 flex items-center gap-2">
                 <Target size={18} /> שריר מטרה (אגוניסט)
               </label>
               <select
                 value={form.target_muscle}
                 onChange={(e) => set("target_muscle", e.target.value)}
-                className="w-full border-b-2 border-teal-500/30 p-2 bg-transparent focus:border-teal-500 focus:ring-1 focus:ring-teal-500/30 outline-none text-white font-bold"
+                className="w-full border-b-2 border-accent/30 p-2 bg-transparent focus:border-focus-on-light focus:ring-2 focus:ring-focus-on-light outline-none text-on-light font-bold"
               >
-                <option value="" className="bg-[#1c1c1e]">
+                <option value="" className="bg-surface">
                   -- בחר שריר מרכזי --
                 </option>
                 {MUSCLE_REGIONS.map((region) => (
-                  <optgroup key={region.id} label={region.label} className="bg-[#1c1c1e]">
+                  <optgroup key={region.id} label={region.label} className="bg-surface">
                     {AVAILABLE_MUSCLES.filter((m) => region.muscleIds.includes(m.id)).map((m) => (
-                      <option key={m.id} value={m.id} className="bg-[#1c1c1e]">
+                      <option key={m.id} value={m.id} className="bg-surface">
                         {m.label}
                       </option>
                     ))}
                   </optgroup>
                 ))}
               </select>
-              <p className="text-[10px] text-teal-500/80 mt-2 font-medium">* לפיו המערכת תחפש תרגילים חלופיים.</p>
+              <p className="text-[10px] text-accent-on-light/80 mt-2 font-medium">* לפיו המערכת תחפש תרגילים חלופיים.</p>
             </div>
             <div className="flex-[2]">
-              <label className="block text-sm font-bold text-teal-400 mb-2">שרירים מייצבים (סינרגיסטים)</label>
+              <label className="block text-sm font-bold text-accent-on-light mb-2">שרירים מייצבים (סינרגיסטים)</label>
               <div className="flex flex-col gap-2.5">
                 {MUSCLE_REGIONS.map((region) => {
                   const muscles = AVAILABLE_MUSCLES.filter((m) => region.muscleIds.includes(m.id) && m.id !== form.target_muscle);
                   if (muscles.length === 0) return null;
                   return (
                     <div key={region.id}>
-                      <div className="text-[10px] font-bold text-stone-500 mb-1">{region.label}</div>
+                      <div className="text-[10px] font-bold text-on-light-muted mb-1">{region.label}</div>
                       <div className="flex flex-wrap gap-2">
                         {muscles.map((m) => {
                           const isSelected = form.secondary_muscles.includes(m.id);
@@ -453,7 +453,7 @@ export default function ExerciseFormModal({ exercise, exercises, internalNotes, 
                               type="button"
                               onClick={() => toggleInArray("secondary_muscles", m.id)}
                               className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all border ${
-                                isSelected ? "bg-teal-500 text-stone-950 border-teal-400 shadow-sm" : "bg-stone-950 text-stone-300 border-stone-800 hover:bg-stone-900"
+                                isSelected ? "bg-accent text-accent-ink border-accent shadow-sm" : "bg-surface-alt text-on-light border-line-light hover:bg-line-light"
                               }`}
                             >
                               {m.label}
@@ -469,7 +469,7 @@ export default function ExerciseFormModal({ exercise, exercises, internalNotes, 
           </div>
 
           <div>
-            <label className="block text-sm font-bold text-teal-400 mb-2 flex items-center gap-2">
+            <label className="block text-sm font-bold text-accent-on-light mb-2 flex items-center gap-2">
               <Target size={18} /> מפת שרירים (Heatmap)
             </label>
             <MusclePicker
@@ -479,50 +479,50 @@ export default function ExerciseFormModal({ exercise, exercises, internalNotes, 
             />
           </div>
 
-          <div className="bg-indigo-500/[0.06] p-5 rounded-2xl border border-indigo-500/20 flex flex-col md:flex-row gap-6">
+          <div className="bg-accent/5 p-5 rounded-2xl border border-accent/20 flex flex-col md:flex-row gap-6">
             <div className="flex-1">
-              <label className="block text-sm font-bold text-indigo-400 mb-2 flex items-center gap-2">
+              <label className="block text-sm font-bold text-accent-on-light mb-2 flex items-center gap-2">
                 <TrendingDown size={18} /> גרסה קלה יותר (Progression / קל)
               </label>
               <ExerciseCombobox value={form.easier_version_id} onChange={(id) => set("easier_version_id", id)} options={otherExercises} lang={lang} placeholder="-- ללא --" />
             </div>
             <div className="flex-1">
-              <label className="block text-sm font-bold text-indigo-400 mb-2 flex items-center gap-2">
+              <label className="block text-sm font-bold text-accent-on-light mb-2 flex items-center gap-2">
                 <TrendingUp size={18} /> גרסה קשה יותר (Progression / קשה)
               </label>
               <ExerciseCombobox value={form.harder_version_id} onChange={(id) => set("harder_version_id", id)} options={otherExercises} lang={lang} placeholder="-- ללא --" />
             </div>
           </div>
 
-          <div className="bg-stone-950 p-5 rounded-2xl border border-stone-800">
-            <label className="block text-sm font-bold text-stone-400 mb-3 flex items-center gap-2">
+          <div className="bg-surface-alt p-5 rounded-2xl border border-line-light">
+            <label className="block text-sm font-bold text-on-light-muted mb-3 flex items-center gap-2">
               <Lock size={16} /> הערות פנימיות לצוות (לאדמין בלבד, לא מוצג למטופלים)
             </label>
             <textarea
               value={form.internal_notes}
               onChange={(e) => set("internal_notes", e.target.value)}
               placeholder="הערות קליניות, שיקולים פנימיים וכו'"
-              className="w-full min-h-[120px] border-b-2 border-stone-800 p-2 bg-transparent text-white placeholder:text-stone-600 focus:border-teal-500 focus:ring-1 focus:ring-teal-500/30 outline-none"
+              className="w-full min-h-[120px] border-b-2 border-line-input p-2 bg-transparent text-on-light placeholder:text-on-light-muted focus:border-focus-on-light focus:ring-2 focus:ring-focus-on-light outline-none"
               rows={4}
             />
           </div>
 
-          <div className="bg-emerald-500/[0.06] p-5 rounded-2xl border border-emerald-500/20">
-            <label className="block text-sm font-bold text-emerald-400 mb-2 flex items-center gap-2">
+          <div className="bg-accent/5 p-5 rounded-2xl border border-accent/20">
+            <label className="block text-sm font-bold text-accent-on-light mb-2 flex items-center gap-2">
               <Check size={18} /> דגשים קליניים (Clinical Cues, עברית · אופציונלי)
             </label>
             <textarea
               value={form.patient_cues}
               onChange={(e) => set("patient_cues", e.target.value)}
               placeholder={"שורה אחת לכל דגש, לדוגמה:\nשמור על גב ישר\nנשוף בזמן המאמץ"}
-              className="w-full min-h-[120px] border-b-2 border-emerald-500/30 p-2 bg-transparent text-white placeholder:text-stone-600 focus:border-emerald-400 outline-none"
+              className="w-full min-h-[120px] border-b-2 border-accent-on-light/50 p-2 bg-transparent text-on-light placeholder:text-on-light-muted focus:border-focus-on-light focus:ring-2 focus:ring-focus-on-light outline-none"
               rows={4}
             />
-            <p className="text-[10px] text-emerald-500/80 mt-2 font-medium">* כל שורה תוצג למטופל עם ✅ בתחילתה.</p>
+            <p className="text-[10px] text-accent-on-light/80 mt-2 font-medium">* כל שורה תוצג למטופל עם ✅ בתחילתה.</p>
           </div>
 
-          <div className="bg-emerald-500/[0.06] p-5 rounded-2xl border border-emerald-500/20">
-            <label className="block text-sm font-bold text-emerald-400 mb-2 flex items-center gap-2" dir="ltr">
+          <div className="bg-accent/5 p-5 rounded-2xl border border-accent/20">
+            <label className="block text-sm font-bold text-accent-on-light mb-2 flex items-center gap-2" dir="ltr">
               <Check size={18} /> Clinical Cues / Do&apos;s (English · Optional)
             </label>
             <textarea
@@ -530,28 +530,28 @@ export default function ExerciseFormModal({ exercise, exercises, internalNotes, 
               onChange={(e) => set("cues_en", e.target.value)}
               dir="ltr"
               placeholder={"One cue per line, e.g.:\nKeep your back straight\nExhale during the effort"}
-              className="w-full min-h-[120px] border-b-2 border-emerald-500/30 p-2 bg-transparent text-white placeholder:text-stone-600 focus:border-emerald-400 outline-none text-left"
+              className="w-full min-h-[120px] border-b-2 border-accent-on-light/50 p-2 bg-transparent text-on-light placeholder:text-on-light-muted focus:border-focus-on-light focus:ring-2 focus:ring-focus-on-light outline-none text-left"
               rows={4}
             />
-            <p className="text-[10px] text-emerald-500/80 mt-2 font-medium" dir="ltr">* Each line is shown to the patient with a ✅.</p>
+            <p className="text-[10px] text-accent-on-light/80 mt-2 font-medium" dir="ltr">* Each line is shown to the patient with a ✅.</p>
           </div>
 
-          <div className="bg-red-500/[0.06] p-5 rounded-2xl border border-red-500/20">
-            <label className="block text-sm font-bold text-red-400 mb-2 flex items-center gap-2">
+          <div className="bg-warm/10 p-5 rounded-2xl border border-warm/30">
+            <label className="block text-sm font-bold text-warm-on-light mb-2 flex items-center gap-2">
               <AlertTriangle size={18} /> טעויות נפוצות (עברית · אופציונלי)
             </label>
             <textarea
               value={form.common_mistake}
               onChange={(e) => set("common_mistake", e.target.value)}
               placeholder={"שורה אחת לכל טעות, לדוגמה:\nאל תיתן לברך לקרוס פנימה\nאל תנעל מרפקים בקצה התנועה"}
-              className="w-full min-h-[120px] border-b-2 border-red-500/30 p-2 bg-transparent text-white placeholder:text-stone-600 focus:border-red-400 outline-none"
+              className="w-full min-h-[120px] border-b-2 border-warm-on-light/50 p-2 bg-transparent text-on-light placeholder:text-on-light-muted focus:border-focus-on-light focus:ring-2 focus:ring-focus-on-light outline-none"
               rows={4}
             />
-            <p className="text-[10px] text-red-500/80 mt-2 font-medium">* כל שורה תוצג למטופל עם ❌ בתחילתה.</p>
+            <p className="text-[10px] text-warm-on-light mt-2 font-medium">* כל שורה תוצג למטופל עם ❌ בתחילתה.</p>
           </div>
 
-          <div className="bg-red-500/[0.06] p-5 rounded-2xl border border-red-500/20">
-            <label className="block text-sm font-bold text-red-400 mb-2 flex items-center gap-2" dir="ltr">
+          <div className="bg-warm/10 p-5 rounded-2xl border border-warm/30">
+            <label className="block text-sm font-bold text-warm-on-light mb-2 flex items-center gap-2" dir="ltr">
               <AlertTriangle size={18} /> Common Mistakes / Don&apos;ts (English · Optional)
             </label>
             <textarea
@@ -559,40 +559,40 @@ export default function ExerciseFormModal({ exercise, exercises, internalNotes, 
               onChange={(e) => set("mistakes_en", e.target.value)}
               dir="ltr"
               placeholder={"One mistake per line, e.g.:\nDon't let the knee cave inward\nDon't lock the elbows at the end of the movement"}
-              className="w-full min-h-[120px] border-b-2 border-red-500/30 p-2 bg-transparent text-white placeholder:text-stone-600 focus:border-red-400 outline-none text-left"
+              className="w-full min-h-[120px] border-b-2 border-warm-on-light/50 p-2 bg-transparent text-on-light placeholder:text-on-light-muted focus:border-focus-on-light focus:ring-2 focus:ring-focus-on-light outline-none text-left"
               rows={4}
             />
-            <p className="text-[10px] text-red-500/80 mt-2 font-medium" dir="ltr">* Each line is shown to the patient with a ❌.</p>
+            <p className="text-[10px] text-warm-on-light mt-2 font-medium" dir="ltr">* Each line is shown to the patient with a ❌.</p>
           </div>
 
           <div>
-            <label className="block text-[10px] font-extrabold text-stone-500 mb-2 uppercase tracking-wider">תיאור / הנחיות ביצוע (עברית · אופציונלי)</label>
+            <label className="block text-[10px] font-extrabold text-on-light-muted mb-2 uppercase tracking-wider">תיאור / הנחיות ביצוע (עברית · אופציונלי)</label>
             <textarea
               value={form.description}
               onChange={(e) => set("description", e.target.value)}
-              className="w-full min-h-[120px] border-b-2 border-stone-800 p-2 bg-transparent text-white focus:border-teal-500 focus:ring-1 focus:ring-teal-500/30 outline-none"
+              className="w-full min-h-[120px] border-b-2 border-line-input p-2 bg-transparent text-on-light focus:border-focus-on-light focus:ring-2 focus:ring-focus-on-light outline-none"
               rows={4}
             />
           </div>
 
           <div>
-            <label className="block text-[10px] font-extrabold text-stone-500 mb-2 uppercase tracking-wider" dir="ltr">
+            <label className="block text-[10px] font-extrabold text-on-light-muted mb-2 uppercase tracking-wider" dir="ltr">
               Description / Instructions (English · Optional)
             </label>
             <textarea
               value={form.description_en}
               onChange={(e) => set("description_en", e.target.value)}
               dir="ltr"
-              className="w-full min-h-[120px] border-b-2 border-stone-800 p-2 bg-transparent text-white focus:border-teal-500 focus:ring-1 focus:ring-teal-500/30 outline-none text-left"
+              className="w-full min-h-[120px] border-b-2 border-line-input p-2 bg-transparent text-on-light focus:border-focus-on-light focus:ring-2 focus:ring-focus-on-light outline-none text-left"
               rows={4}
             />
           </div>
 
-          <div className="flex gap-3 sticky bottom-0 -mx-6 md:-mx-8 -mb-6 md:-mb-8 px-6 md:px-8 py-5 bg-[#161311] border-t border-stone-800">
-            <button type="submit" disabled={isSaving} className="flex-1 bg-teal-500 text-stone-950 py-3.5 rounded-2xl font-black hover:bg-teal-400 transition-colors disabled:opacity-50">
+          <div className="on-light flex gap-3 sticky bottom-0 -mx-6 md:-mx-8 -mb-6 md:-mb-8 px-6 md:px-8 py-5 bg-surface border-t border-line-light">
+            <button type="submit" disabled={isSaving} className="flex-1 bg-accent text-accent-ink py-3.5 rounded-2xl font-black hover:bg-accent-hover active:bg-accent-active transition-colors disabled:bg-elevated disabled:text-on-dark-muted disabled:hover:bg-elevated">
               {isSaving ? "שומר..." : isEditing ? "שמור שינויים" : "שמור במאגר"}
             </button>
-            <button type="button" onClick={onClose} className="px-8 bg-stone-800 text-stone-300 py-3.5 rounded-2xl font-bold hover:bg-stone-700 transition-colors">
+            <button type="button" onClick={onClose} className="px-8 bg-surface-alt text-on-light py-3.5 rounded-2xl font-bold hover:bg-line-light transition-colors">
               ביטול
             </button>
           </div>

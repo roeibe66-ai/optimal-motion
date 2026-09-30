@@ -30,18 +30,18 @@ export default function MusclePicker({ primeMovers, synergists, onChange }: Musc
   };
 
   return (
-    <div className="flex flex-col md:flex-row gap-6 bg-stone-950 rounded-2xl border border-stone-800 p-5">
+    <div className="flex flex-col md:flex-row gap-6 bg-elevated rounded-2xl border border-line-dark p-5">
       <div className="w-full md:w-56 shrink-0">
         <AnatomyHeatmap primeMovers={primeMovers} synergists={synergists} />
       </div>
 
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-4 mb-3 text-[10px] font-extrabold uppercase tracking-wider text-stone-400">
+        <div className="flex items-center gap-4 mb-3 text-[10px] font-extrabold uppercase tracking-wider text-on-dark-muted">
           <span className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: "#047857" }} /> מניע ראשי
+            <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: "var(--muscle-primary)" }} /> מניע ראשי
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: "#047857", opacity: 0.35 }} /> סינרגיסט
+            <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: "var(--muscle-secondary)" }} /> סינרגיסט
           </span>
         </div>
 
@@ -56,10 +56,10 @@ export default function MusclePicker({ primeMovers, synergists, onChange }: Musc
                 onClick={() => cycle(id)}
                 className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-colors ${
                   isPrime
-                    ? "bg-emerald-700 text-white border-emerald-600"
+                    ? "bg-muscle-primary text-accent-ink border-muscle-primary"
                     : isSynergist
-                      ? "bg-emerald-700/30 text-emerald-200 border-emerald-700/50"
-                      : "bg-transparent text-stone-400 border-stone-800 hover:border-stone-600 hover:text-stone-200"
+                      ? "bg-muscle-secondary/20 text-muscle-secondary border-muscle-secondary/50"
+                      : "bg-transparent text-on-dark-muted border-line-dark hover:border-accent/40 hover:text-on-dark"
                 }`}
               >
                 {muscleLabel(id)}

@@ -68,11 +68,11 @@ export default function ProgramSimulatorModal({ pkg, packageExercises, exerciseC
     .filter((x): x is HydratedPatientExercise => x !== null);
 
   return (
-    <div className="fixed inset-0 z-[300] bg-stone-950/70 backdrop-blur-sm flex items-center justify-center p-0 md:p-6">
-      <div className="relative w-full h-full md:h-[92vh] md:max-w-md md:rounded-[2.5rem] overflow-hidden bg-[#FDFBF7] shadow-2xl">
+    <div className="fixed inset-0 z-[300] bg-shell/70 backdrop-blur-sm flex items-center justify-center p-0 md:p-6">
+      <div className="relative w-full h-full md:h-[92vh] md:max-w-md md:rounded-[2.5rem] overflow-hidden bg-shell shadow-2xl">
         <button
           onClick={onClose}
-          className="absolute top-4 left-4 z-[400] w-10 h-10 rounded-full bg-stone-950/80 text-white flex items-center justify-center shadow-lg hover:bg-stone-950"
+          className="absolute top-4 left-4 z-[400] w-10 h-10 rounded-full bg-shell/80 text-on-dark flex items-center justify-center shadow-lg hover:bg-shell"
           aria-label="סגור סימולציה"
         >
           <X size={20} />
@@ -129,9 +129,9 @@ function SimulatorPlayer({ programTitle, hydratedExercises, exerciseCatalog, pat
 
   if (hydratedExercises.length === 0) {
     return (
-      <div className="p-8 h-full flex flex-col items-center justify-center text-center gap-3 text-stone-500">
-        <Dumbbell size={40} className="text-stone-300" />
-        <p className="font-bold text-stone-700">לתבנית הזו עדיין אין תרגילים</p>
+      <div className="p-8 h-full flex flex-col items-center justify-center text-center gap-3 text-on-dark-muted">
+        <Dumbbell size={40} className="text-on-dark-muted" />
+        <p className="font-bold text-on-dark">לתבנית הזו עדיין אין תרגילים</p>
         <p className="text-sm">הוסף תרגילים בבונה החכם לפני שמריצים סימולציה.</p>
       </div>
     );
@@ -148,17 +148,17 @@ function SimulatorPlayer({ programTitle, hydratedExercises, exerciseCatalog, pat
       {!session.isWorkoutMode && (
         <div className="h-full overflow-y-auto p-6 pt-16 flex flex-col gap-6">
           <div>
-            <div className="text-[10px] font-extrabold tracking-widest uppercase text-emerald-600">מצב סימולציה — אדמין</div>
-            <h2 className="text-xl font-black text-stone-900 mt-1">{programTitle}</h2>
+            <div className="text-[10px] font-extrabold tracking-widest uppercase text-success">מצב סימולציה — אדמין</div>
+            <h2 className="text-xl font-black text-on-dark mt-1">{programTitle}</h2>
           </div>
 
           <div>
-            <div className="text-xs font-bold text-stone-500 mb-2">הרץ בתור מטופל מסוג</div>
+            <div className="text-xs font-bold text-on-dark-muted mb-2">הרץ בתור מטופל מסוג</div>
             <div className="flex gap-2">
               <button
                 onClick={() => setPatientType("fitness")}
                 className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-bold border transition-colors ${
-                  patientType === "fitness" ? "bg-stone-900 text-white border-stone-900" : "bg-white text-stone-600 border-stone-200"
+                  patientType === "fitness" ? "bg-accent text-accent-ink border-accent" : "bg-elevated text-on-dark-muted border-line-dark"
                 }`}
               >
                 <Dumbbell size={15} /> כושר
@@ -166,7 +166,7 @@ function SimulatorPlayer({ programTitle, hydratedExercises, exerciseCatalog, pat
               <button
                 onClick={() => setPatientType("clinical")}
                 className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-bold border transition-colors ${
-                  patientType === "clinical" ? "bg-stone-900 text-white border-stone-900" : "bg-white text-stone-600 border-stone-200"
+                  patientType === "clinical" ? "bg-accent text-accent-ink border-accent" : "bg-elevated text-on-dark-muted border-line-dark"
                 }`}
               >
                 <HeartPulse size={15} /> קליני
@@ -176,14 +176,14 @@ function SimulatorPlayer({ programTitle, hydratedExercises, exerciseCatalog, pat
 
           {weeks.length > 1 && (
             <div>
-              <div className="text-xs font-bold text-stone-500 mb-2">שבוע</div>
+              <div className="text-xs font-bold text-on-dark-muted mb-2">שבוע</div>
               <div className="flex flex-wrap gap-2">
                 {weeks.map((w) => (
                   <button
                     key={w}
                     onClick={() => setActiveWeek(w)}
                     className={`px-4 py-2 rounded-full text-sm font-bold border transition-colors ${
-                      activeWeek === w ? "bg-emerald-600 text-white border-emerald-600" : "bg-white text-stone-600 border-stone-200"
+                      activeWeek === w ? "bg-accent text-accent-ink border-accent" : "bg-elevated text-on-dark-muted border-line-dark"
                     }`}
                   >
                     שבוע {w}
@@ -194,9 +194,9 @@ function SimulatorPlayer({ programTitle, hydratedExercises, exerciseCatalog, pat
           )}
 
           <div>
-            <div className="text-xs font-bold text-stone-500 mb-2">קטגוריה</div>
+            <div className="text-xs font-bold text-on-dark-muted mb-2">קטגוריה</div>
             {categories.length === 0 ? (
-              <p className="text-sm text-stone-400">אין תרגילים בשבוע הנבחר.</p>
+              <p className="text-sm text-on-dark-muted">אין תרגילים בשבוע הנבחר.</p>
             ) : (
               <div className="flex flex-wrap gap-2">
                 {categories.map((cat) => (
@@ -204,7 +204,7 @@ function SimulatorPlayer({ programTitle, hydratedExercises, exerciseCatalog, pat
                     key={cat}
                     onClick={() => setSelectedCategory(cat)}
                     className={`px-4 py-2 rounded-full text-sm font-bold border transition-colors ${
-                      selectedCategory === cat ? "bg-emerald-600 text-white border-emerald-600" : "bg-white text-stone-600 border-stone-200"
+                      selectedCategory === cat ? "bg-accent text-accent-ink border-accent" : "bg-elevated text-on-dark-muted border-line-dark"
                     }`}
                   >
                     {cat}
@@ -214,14 +214,14 @@ function SimulatorPlayer({ programTitle, hydratedExercises, exerciseCatalog, pat
             )}
           </div>
 
-          <div className="bg-white rounded-2xl border border-stone-100 p-4 space-y-2">
+          <div className="on-light bg-surface rounded-2xl border border-line-light p-4 space-y-2">
             {session.displayedExercises.length === 0 ? (
-              <p className="text-sm text-stone-400 text-center py-4">בחר קטגוריה שיש בה תרגילים כדי לראות תצוגה מקדימה.</p>
+              <p className="text-sm text-on-light-muted text-center py-4">בחר קטגוריה שיש בה תרגילים כדי לראות תצוגה מקדימה.</p>
             ) : (
               session.displayedExercises.map((pe) => (
-                <div key={pe.id} className="flex items-center justify-between text-sm py-1.5 border-b border-stone-50 last:border-0">
-                  <span className="font-bold text-stone-800">{getExerciseName(pe.exercise, lang)}</span>
-                  <span className="text-stone-500">
+                <div key={pe.id} className="flex items-center justify-between text-sm py-1.5 border-b border-line-light last:border-0">
+                  <span className="font-bold text-on-light">{getExerciseName(pe.exercise, lang)}</span>
+                  <span className="text-on-light-muted">
                     {pe.sets} × {pe.reps} {pe.is_time ? "שנ׳" : "חז׳"} · מנוחה {pe.rest_time_seconds}s
                   </span>
                 </div>
@@ -232,7 +232,7 @@ function SimulatorPlayer({ programTitle, hydratedExercises, exerciseCatalog, pat
           <button
             disabled={session.displayedExercises.length === 0}
             onClick={session.handleStartClick}
-            className="mt-auto w-full flex items-center justify-center gap-2 py-4 rounded-2xl bg-emerald-600 text-white font-black text-base shadow-lg shadow-emerald-600/20 disabled:opacity-40 disabled:shadow-none"
+            className="mt-auto w-full flex items-center justify-center gap-2 py-4 rounded-2xl bg-accent text-accent-ink hover:bg-accent-hover active:bg-accent-active font-black text-base shadow-lg shadow-accent/20 disabled:bg-elevated disabled:text-on-dark-muted disabled:hover:bg-elevated disabled:shadow-none"
           >
             <Play size={18} fill="currentColor" /> התחל סימולציה
           </button>

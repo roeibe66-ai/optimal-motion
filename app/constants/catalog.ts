@@ -92,32 +92,27 @@ export const MUSCLE_TO_BODY_PARTS: Record<string, string[]> = {
   "peroneus-longus": ["legs", "lower-body"],
 };
 
-// Distinct 7-color palette for BODY_PART_GROUPS - deliberately not reusing
-// any hex from DIY_CATEGORY_STYLES or ADMIN_CATEGORY_STYLES below so the
-// two existing tag systems and this new one never collide on an exercise
-// card.
-//
-// `text`/`bg`/`border` are tuned for the light "boutique clinic" patient
-// pages (DiyBuilderTab, MyWorkoutsScreen) — a dark ~700/800-shade text color
-// on a pale ~12% tint clears WCAG AA (4.5:1) against the app's off-white
-// (#FDFBF7) background, unlike the bright/saturated hues this used to use
-// (those were legible on a dark backdrop, which these screens no longer
-// have). `solid` is the pill's own selected-state fill, paired with white
-// text — a separate value from `text` (not reused as the fill) since a
-// handful of these hues need to go one shade darker than `text` to clear
-// 4.5:1 for white-on-solid specifically; verified with an actual contrast
-// calculation, not eyeballed.
+// Tag/badge colors, shared by every tag map below. All built from the
+// global color tokens (app/globals.css) — no per-category hues any more:
+// the theme has one accent (teal) for tags, and --warm is reserved for a
+// single highlight type (premium/featured), not for any category. `text`/`bg`/`border` are for tags on
+// a light --surface (accent-on-light text on a 15% accent tint clears
+// WCAG AA); `solid` is a small filled dot/indicator.
+const mix = (token: string, pct: number) => `color-mix(in srgb, var(${token}) ${pct}%, transparent)`;
+const ACCENT_TAG = { text: "var(--accent-on-light)", bg: mix("--accent", 15), border: mix("--accent", 30), solid: "var(--accent)" };
+const NEUTRAL_TAG = { text: "var(--text-on-light-muted)", bg: mix("--text-on-light-muted", 12), border: mix("--text-on-light-muted", 30), solid: "var(--text-on-light-muted)" };
+
 export const BODY_PART_STYLES: Record<string, { text: string; bg: string; border: string; solid: string }> = {
-  chest: { text: "#be123c", bg: "rgba(244,63,94,0.12)", border: "rgba(244,63,94,0.3)", solid: "#be123c" },
-  back: { text: "#c2410c", bg: "rgba(249,115,22,0.12)", border: "rgba(249,115,22,0.3)", solid: "#c2410c" },
-  shoulders: { text: "#a21caf", bg: "rgba(217,70,239,0.12)", border: "rgba(217,70,239,0.3)", solid: "#a21caf" },
-  arms: { text: "#3f6212", bg: "rgba(132,204,22,0.14)", border: "rgba(132,204,22,0.3)", solid: "#4d7c0f" },
-  core: { text: "#047857", bg: "rgba(16,185,129,0.12)", border: "rgba(16,185,129,0.3)", solid: "#047857" },
-  legs: { text: "#4338ca", bg: "rgba(99,102,241,0.12)", border: "rgba(99,102,241,0.3)", solid: "#4338ca" },
-  "upper-body": { text: "#0e7490", bg: "rgba(6,182,212,0.12)", border: "rgba(6,182,212,0.3)", solid: "#0e7490" },
-  "lower-body": { text: "#0369a1", bg: "rgba(14,165,233,0.12)", border: "rgba(14,165,233,0.3)", solid: "#0369a1" },
+  chest: ACCENT_TAG,
+  back: ACCENT_TAG,
+  shoulders: ACCENT_TAG,
+  arms: ACCENT_TAG,
+  core: ACCENT_TAG,
+  legs: ACCENT_TAG,
+  "upper-body": ACCENT_TAG,
+  "lower-body": ACCENT_TAG,
 };
-export const DEFAULT_BODY_PART_STYLE = { text: "#57534e", bg: "rgba(168,162,158,0.14)", border: "rgba(168,162,158,0.3)", solid: "#78716c" };
+export const DEFAULT_BODY_PART_STYLE = NEUTRAL_TAG;
 
 export const EQUIPMENT_LIST = [
   { id: "pullup_bar", label: "מתח" },
@@ -175,20 +170,20 @@ export const CATEGORY_IMAGES: Record<string, string> = {
 
 export const DEFAULT_COURSE_IMG = "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?auto=format&fit=crop&w=800&q=80";
 
-// Warm-tinted glow per category track (Main's track cards, the Premium
-// store's track cards) — a dark card base plus a category-tinted radial
-// glow, replacing per-category stock photos with a hand-authored look.
-// Generalized rather than hand-coded per category, since the real category
-// list isn't fixed to whichever categories a given mockup happened to show.
+// Glow tint per category track (Main's track cards, the Premium store's
+// track cards) — a card base plus a category-tinted radial glow, replacing
+// per-category stock photos. All tracks share the accent glow now (single
+// color system); the map is kept so a category can opt into a different
+// token later without touching the consumers.
 export const TRACK_GLOW_TINTS: Record<string, string> = {
-  "יוגה": "rgba(248,113,86,0.32)",
-  "קטלבל": "rgba(245,158,11,0.3)",
-  "מוביליטי": "rgba(234,179,8,0.3)",
-  "קליסטניקס": "rgba(20,184,166,0.3)",
-  "מכון כושר": "rgba(234,88,12,0.3)",
-  "שיקום": "rgba(16,185,129,0.25)",
+  "יוגה": mix("--accent", 30),
+  "קטלבל": mix("--accent", 30),
+  "מוביליטי": mix("--accent", 30),
+  "קליסטניקס": mix("--accent", 30),
+  "מכון כושר": mix("--accent", 30),
+  "שיקום": mix("--accent", 30),
 };
-export const DEFAULT_TRACK_GLOW = "rgba(245,158,11,0.22)";
+export const DEFAULT_TRACK_GLOW = mix("--accent", 22);
 
 // Patient-facing DIY-builder category tag colors — a separate, smaller
 // taxonomy from ADMIN_TAGS (which is admin-only and has 7 values). Exercises'
@@ -196,31 +191,40 @@ export const DEFAULT_TRACK_GLOW = "rgba(245,158,11,0.22)";
 // legacy value like "כוח וסיבולת") falls back to DEFAULT_DIY_CATEGORY_STYLE
 // rather than being hidden.
 //
-// Same light-theme contrast tuning as BODY_PART_STYLES above (dark text on
-// a pale tint, plus a `solid` fill for the selected state) — this map feeds
+// Same light-surface tag styling as BODY_PART_STYLES above — this map feeds
 // the same DiyBuilderTab.tsx pills.
 export const DIY_CATEGORY_STYLES: Record<string, { text: string; bg: string; border: string; solid: string }> = {
-  "קטלבל": { text: "#92400e", bg: "rgba(245,158,11,0.14)", border: "rgba(245,158,11,0.3)", solid: "#b45309" },
-  "יוגה": { text: "#9a3412", bg: "rgba(248,113,86,0.14)", border: "rgba(248,113,86,0.3)", solid: "#c2410c" },
-  "שרירים": { text: "#1d4ed8", bg: "rgba(59,130,246,0.14)", border: "rgba(59,130,246,0.3)", solid: "#1d4ed8" },
-  "מוביליטי": { text: "#854d0e", bg: "rgba(234,179,8,0.14)", border: "rgba(234,179,8,0.3)", solid: "#a16207" },
+  "קטלבל": ACCENT_TAG,
+  "יוגה": ACCENT_TAG,
+  "שרירים": ACCENT_TAG,
+  "מוביליטי": ACCENT_TAG,
 };
-export const DEFAULT_DIY_CATEGORY_STYLE = { text: "#57534e", bg: "rgba(168,162,158,0.14)", border: "rgba(168,162,158,0.3)", solid: "#78716c" };
+export const DEFAULT_DIY_CATEGORY_STYLE = NEUTRAL_TAG;
 
-// Admin-facing category tag colors (AdminExerciseLibrary + ProtocolBuilder).
-// A separate 7-value taxonomy from DIY_CATEGORY_STYLES above — keyed by
-// ADMIN_TAGS label (Hebrew text), which is what exercises.category actually
-// stores. `glow` is the darker tone used behind card thumbnails.
+// Admin-facing category tag colors (AdminExerciseLibrary + ProtocolBuilder,
+// and the patient calendar's category dots). A separate 7-value taxonomy
+// from DIY_CATEGORY_STYLES above — keyed by ADMIN_TAGS label (Hebrew text),
+// which is what exercises.category actually stores. These render on dark
+// (card thumbnail headers / the dark page), so `text` is the plain accent;
+// `glow` is the tinted dark tone behind card thumbnails. (--warm is
+// reserved for the premium/featured highlight, so no category uses it.)
+const darkTag = (token: string) => ({
+  text: `var(${token})`,
+  bg: mix(token, 15),
+  border: mix(token, 30),
+  glow: `color-mix(in srgb, var(${token}) 22%, var(--bg-base))`,
+  radial: mix(token, 30),
+});
 export const ADMIN_CATEGORY_STYLES: Record<string, { text: string; bg: string; border: string; glow: string; radial: string }> = {
-  "קליסטניקס": { text: "#14b8a6", bg: "rgba(20,184,166,0.14)", border: "rgba(20,184,166,0.3)", glow: "#123a34", radial: "rgba(20,184,166,0.32)" },
-  "מכון כושר": { text: "#a78bfa", bg: "rgba(167,139,250,0.14)", border: "rgba(167,139,250,0.3)", glow: "#241a3a", radial: "rgba(167,139,250,0.28)" },
-  "יוגה": { text: "#f87156", bg: "rgba(248,113,86,0.14)", border: "rgba(248,113,86,0.3)", glow: "#3a1e18", radial: "rgba(248,113,86,0.3)" },
-  "מוביליטי": { text: "#facc15", bg: "rgba(234,179,8,0.14)", border: "rgba(234,179,8,0.3)", glow: "#3a3414", radial: "rgba(234,179,8,0.28)" },
-  "קטלבל": { text: "#f59e0b", bg: "rgba(245,158,11,0.14)", border: "rgba(245,158,11,0.3)", glow: "#3a2c14", radial: "rgba(245,158,11,0.3)" },
-  "פליומטרי": { text: "#fb923c", bg: "rgba(251,146,60,0.14)", border: "rgba(251,146,60,0.3)", glow: "#3a2410", radial: "rgba(251,146,60,0.28)" },
-  "שיקום": { text: "#60a5fa", bg: "rgba(96,165,250,0.14)", border: "rgba(96,165,250,0.3)", glow: "#14263a", radial: "rgba(96,165,250,0.28)" },
+  "קליסטניקס": darkTag("--accent"),
+  "מכון כושר": darkTag("--accent"),
+  "יוגה": darkTag("--accent"),
+  "מוביליטי": darkTag("--accent"),
+  "קטלבל": darkTag("--accent"),
+  "פליומטרי": darkTag("--accent"),
+  "שיקום": darkTag("--accent"),
 };
-export const DEFAULT_ADMIN_CATEGORY_STYLE = { text: "#a8a29e", bg: "rgba(168,162,158,0.14)", border: "rgba(168,162,158,0.3)", glow: "#1c1c1e", radial: "rgba(168,162,158,0.24)" };
+export const DEFAULT_ADMIN_CATEGORY_STYLE = { ...darkTag("--text-on-dark-muted"), glow: "var(--bg-elevated)" };
 
 // react-body-highlighter (the muscle-diagram library backing ExerciseMuscleMap
 // and PlanTab's hero diagram) only recognizes a fixed ~21-muscle vocabulary and
@@ -262,7 +266,7 @@ export function toBodyModelMuscles(ids: string[]): string[] {
 // stabilizer muscles (exercises.secondary_muscles), index 1 = the primary
 // agonist (exercises.target_muscle) — matches react-body-highlighter's
 // `highlightedColors[frequency - 1]` indexing (see ExerciseMuscleMap.tsx).
-export const MUSCLE_MAP_TIER_COLORS = ["#fecaca", "#dc2626"];
+export const MUSCLE_MAP_TIER_COLORS = ["var(--muscle-secondary)", "var(--muscle-primary)"];
 
 // AnatomyDiagram now draws from a custom-commissioned SVG (see
 // app/components/patient/anatomy/customAnatomyRegions.ts) instead of the
@@ -285,16 +289,8 @@ export const MUSCLE_TO_ANATOMY_REGIONS: Record<string, { view: "front" | "back";
   // TODO: fill in via AnatomyDiagram's Dev Mode click-to-console.log.
 };
 
-// A muted brick-red — the universal "muscle activation" register, restored
-// after briefly living on the app's general brand-terracotta accent (which
-// still drives buttons/nav/tabs elsewhere, just not this diagram any more).
-// Deliberately muted/brownish rather than a vivid red so it still reads as
-// distinct from react-body-highlighter's default (bright) red on the
-// separate "where does it hurt" pain-area check-in — a "muscles this
-// exercise works" diagram and a "where does it hurt" diagram are different
-// concepts, and two diagrams both glowing the same saturated red risked
-// reading as if the highlighted muscles were the sore ones. Matches
-// AnatomyHeatmap.tsx's own MUSCLE_HIGHLIGHT_COLOR constant. `secondary` is
-// a paler tint of the same hue for the synergist tier, mirroring
-// AnatomyHeatmap's own prime/synergist opacity split.
-export const ANATOMY_TIER_COLORS = { primary: "#A53021", secondary: "#E4C1BC" };
+// Muscle-diagram tier colors — the theme's dedicated muscle tokens (teal
+// primary mover, warm assisting muscle). Never red: --danger is reserved
+// for errors/destructive actions, and a red diagram would read as "these
+// muscles hurt" next to the separate pain-area check-in.
+export const ANATOMY_TIER_COLORS = { primary: "var(--muscle-primary)", secondary: "var(--muscle-secondary)" };

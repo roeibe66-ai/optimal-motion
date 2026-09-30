@@ -132,4 +132,30 @@ data looks like it's parsing free text instead of reading a typed column, that's
 red flag as the `target_muscle` comma-packing entry above — check whether a real column exists
 before trusting the text-parsing code.
 
+## 2026-09-28 — Research tab failed in production: ANTHROPIC_API_KEY never set on Vercel
+
+**What happened:** The admin "הידעת?" research tab always showed "אחזור המאמרים הצליח אך יצירת
+הסיכומים נכשלה" in production. Paper retrieval (Semantic Scholar/PubMed, no key needed) worked,
+but every Claude summarization call failed because `ANTHROPIC_API_KEY` lived only in
+`.env.local`. `vercel env ls` listed just the Supabase vars. `generateResearchFacts` swallowed
+each `Promise.allSettled` rejection and returned a generic message, so the real cause
+(authentication) never appeared in the UI.
+**Rule:** any new server-side env var added to `.env.local` must also be added to Vercel
+(`vercel env add NAME production`, plus preview). Server actions that depend on a key should
+check for it up front and return a specific error. Don't collapse settled rejections into a
+generic message: include the first rejection's reason.
+
 <!-- Add new entries above this line, newest first is fine but not required. -->
+
+## 2026-09 — Tailwind v4 color token named `base` hijacked `text-base`
+
+**What happened:** During the color-token re-theme, `--color-base` was registered in
+`@theme` so `bg-base` would work. Tailwind v4 then resolved every `text-base` /
+`md:text-base` to `color: var(--bg-base)` instead of the 1rem font size — text went
+dark-on-dark and lost its size, with no build error.
+**Why:** v4 utilities share one namespace per prefix: `text-*` looks up both
+`--text-*` (font sizes) and `--color-*`, and the color won.
+**Rule:** never name a `--color-*` theme key after an existing utility value
+(`base`, `xs`…`9xl`, `sm`/`md`/`lg` for shadows, etc.). The app shell color is
+exposed as `bg-shell` for this reason. After adding theme keys, check the generated
+CSS for the affected class, not just that the page renders.

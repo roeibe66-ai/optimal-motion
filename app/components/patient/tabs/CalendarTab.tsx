@@ -115,8 +115,8 @@ export default function CalendarTab({ patientExercises, workoutLogs, patientId, 
 
   return (
     <div className="animate-in fade-in duration-500">
-      <h2 className="text-xl md:text-2xl font-black text-brand-espresso tracking-tight flex items-center gap-2 mb-6">
-        <CalendarDays size={22} className="text-brand-terracotta" />
+      <h2 className="text-xl md:text-2xl font-black text-on-dark tracking-tight flex items-center gap-2 mb-6">
+        <CalendarDays size={22} className="text-accent" />
         לוח שנה
       </h2>
 
@@ -126,15 +126,15 @@ export default function CalendarTab({ patientExercises, workoutLogs, patientId, 
         <button
           onClick={() => handleChangeMonth(-1)}
           aria-label="חודש קודם"
-          className="text-stone-500 hover:text-brand-espresso active:scale-90 transition-all duration-150 ease-out p-2 -m-2"
+          className="text-on-dark-muted hover:text-on-dark active:scale-90 transition-all duration-150 ease-out p-2 -m-2"
         >
           <ChevronRight size={22} />
         </button>
-        <h3 className="font-black text-2xl md:text-3xl text-brand-espresso tracking-tight">{monthLabel}</h3>
+        <h3 className="font-black text-2xl md:text-3xl text-on-dark tracking-tight">{monthLabel}</h3>
         <button
           onClick={() => handleChangeMonth(1)}
           aria-label="חודש הבא"
-          className="text-stone-500 hover:text-brand-espresso active:scale-90 transition-all duration-150 ease-out p-2 -m-2"
+          className="text-on-dark-muted hover:text-on-dark active:scale-90 transition-all duration-150 ease-out p-2 -m-2"
         >
           <ChevronLeft size={22} />
         </button>
@@ -142,7 +142,7 @@ export default function CalendarTab({ patientExercises, workoutLogs, patientId, 
 
       <div className="grid grid-cols-7 mb-4">
         {WEEKDAY_LABELS.map((label) => (
-          <div key={label} className="text-center text-[11px] font-bold text-stone-500 tracking-wide">
+          <div key={label} className="text-center text-[11px] font-bold text-on-dark-muted tracking-wide">
             {label}
           </div>
         ))}
@@ -176,14 +176,14 @@ export default function CalendarTab({ patientExercises, workoutLogs, patientId, 
               <span
                 className={`relative w-9 h-9 rounded-full flex items-center justify-center text-[13px] font-bold tabular-nums transition-all duration-200 ease-out ${
                   isSelected
-                    ? "bg-brand-terracotta text-white shadow-[0_4px_14px_-2px_rgba(161,93,56,0.5)]"
+                    ? "bg-accent text-accent-ink shadow-[0_4px_14px_-2px_color-mix(in_srgb,var(--accent)_50%,transparent)]"
                     : isClickable
-                      ? "text-brand-espresso group-hover:bg-stone-100 group-active:scale-90"
-                      : "text-stone-500"
+                      ? "text-on-dark group-hover:bg-line-dark group-active:scale-90"
+                      : "text-on-dark-muted"
                 }`}
               >
                 {date.getDate()}
-                {isCompleted && <CheckCircle2 size={11} className="absolute -top-1 -right-1 text-amber-600 bg-white rounded-full" />}
+                {isCompleted && <CheckCircle2 size={11} className="absolute -top-1 -right-1 text-success bg-shell rounded-full" />}
               </span>
               <div className="flex items-center gap-1 h-1.5">
                 {scheduledCategories.slice(0, 3).map((cat) => (
@@ -199,13 +199,13 @@ export default function CalendarTab({ patientExercises, workoutLogs, patientId, 
         })}
       </div>
 
-      <div className="flex items-center gap-4 mt-6 mb-8 text-[11px] text-stone-500">
+      <div className="flex items-center gap-4 mt-6 mb-8 text-[11px] text-on-dark-muted">
         <div className="flex items-center gap-1.5">
           <span className="w-2 h-2 rounded-full" style={{ background: ADMIN_CATEGORY_STYLES["קליסטניקס"].text }} />
           נקודה צבעונית = קטגוריית אימון מתוזמנת
         </div>
         <div className="flex items-center gap-1.5">
-          <CheckCircle2 size={11} className="text-amber-600" />
+          <CheckCircle2 size={11} className="text-success" />
           הושלם
         </div>
       </div>
@@ -216,24 +216,24 @@ export default function CalendarTab({ patientExercises, workoutLogs, patientId, 
           list can never overlap PatientShell's sticky header or bottom nav —
           it just grows and the page scrolls, which is the safer choice for
           a list whose length varies with how many categories are scheduled. */}
-      <div className="-mx-4 md:-mx-8 bg-white rounded-t-[2rem] px-5 pt-3 pb-10 shadow-[0_-8px_30px_-8px_rgba(0,0,0,0.1)]">
-        <div className="w-10 h-1.5 rounded-full bg-stone-200 mx-auto mb-5"></div>
+      <div className="on-light -mx-4 md:-mx-8 bg-surface rounded-t-[2rem] px-5 pt-3 pb-10 shadow-[0_-8px_30px_-8px_color-mix(in_srgb,var(--bg-base)_10%,transparent)]">
+        <div className="w-10 h-1.5 rounded-full bg-surface-alt mx-auto mb-5"></div>
 
         <div className="flex items-center justify-between mb-4">
-          <h4 className="font-black text-brand-espresso text-base">
+          <h4 className="font-black text-on-light text-base">
             {selectedDayCategories.length} {selectedDayCategories.length === 1 ? "אימון" : "אימונים"}
           </h4>
           {selectedDate && (
-            <span className="text-[12px] font-bold text-stone-500">
+            <span className="text-[12px] font-bold text-on-light-muted">
               {selectedDate.toLocaleDateString("he-IL", { weekday: "long", day: "numeric", month: "long" })}
             </span>
           )}
         </div>
 
         {!selectedDate ? (
-          <p className="text-stone-500 text-sm text-center py-6">בחר יום כדי לראות את האימונים שלו.</p>
+          <p className="text-on-light-muted text-sm text-center py-6">בחר יום כדי לראות את האימונים שלו.</p>
         ) : selectedDayCategories.length === 0 ? (
-          <p className="text-stone-500 text-sm text-center py-6">אין אימונים מתוזמנים ביום הזה.</p>
+          <p className="text-on-light-muted text-sm text-center py-6">אין אימונים מתוזמנים ביום הזה.</p>
         ) : (
           <div className="flex flex-col gap-2">
             {selectedDayCategories.map((cat) => {
@@ -245,15 +245,15 @@ export default function CalendarTab({ patientExercises, workoutLogs, patientId, 
                 <button
                   key={cat}
                   onClick={() => selectedWeek !== null && selectedDayId !== null && onSelectDate(selectedWeek, selectedDayId)}
-                  className="w-full flex items-center gap-3.5 text-right hover:bg-stone-50 active:scale-[0.98] rounded-2xl p-1.5 transition-all duration-150 ease-out"
+                  className="w-full flex items-center gap-3.5 text-right hover:bg-surface-alt active:scale-[0.98] rounded-2xl p-1.5 transition-all duration-150 ease-out"
                 >
                   <div className="relative w-14 h-14 rounded-2xl overflow-hidden shrink-0" style={{ background: style.bg }}>
                     {thumbUrl && <img src={thumbUrl} alt="" className="w-full h-full object-cover" />}
                     <div className="absolute bottom-0 inset-x-0 h-[3px]" style={{ background: style.text }}></div>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h5 className="font-black text-brand-espresso text-[15px] truncate">{cat}</h5>
-                    <p className="text-stone-500 text-[12px] font-semibold mt-0.5">
+                    <h5 className="font-black text-on-light text-[15px] truncate">{cat}</h5>
+                    <p className="text-on-light-muted text-[12px] font-semibold mt-0.5">
                       שבוע {selectedWeek} · {catExercises.length} תרגילים
                     </p>
                   </div>

@@ -11,9 +11,9 @@ interface ModalProps {
 }
 
 // Shared modal chrome (overlay + panel + header + close button) for the
-// patient app's "Clean Premium Light" surfaces — a white sheet floating on a
-// dimmed backdrop, dark charcoal text, no heavy borders (a hairline
-// stone-100 divider under the header is as far as it goes). Currently only
+// patient app — an elevated dark sheet (header) over a dimmed backdrop, with
+// the scrollable body on a light --surface so exercise content stays
+// readable. No heavy borders (a hairline divider under the header). Currently only
 // rendered from ExerciseInfoModal (and, via it, the Explore tab's workout
 // preview).
 //
@@ -26,24 +26,24 @@ interface ModalProps {
 // now matches them instead of being the odd one out.
 export default function Modal({ onClose, title, icon, children }: ModalProps) {
   return (
-    <div className="fixed inset-0 z-[200] bg-brand-espresso/60 backdrop-blur-sm flex items-end justify-center" onClick={onClose}>
+    <div className="fixed inset-0 z-[200] bg-shell/60 backdrop-blur-sm flex items-end justify-center" onClick={onClose}>
       <div
-        className="bg-white text-brand-espresso w-full overflow-hidden shadow-2xl relative flex flex-col max-h-[92vh] rounded-t-3xl m-0 pb-[env(safe-area-inset-bottom)] animate-in slide-in-from-bottom duration-300 ease-out"
+        className="bg-elevated text-on-dark w-full overflow-hidden shadow-2xl relative flex flex-col max-h-[92vh] rounded-t-3xl m-0 pb-[env(safe-area-inset-bottom)] animate-in slide-in-from-bottom duration-300 ease-out"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex justify-between items-center p-5 border-b border-stone-100">
-          <h3 className="text-xl font-black flex items-center gap-2 text-brand-espresso">
+        <div className="flex justify-between items-center p-5 border-b border-line-dark">
+          <h3 className="text-xl font-black flex items-center gap-2 text-on-dark">
             {icon} {title}
           </h3>
           <button
             onClick={onClose}
             aria-label="סגור"
-            className="text-stone-500 hover:text-brand-espresso bg-stone-100 hover:bg-stone-200 p-2 rounded-full transition-colors"
+            className="text-on-dark-muted hover:text-on-dark bg-line-dark hover:bg-on-dark/15 p-2 rounded-full transition-colors"
           >
             <X size={20} />
           </button>
         </div>
-        <div className="p-6 overflow-y-auto flex-1">{children}</div>
+        <div className="on-light p-6 overflow-y-auto flex-1 bg-surface text-on-light">{children}</div>
       </div>
     </div>
   );

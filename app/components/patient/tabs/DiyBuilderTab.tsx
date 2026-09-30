@@ -162,14 +162,14 @@ export default function DiyBuilderTab({
 
       <div className="flex items-start justify-between gap-3 mb-6">
         <div>
-          <h2 className="text-2xl md:text-3xl font-black text-brand-espresso tracking-tight mb-1.5">בנה תוכנית שבועית</h2>
-          <p className="text-stone-500 text-[13px] md:text-sm">הוסף ימי אימון ובחר תרגילים לכל יום מהמאגר הפתוח שלך.</p>
+          <h2 className="text-2xl md:text-3xl font-black text-on-dark tracking-tight mb-1.5">בנה תוכנית שבועית</h2>
+          <p className="text-on-dark-muted text-[13px] md:text-sm">הוסף ימי אימון ובחר תרגילים לכל יום מהמאגר הפתוח שלך.</p>
         </div>
         <button
           onClick={onOpenMyWorkouts}
-          className="shrink-0 mt-0.5 flex items-center gap-1.5 bg-white/70 backdrop-blur-md border border-brand-espresso/5 text-stone-600 font-bold text-[11px] px-3 py-2.5 rounded-full whitespace-nowrap hover:border-stone-300 transition-colors shadow-sm"
+          className="shrink-0 mt-0.5 flex items-center gap-1.5 bg-elevated/90 backdrop-blur-md border border-line-dark text-on-dark-muted font-bold text-[11px] px-3 py-2.5 rounded-full whitespace-nowrap hover:border-accent/40 transition-colors shadow-sm"
         >
-          <Folder size={14} className="text-brand-terracotta" />
+          <Folder size={14} className="text-accent" />
           התוכניות שלי
         </button>
       </div>
@@ -187,19 +187,19 @@ export default function DiyBuilderTab({
               <button
                 onClick={() => setDiyActiveDay(day)}
                 className={`flex items-center gap-1.5 pl-3 pr-4 py-2.5 rounded-full font-extrabold text-xs transition-colors border ${
-                  isActive ? "bg-brand-terracotta text-white border-brand-terracotta" : "bg-white/70 backdrop-blur-md text-stone-600 border-brand-espresso/5 hover:border-stone-300"
+                  isActive ? "bg-accent text-accent-ink border-accent" : "bg-elevated/90 backdrop-blur-md text-on-dark-muted border-line-dark hover:border-accent/40"
                 }`}
               >
                 יום {day}
                 {count > 0 && (
-                  <span className={`text-[10px] rounded-full px-1.5 py-0.5 ${isActive ? "bg-white/20" : "bg-stone-100 text-stone-500"}`}>{count}</span>
+                  <span className={`text-[10px] rounded-full px-1.5 py-0.5 ${isActive ? "bg-accent-ink/15" : "bg-on-dark/10 text-on-dark-muted"}`}>{count}</span>
                 )}
               </button>
               {dayNumbers.length > 1 && (
                 <button
                   onClick={() => onRemoveDiyDay(day)}
                   aria-label={`הסר יום ${day}`}
-                  className="absolute -top-1.5 -left-1.5 w-4 h-4 bg-stone-400 hover:bg-red-500 text-white rounded-full flex items-center justify-center shadow-md transition-colors"
+                  className="absolute -top-1.5 -left-1.5 w-4 h-4 bg-line-dark text-on-dark hover:bg-danger hover:text-on-danger rounded-full flex items-center justify-center shadow-md transition-colors"
                 >
                   <X size={8} strokeWidth={3} />
                 </button>
@@ -209,7 +209,7 @@ export default function DiyBuilderTab({
         })}
         <button
           onClick={onAddDiyDay}
-          className="shrink-0 flex items-center gap-1 pl-3 pr-3.5 py-2.5 rounded-full font-extrabold text-xs bg-brand-terracotta/8 text-brand-terracotta border border-dashed border-brand-terracotta/50 hover:bg-brand-terracotta/15 transition-colors"
+          className="shrink-0 flex items-center gap-1 pl-3 pr-3.5 py-2.5 rounded-full font-extrabold text-xs bg-accent/15 text-accent border border-dashed border-accent/50 hover:bg-accent/25 transition-colors"
         >
           <Plus size={14} />
           הוסף יום
@@ -223,7 +223,7 @@ export default function DiyBuilderTab({
         <select
           value={diyEquipFilter}
           onChange={(e) => setDiyEquipFilter(e.target.value)}
-          className="appearance-none bg-white/70 backdrop-blur-md border border-brand-espresso/5 text-stone-700 rounded-full pl-9 pr-4 py-2.5 outline-none font-bold text-xs focus:border-brand-terracotta focus:ring-1 focus:ring-brand-terracotta/30 shadow-sm"
+          className="appearance-none bg-surface backdrop-blur-md border border-line-light text-on-light rounded-full pl-9 pr-4 py-2.5 outline-none font-bold text-xs focus:border-focus focus:ring-2 focus:ring-focus shadow-sm"
         >
           <option value="all">כל הציוד</option>
           {EQUIPMENT_LIST.map((eq) => (
@@ -232,25 +232,25 @@ export default function DiyBuilderTab({
             </option>
           ))}
         </select>
-        <ChevronDown size={13} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" />
+        <ChevronDown size={13} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-on-light-muted" />
       </div>
 
       {totalExerciseCount > 0 && (
-        <div className="bg-brand-terracotta/8 border border-brand-terracotta/15 p-4 rounded-3xl mb-8 flex flex-col gap-3.5 sticky top-4 z-30 backdrop-blur-xl shadow-[0_8px_30px_rgb(0,0,0,0.06)]">
+        <div className="on-light bg-surface border border-line-light p-4 rounded-3xl mb-8 flex flex-col gap-3.5 sticky top-4 z-30 backdrop-blur-xl shadow-[0_8px_30px_color-mix(in_srgb,var(--bg-base)_6%,transparent)]">
           <div className="flex justify-between items-center">
-            <h4 className="font-extrabold text-brand-terracotta text-[13px]">
+            <h4 className="font-extrabold text-accent-on-light text-[13px]">
               יום {diyActiveDay} ({activeDayExercises.length} תרגילים)
             </h4>
             <div className="flex items-center gap-3">
               {isEditingSavedProgram && (
-                <button onClick={onCancelEditSavedProgram} className="text-[11px] font-bold text-stone-500 hover:text-stone-700">
+                <button onClick={onCancelEditSavedProgram} className="text-[11px] font-bold text-on-light-muted hover:text-on-light">
                   ביטול עריכה
                 </button>
               )}
               {activeDayExercises.length > 0 && (
                 <button
                   onClick={() => setDiyExercisesByDay((prev) => ({ ...prev, [diyActiveDay]: [] }))}
-                  className="text-[11px] font-bold text-stone-500 hover:text-stone-700"
+                  className="text-[11px] font-bold text-on-light-muted hover:text-on-light"
                 >
                   נקה יום זה
                 </button>
@@ -261,35 +261,35 @@ export default function DiyBuilderTab({
           {activeDayExercises.length > 0 ? (
             <div className="flex gap-2.5 overflow-x-auto no-scrollbar">
               {activeDayExercises.map((ex, idx) => (
-                <div key={idx} className="bg-white border border-stone-200 rounded-2xl p-2 flex items-center gap-2 min-w-[140px] relative">
+                <div key={idx} className="on-light bg-surface border border-line-light rounded-2xl p-2 flex items-center gap-2 min-w-[140px] relative">
                   <button
                     onClick={() => removeExerciseFromActiveDay(idx)}
                     aria-label="הסר תרגיל"
                     className="absolute -top-3.5 -right-3.5 w-8 h-8 flex items-center justify-center"
                   >
-                    <span className="w-4 h-4 bg-red-500 text-white rounded-full flex items-center justify-center shadow-md">
+                    <span className="w-4 h-4 bg-danger text-on-danger rounded-full flex items-center justify-center shadow-md">
                       <X size={8} strokeWidth={3} />
                     </span>
                   </button>
                   {ex.gif_url ? (
                     ex.gif_url.toLowerCase().includes(".mp4") || ex.gif_url.toLowerCase().includes(".webm") ? (
-                      <video src={ex.gif_url} className="w-9 h-9 rounded-[10px] bg-stone-100 object-contain" />
+                      <video src={ex.gif_url} className="w-9 h-9 rounded-[10px] bg-surface-alt object-contain" />
                     ) : (
-                      <img src={ex.gif_url} alt={getExerciseName(ex, lang)} className="w-9 h-9 rounded-[10px] bg-stone-100 object-contain p-0.5" />
+                      <img src={ex.gif_url} alt={getExerciseName(ex, lang)} className="w-9 h-9 rounded-[10px] bg-surface-alt object-contain p-0.5" />
                     )
                   ) : (
-                    <div className="w-9 h-9 rounded-[10px] bg-stone-100" />
+                    <div className="w-9 h-9 rounded-[10px] bg-surface-alt" />
                   )}
-                  <span className="text-[11px] font-bold text-stone-700 truncate w-full">{getExerciseName(ex, lang)}</span>
+                  <span className="text-[11px] font-bold text-on-light truncate w-full">{getExerciseName(ex, lang)}</span>
                 </div>
               ))}
             </div>
           ) : (
-            <p className="text-[11px] font-medium text-brand-terracotta/70">עדיין לא נבחרו תרגילים ליום {diyActiveDay}. בחר תרגילים מהרשימה למטה.</p>
+            <p className="text-[11px] font-medium text-on-light-muted">עדיין לא נבחרו תרגילים ליום {diyActiveDay}. בחר תרגילים מהרשימה למטה.</p>
           )}
 
           <div>
-            <label htmlFor="diy-program-name" className="block text-[10px] font-extrabold text-brand-terracotta uppercase mb-1.5">
+            <label htmlFor="diy-program-name" className="block text-[10px] font-extrabold text-accent-on-light uppercase mb-1.5">
               שם התוכנית
             </label>
             <input
@@ -297,7 +297,7 @@ export default function DiyBuilderTab({
               type="text"
               value={diyProgramName}
               onChange={(e) => setDiyProgramName(e.target.value)}
-              className="w-full bg-white border border-stone-200 text-brand-espresso p-2.5 rounded-xl text-xs font-bold outline-none focus:border-brand-terracotta focus:ring-1 focus:ring-brand-terracotta/30"
+              className="w-full bg-surface border border-line-input text-on-light p-2.5 rounded-xl text-xs font-bold outline-none focus:border-focus-on-light focus:ring-2 focus:ring-focus-on-light"
             />
           </div>
 
@@ -306,7 +306,7 @@ export default function DiyBuilderTab({
               onClick={handleSaveClick}
               disabled={isSaving}
               className={`flex-1 border-[1.5px] font-extrabold text-[13px] py-3.5 rounded-2xl flex items-center justify-center gap-1.5 transition-colors disabled:opacity-70 ${
-                justSaved ? "bg-brand-terracotta border-brand-terracotta text-white" : "bg-white border-brand-terracotta/40 text-brand-terracotta hover:bg-brand-terracotta/8"
+                justSaved ? "bg-accent border-accent text-accent-ink" : "bg-transparent border-accent text-accent-on-light hover:bg-accent/12"
               }`}
             >
               {justSaved ? <Check size={15} /> : <Bookmark size={15} />}
@@ -315,7 +315,7 @@ export default function DiyBuilderTab({
             <button
               onClick={onStartDiyWorkoutNow}
               disabled={activeDayExercises.length === 0}
-              className="flex-[1.5] bg-brand-terracotta text-white font-black text-sm py-3.5 rounded-2xl hover:brightness-90 transition-colors shadow-lg disabled:opacity-40 disabled:pointer-events-none"
+              className="flex-[1.5] bg-accent text-accent-ink font-black text-sm py-3.5 rounded-2xl hover:bg-accent-hover active:bg-accent-active transition-colors shadow-lg disabled:bg-elevated disabled:text-on-dark-muted disabled:hover:bg-elevated disabled:pointer-events-none"
             >
               התחל את יום {diyActiveDay} עכשיו
             </button>
@@ -335,10 +335,10 @@ export default function DiyBuilderTab({
           const selectedRegion = isExpanded ? diyBodyPartFilter : null;
 
           return (
-            <div key={tab.id} className="rounded-[1.75rem] overflow-hidden bg-white/60 backdrop-blur-lg border border-brand-espresso/5 shadow-sm">
+            <div key={tab.id} className="on-light rounded-[1.75rem] overflow-hidden bg-surface backdrop-blur-lg border border-line-light shadow-sm">
               <button onClick={() => toggleTab(tab.id)} className="w-full flex items-center gap-3 p-5 text-start">
                 {tabStyle && <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: tabStyle.solid }} />}
-                <span className="flex-1 font-black text-lg text-brand-espresso truncate">{tab.label}</span>
+                <span className="flex-1 font-black text-lg text-on-light truncate">{tab.label}</span>
 
                 {/* Dynamic header image — grows in from 0 width with a fade,
                     cropped cleanly inside its own rounded thumbnail rather
@@ -351,7 +351,7 @@ export default function DiyBuilderTab({
                   <img src={tab.image} alt="" className="w-14 h-14 object-cover" />
                 </div>
 
-                <ChevronDown size={18} className={`shrink-0 text-stone-500 transition-transform duration-300 ease-out ${isExpanded ? "rotate-180" : ""}`} />
+                <ChevronDown size={18} className={`shrink-0 text-on-light-muted transition-transform duration-300 ease-out ${isExpanded ? "rotate-180" : ""}`} />
               </button>
 
               <div className={`grid transition-[grid-template-rows] duration-300 ease-out ${isExpanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}>
@@ -372,12 +372,12 @@ export default function DiyBuilderTab({
                             <button
                               key={region.id}
                               onClick={() => setDiyBodyPartFilter(region.id)}
-                              className="flex flex-col items-start gap-1 rounded-2xl p-3.5 bg-white/70 border border-white/60 hover:bg-white transition-colors text-start"
+                              className="flex flex-col items-start gap-1 rounded-2xl p-3.5 bg-surface-alt border border-line-light hover:bg-line-light transition-colors text-start"
                             >
                               <span className="font-extrabold text-sm" style={{ color: regionStyle.text }}>
                                 {region.label}
                               </span>
-                              <span className="text-[11px] font-bold text-stone-500">{count} תרגילים</span>
+                              <span className="text-[11px] font-bold text-on-light-muted">{count} תרגילים</span>
                             </button>
                           );
                         })}
@@ -386,7 +386,7 @@ export default function DiyBuilderTab({
                       <div>
                         <button
                           onClick={() => setDiyBodyPartFilter(null)}
-                          className="flex items-center gap-1 text-xs font-bold text-stone-500 hover:text-stone-800 mb-3.5 transition-colors"
+                          className="flex items-center gap-1 text-xs font-bold text-on-light-muted hover:text-on-light mb-3.5 transition-colors"
                         >
                           <ChevronRight size={14} />
                           {BODY_PART_GROUPS.find((r) => r.id === selectedRegion)?.label ?? selectedRegion}
@@ -400,30 +400,30 @@ export default function DiyBuilderTab({
                               return (
                                 <div
                                   key={ex.id}
-                                  className="bg-white rounded-[1.25rem] p-3 border border-stone-100 shadow-sm flex items-center justify-between gap-3 hover:border-stone-200 transition-colors"
+                                  className="on-light bg-surface rounded-[1.25rem] p-3 border border-line-light shadow-sm flex items-center justify-between gap-3 hover:border-line-input transition-colors"
                                 >
                                   <div className="flex items-center gap-3 w-full overflow-hidden">
                                     {ex.gif_url ? (
                                       ex.gif_url.toLowerCase().includes(".mp4") || ex.gif_url.toLowerCase().includes(".webm") ? (
-                                        <video src={ex.gif_url} className="w-[52px] h-[52px] rounded-2xl bg-stone-100 object-contain shrink-0" />
+                                        <video src={ex.gif_url} className="w-[52px] h-[52px] rounded-2xl bg-surface-alt object-contain shrink-0" />
                                       ) : (
                                         <img
                                           src={ex.gif_url}
                                           alt={getExerciseName(ex, lang)}
-                                          className="w-[52px] h-[52px] rounded-2xl bg-stone-50 object-contain shrink-0 p-1"
+                                          className="w-[52px] h-[52px] rounded-2xl bg-surface-alt object-contain shrink-0 p-1"
                                         />
                                       )
                                     ) : (
-                                      <div className="w-[52px] h-[52px] rounded-2xl bg-stone-100 shrink-0" />
+                                      <div className="w-[52px] h-[52px] rounded-2xl bg-surface-alt shrink-0" />
                                     )}
 
                                     <div className="overflow-hidden">
-                                      <h4 className="font-extrabold text-brand-espresso text-[13px] truncate">{getExerciseName(ex, lang)}</h4>
+                                      <h4 className="font-extrabold text-on-light text-[13px] truncate">{getExerciseName(ex, lang)}</h4>
                                       <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-                                        <span className="text-[11px] text-stone-500 truncate">
+                                        <span className="text-[11px] text-on-light-muted truncate">
                                           {AVAILABLE_MUSCLES.find((m) => m.id === ex.target_muscle)?.label}
                                         </span>
-                                        <span className="w-[3px] h-[3px] rounded-full bg-stone-300 shrink-0"></span>
+                                        <span className="w-[3px] h-[3px] rounded-full bg-line-light shrink-0"></span>
                                         <span
                                           className="text-[10px] font-extrabold px-2 py-0.5 rounded-full whitespace-nowrap"
                                           style={{ background: style.bg, color: style.text }}
@@ -451,14 +451,14 @@ export default function DiyBuilderTab({
                                     <button
                                       onClick={() => onViewExerciseInfo(ex)}
                                       aria-label="מידע על התרגיל"
-                                      className="w-9 h-9 rounded-full bg-stone-50 text-stone-500 flex items-center justify-center hover:bg-stone-100 hover:text-stone-700 transition-colors"
+                                      className="w-9 h-9 rounded-full bg-surface-alt text-on-light-muted flex items-center justify-center hover:bg-line-light hover:text-on-light transition-colors"
                                     >
                                       <Info size={16} />
                                     </button>
                                     <button
                                       onClick={() => addExerciseToActiveDay(ex)}
                                       aria-label="הוסף לאימון"
-                                      className="w-9 h-9 rounded-full bg-brand-terracotta/8 text-brand-terracotta flex items-center justify-center hover:bg-brand-terracotta/15 transition-colors"
+                                      className="w-9 h-9 rounded-full bg-accent/15 text-accent-on-light flex items-center justify-center hover:bg-accent/25 transition-colors"
                                     >
                                       <Plus size={18} />
                                     </button>

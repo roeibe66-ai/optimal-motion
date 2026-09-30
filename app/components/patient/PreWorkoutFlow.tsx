@@ -38,14 +38,14 @@ export default function PreWorkoutFlow({
   if (feedbackPhase === "pain_heatmap") {
     return (
       <div
-        className="fixed inset-0 z-[100] bg-stone-950 flex flex-col items-center justify-start pt-12 p-6 text-center animate-in zoom-in duration-500 overflow-y-auto"
+        className="fixed inset-0 z-[100] bg-shell flex flex-col items-center justify-start pt-12 p-6 text-center animate-in zoom-in duration-500 overflow-y-auto"
         dir={dir}
       >
-        <Activity size={40} className="text-teal-400 mb-4" />
-        <h2 className="text-3xl md:text-4xl font-black text-white mb-2 tracking-tight">איפה כואב לך היום?</h2>
-        <p className="text-stone-400 mb-8 max-w-sm mx-auto text-sm">סמן על גבי המודל את האזורים שמרגישים מתוחים או כואבים כרגע.</p>
+        <Activity size={40} className="text-accent mb-4" />
+        <h2 className="text-3xl md:text-4xl font-black text-on-dark mb-2 tracking-tight">איפה כואב לך היום?</h2>
+        <p className="text-on-dark-muted mb-8 max-w-sm mx-auto text-sm">סמן על גבי המודל את האזורים שמרגישים מתוחים או כואבים כרגע.</p>
 
-        <div className="bg-[#1c1c1e] p-6 rounded-3xl w-full max-w-sm mb-8 flex justify-center border border-stone-800">
+        <div className="bg-elevated p-6 rounded-3xl w-full max-w-sm mb-8 flex justify-center border border-line-dark">
           <div className="pointer-events-auto" style={{ width: "150px" }}>
             <BodyDiagram highlightedMuscles={selectedPainAreas} onMuscleClick={toggleMuscle} />
           </div>
@@ -53,7 +53,7 @@ export default function PreWorkoutFlow({
 
         <button
           onClick={onConfirmPainAreas}
-          className="bg-teal-500 text-brand-espresso px-10 py-4 rounded-full font-bold text-lg hover:bg-teal-400 transition-colors shadow-lg w-full max-w-sm"
+          className="bg-accent text-accent-ink px-10 py-4 rounded-full font-bold text-lg hover:bg-accent-hover active:bg-accent-active transition-colors shadow-lg w-full max-w-sm"
         >
           המשך
         </button>
@@ -64,12 +64,12 @@ export default function PreWorkoutFlow({
   // feedbackPhase === "pain_scale"
   return (
     <div
-      className="fixed inset-0 z-[100] bg-stone-950 flex flex-col items-center justify-center p-6 text-center animate-in slide-in-from-right duration-300"
+      className="fixed inset-0 z-[100] bg-shell flex flex-col items-center justify-center p-6 text-center animate-in slide-in-from-right duration-300"
       dir={dir}
     >
-      <Activity size={60} className="text-blue-400 mb-6" />
-      <h2 className="text-3xl md:text-5xl font-black text-white mb-4 tracking-tight">ועד כמה זה כואב?</h2>
-      <p className="text-lg md:text-xl text-stone-400 mb-12 max-w-lg mx-auto">מ-0 (ללא כאב) עד 10 (כאב בלתי נסבל).</p>
+      <Activity size={60} className="text-warm mb-6" />
+      <h2 className="text-3xl md:text-5xl font-black text-on-dark mb-4 tracking-tight">ועד כמה זה כואב?</h2>
+      <p className="text-lg md:text-xl text-on-dark-muted mb-12 max-w-lg mx-auto">מ-0 (ללא כאב) עד 10 (כאב בלתי נסבל).</p>
       <RatingScale values={[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]} getColor={getPainColor} onSelect={onConfirmPreWorkout} />
     </div>
   );

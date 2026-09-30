@@ -22,14 +22,15 @@ const isDevMode = process.env.NODE_ENV !== "production";
 // units so nothing touches the SVG edge.
 const VIEW_BOX: Record<View, string> = { front: "140 10 445 875", back: "746 8 440 873" };
 
-// One clean medical-chart look everywhere: solid white base fill, precise
-// stone-800 stroke outlines. No "translucent/glass" treatment on any
-// variant — a body diagram is a clinical illustration, not a photo-overlay
-// effect, even where it sits on top of a photo (see the "overlay" variant's
-// own opaque white card below, which is what gives it contrast against the
-// photo instead).
-const BASE_FILL = "#ffffff";
-const STROKE_COLOR = "#292524"; // stone-800
+// One clean medical-chart look everywhere: solid --muscle-inactive-dark
+// base fill, muted outlines, on an opaque dark (--bg-elevated) panel in
+// both variants. The diagram is always drawn on dark — even inside a light
+// --surface sheet — because the muscle tokens only clear 3:1 against the
+// dark inactive fill (teal/warm vs --muscle-inactive-light is ~1.3:1).
+// Colors go through `style` (not fill/stroke attributes) so the CSS
+// variables resolve.
+const BASE_FILL = "var(--muscle-inactive-dark)";
+const STROKE_COLOR = "var(--text-on-dark-muted)";
 // Tuned for this source's much larger coordinate space (viewBox ~445 units
 // wide) — the previous body-muscles-based version used 0.25 for a ~35-unit
 // viewBox; the equivalent visual weight here is roughly 13x that.
@@ -37,8 +38,8 @@ const STROKE_WIDTH = 3.2;
 
 // Both variants render the exact same diagram (same fill/stroke/tier
 // colors) — the only difference is the container chrome around it. "card":
-// the exercise-info sheet's usage, a padded bg-stone-50 panel. "overlay":
-// PlanTab's tiny hero-card usage, a small opaque white card sitting on top
+// the exercise-info sheet's usage, a padded dark panel. "overlay":
+// PlanTab's tiny hero-card usage, a small opaque dark card sitting on top
 // of the hero photo so the diagram pops with full contrast instead of
 // blending into it.
 type Variant = "card" | "overlay";
@@ -90,14 +91,12 @@ function AnatomyView({ view, highlights }: { view: View; highlights: Map<number,
           <path
             key={region.id}
             d={region.d}
-            fill={fill}
-            stroke={STROKE_COLOR}
+            style={{ fill, stroke: STROKE_COLOR, ...(isDevMode ? { cursor: "pointer" } : {}) }}
             strokeWidth={STROKE_WIDTH}
             strokeLinejoin="round"
             {...(isDevMode
               ? {
                   onClick: () => console.log(`[AnatomyDiagram] ${view} region #${region.id} (center ${region.cx}, ${region.cy})`),
-                  style: { cursor: "pointer" },
                 }
               : {})}
           />
@@ -128,8 +127,8 @@ export default function AnatomyDiagram({ primaryMuscles, secondaryMuscles = [], 
   const viewWrapperClassName = size ? undefined : "flex-1 max-w-[130px]";
   const containerClassName =
     variant === "card"
-      ? `flex items-center justify-center gap-3 bg-stone-50 rounded-2xl py-3 ${className ?? ""}`
-      : `flex items-center gap-0.5 bg-white rounded-2xl p-1.5 shadow-[0_8px_20px_-4px_rgba(0,0,0,0.35)] ${className ?? ""}`;
+      ? `flex items-center justify-center gap-3 bg-elevated rounded-2xl py-3 ${className ?? ""}`
+      : `flex items-center gap-0.5 bg-elevated rounded-2xl p-1.5 shadow-[0_8px_20px_-4px_color-mix(in_srgb,var(--bg-base)_35%,transparent)] ${className ?? ""}`;
 
   return (
     <div className={containerClassName} dir="ltr">

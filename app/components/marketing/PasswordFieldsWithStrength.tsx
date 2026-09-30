@@ -34,7 +34,7 @@ export default function PasswordFieldsWithStrength({
   return (
     <>
       <div>
-        <label htmlFor="pw-strength-password" className="block text-xs font-bold text-stone-500 mb-1.5">
+        <label htmlFor="pw-strength-password" className="block text-xs font-bold text-on-light-muted mb-1.5">
           {passwordLabel}
         </label>
         <input
@@ -43,7 +43,7 @@ export default function PasswordFieldsWithStrength({
           placeholder={passwordPlaceholder}
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          className="w-full border-b-2 border-stone-200 p-3 bg-transparent focus:border-teal-500 focus:ring-1 focus:ring-teal-500/30 outline-none transition-colors"
+          className="w-full border-b-2 border-line-input p-3 bg-transparent focus:border-focus-on-light focus:ring-2 focus:ring-focus-on-light outline-none transition-colors"
           required
         />
       </div>
@@ -57,7 +57,7 @@ export default function PasswordFieldsWithStrength({
       )}
 
       <div>
-        <label htmlFor="pw-strength-confirm" className="block text-xs font-bold text-stone-500 mb-1.5">
+        <label htmlFor="pw-strength-confirm" className="block text-xs font-bold text-on-light-muted mb-1.5">
           {confirmLabel}
         </label>
         <input
@@ -66,24 +66,24 @@ export default function PasswordFieldsWithStrength({
           placeholder={confirmPlaceholder}
           value={confirmPassword}
           onChange={(e) => setConfirmPassword(e.target.value)}
-          className={`w-full border-b-2 p-3 bg-transparent outline-none transition-colors focus:ring-1 ${
+          className={`w-full border-b-2 p-3 bg-transparent outline-none transition-colors focus:ring-2 ${
             confirmPassword.length > 0
               ? passwordsMatch
-                ? "border-teal-500 focus:ring-teal-500/30"
-                : "border-red-400 focus:ring-red-400/30"
-              : "border-stone-200 focus:border-teal-500 focus:ring-teal-500/30"
+                ? "border-accent-on-light focus:ring-focus-on-light"
+                : "border-danger focus:ring-danger"
+              : "border-line-input focus:border-focus-on-light focus:ring-focus-on-light"
           }`}
           required
         />
       </div>
-      {confirmPassword.length > 0 && !passwordsMatch && <p className="text-xs text-red-500 font-medium -mt-2">הסיסמאות אינן תואמות</p>}
+      {confirmPassword.length > 0 && !passwordsMatch && <p className="text-xs text-danger font-medium -mt-2">הסיסמאות אינן תואמות</p>}
     </>
   );
 }
 
 function CriterionRow({ met, label }: { met: boolean; label: string }) {
   return (
-    <span className={`flex items-center gap-1 text-xs font-medium ${met ? "text-teal-600" : "text-stone-400"}`}>
+    <span className={`flex items-center gap-1 text-xs font-medium ${met ? "text-accent-on-light" : "text-on-light-muted"}`}>
       {met ? <Check size={13} /> : <X size={13} />}
       {label}
     </span>

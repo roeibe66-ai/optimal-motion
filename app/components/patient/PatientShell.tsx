@@ -171,7 +171,7 @@ export default function PatientShell() {
           Letting the whole shell scroll as one is what caused the
           background to drag and the fixed bottom nav to detach/overlap
           during fast scrolling. */}
-      <div className="fixed inset-0 overflow-hidden bg-brand-stone text-brand-espresso flex flex-col">
+      <div className="fixed inset-0 overflow-hidden bg-shell text-on-dark flex flex-col">
         {session.viewingExInfo && (
           <ExerciseInfoModal exercise={session.viewingExInfo} historyData={session.exHistoryData} onClose={() => session.setViewingExInfo(null)} />
         )}
@@ -181,35 +181,35 @@ export default function PatientShell() {
             MISTAKES.md) — using the same working
             max(<min>, env(safe-area-inset-bottom)) pattern as
             PatientCoachSheet instead. */}
-        <nav className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-md border-t border-brand-espresso/5 z-50 print:hidden pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+        <nav className="fixed bottom-0 left-0 right-0 bg-elevated/90 backdrop-blur-md border-t border-line-dark z-50 print:hidden pb-[max(0.5rem,env(safe-area-inset-bottom))]">
           <div className="flex justify-around items-center h-16 max-w-5xl mx-auto px-2">
-            <button onClick={() => switchTab("plan")} className={`flex flex-col items-center justify-center w-16 h-full gap-1 transition-colors ${patientTab === "plan" ? "text-brand-terracotta" : "text-stone-400 hover:text-stone-600"}`}>
-              <HomeIcon size={22} className={patientTab === "plan" ? "fill-brand-terracotta/15" : ""} />
+            <button onClick={() => switchTab("plan")} className={`flex flex-col items-center justify-center w-16 h-full gap-1 transition-colors ${patientTab === "plan" ? "text-accent" : "text-on-dark-muted hover:text-on-dark"}`}>
+              <HomeIcon size={22} className={patientTab === "plan" ? "fill-accent/15" : ""} />
               <span className="text-[10px] font-bold">ראשי</span>
             </button>
 
-            <button onClick={() => switchTab("calendar")} className={`flex flex-col items-center justify-center w-16 h-full gap-1 transition-colors ${patientTab === "calendar" ? "text-brand-terracotta" : "text-stone-400 hover:text-stone-600"}`}>
-              <CalendarDays size={22} className={patientTab === "calendar" ? "fill-brand-terracotta/15" : ""} />
+            <button onClick={() => switchTab("calendar")} className={`flex flex-col items-center justify-center w-16 h-full gap-1 transition-colors ${patientTab === "calendar" ? "text-accent" : "text-on-dark-muted hover:text-on-dark"}`}>
+              <CalendarDays size={22} className={patientTab === "calendar" ? "fill-accent/15" : ""} />
               <span className="text-[10px] font-bold">לוח שנה</span>
             </button>
 
             {loggedInPatient.patient_type === "fitness" && (
-              <button onClick={() => switchTab("diy")} className={`flex flex-col items-center justify-center w-16 h-full gap-1 transition-colors ${patientTab === "diy" ? "text-brand-terracotta" : "text-stone-400 hover:text-stone-600"}`}>
+              <button onClick={() => switchTab("diy")} className={`flex flex-col items-center justify-center w-16 h-full gap-1 transition-colors ${patientTab === "diy" ? "text-accent" : "text-on-dark-muted hover:text-on-dark"}`}>
                 <Dumbbell size={22} />
                 <span className="text-[10px] font-bold">בנה אימון</span>
               </button>
             )}
 
             {loggedInPatient.patient_type === "fitness" && (
-              <button onClick={() => switchTab("explore")} className={`flex flex-col items-center justify-center w-16 h-full gap-1 transition-colors ${patientTab === "explore" ? "text-brand-terracotta" : "text-stone-400 hover:text-stone-600"}`}>
-                <Compass size={22} className={patientTab === "explore" ? "fill-brand-terracotta/15" : ""} />
+              <button onClick={() => switchTab("explore")} className={`flex flex-col items-center justify-center w-16 h-full gap-1 transition-colors ${patientTab === "explore" ? "text-accent" : "text-on-dark-muted hover:text-on-dark"}`}>
+                <Compass size={22} className={patientTab === "explore" ? "fill-accent/15" : ""} />
                 <span className="text-[10px] font-bold">גלה</span>
               </button>
             )}
 
             {loggedInPatient.patient_type === "fitness" && (
-              <button onClick={() => switchTab("premium")} className={`flex flex-col items-center justify-center w-16 h-full gap-1 transition-colors ${patientTab === "premium" ? "text-brand-terracotta" : "text-stone-400 hover:text-stone-600"}`}>
-                <Crown size={22} className={patientTab === "premium" ? "fill-brand-terracotta/15" : ""} />
+              <button onClick={() => switchTab("premium")} className={`flex flex-col items-center justify-center w-16 h-full gap-1 transition-colors ${patientTab === "premium" ? "text-accent" : "text-on-dark-muted hover:text-on-dark"}`}>
+                <Crown size={22} className={patientTab === "premium" ? "fill-accent/15" : ""} />
                 <span className="text-[10px] font-bold">תוכניות</span>
               </button>
             )}
@@ -218,10 +218,10 @@ export default function PatientShell() {
                 to show (first-letter circle) — moved here rather than kept
                 as a separate button, since this tab already does the same
                 job (open the account/profile screen). */}
-            <button onClick={() => switchTab("profile")} className={`flex flex-col items-center justify-center w-16 h-full gap-1 transition-colors ${patientTab === "profile" ? "text-brand-terracotta" : "text-stone-400 hover:text-stone-600"}`}>
+            <button onClick={() => switchTab("profile")} className={`flex flex-col items-center justify-center w-16 h-full gap-1 transition-colors ${patientTab === "profile" ? "text-accent" : "text-on-dark-muted hover:text-on-dark"}`}>
               <span
                 className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold transition-colors ${
-                  patientTab === "profile" ? "bg-brand-terracotta text-white" : "bg-amber-500 text-stone-950"
+                  patientTab === "profile" ? "bg-accent text-accent-ink" : "bg-warm text-accent-ink"
                 }`}
               >
                 {loggedInPatient.full_name.charAt(0)}
@@ -244,13 +244,13 @@ export default function PatientShell() {
         <main className="flex-1 overflow-y-auto max-w-5xl w-full mx-auto px-4 md:px-8 pb-[calc(6rem+env(safe-area-inset-bottom))] md:pb-24 pt-[max(1rem,env(safe-area-inset-top))] relative z-0">
           {loggedInPatient.patient_type === "fitness" && loggedInPatient.email_verified === false && (
             <div className="print:hidden mb-6">
-              <div className="bg-amber-50 border border-amber-100 p-4 rounded-2xl flex items-start gap-4 shadow-[0_8px_30px_rgb(0,0,0,0.04)] animate-in fade-in slide-in-from-top-4">
-                <div className="w-10 h-10 bg-amber-100 text-amber-700 rounded-full flex items-center justify-center shrink-0 mt-1">
+              <div className="bg-warm/15 border border-warm/40 p-4 rounded-2xl flex items-start gap-4 shadow-[0_8px_30px_color-mix(in_srgb,var(--bg-base)_4%,transparent)] animate-in fade-in slide-in-from-top-4">
+                <div className="w-10 h-10 bg-warm/15 text-warm rounded-full flex items-center justify-center shrink-0 mt-1">
                   <AlertCircle size={20} />
                 </div>
                 <div>
-                  <h4 className="font-bold text-amber-800 text-sm">אנא אמת את כתובת המייל שלך</h4>
-                  <p className="text-amber-700/80 text-xs font-medium mt-1">
+                  <h4 className="font-bold text-warm text-sm">אנא אמת את כתובת המייל שלך</h4>
+                  <p className="text-warm/80 text-xs font-medium mt-1">
                     נשלח קישור לאימות לכתובת {loggedInPatient.email}. יש לך 7 ימים לאמת את החשבון כדי שתוכל להמשיך להשתמש בפלטפורמה ולרכוש מסלולים חדשים.
                   </p>
                 </div>

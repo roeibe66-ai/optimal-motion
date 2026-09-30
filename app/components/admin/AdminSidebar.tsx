@@ -38,37 +38,37 @@ export default function AdminSidebar({ adminTab, setAdminTab, isSidebarOpen, set
 
   return (
     <>
-      <div className="md:hidden bg-[#161311] text-white p-4 flex justify-between items-center z-30 relative shadow-md border-b border-stone-800">
+      <div className="md:hidden bg-elevated text-on-dark p-4 flex justify-between items-center z-30 relative shadow-md border-b border-line-dark">
         <span className="text-xl font-black tracking-widest uppercase">
-          Optimal<span className="text-teal-400">Motion</span>
+          Optimal<span className="text-accent">Motion</span>
         </span>
-        <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-2 bg-white/10 rounded-lg hover:bg-white/20 transition-colors">
+        <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-2 bg-on-dark/10 rounded-lg hover:bg-on-dark/20 transition-colors">
           {isSidebarOpen ? <X size={24} /> : <Menu size={24} />}
         </button>
       </div>
 
-      {isSidebarOpen && <div className="fixed inset-0 bg-black/60 z-40 md:hidden backdrop-blur-sm" onClick={() => setIsSidebarOpen(false)}></div>}
+      {isSidebarOpen && <div className="fixed inset-0 bg-shell/60 z-40 md:hidden backdrop-blur-sm" onClick={() => setIsSidebarOpen(false)}></div>}
 
       <aside
-        className={`fixed md:static inset-y-0 w-72 bg-[#161311] text-stone-400 flex flex-col z-50 transition-all duration-300 ease-in-out border-l border-stone-800 ${
+        className={`fixed md:static inset-y-0 w-72 bg-elevated text-on-dark-muted flex flex-col z-50 transition-all duration-300 ease-in-out border-l border-line-dark ${
           isSidebarOpen ? "right-0" : "-right-80"
         } md:right-0`}
       >
         <div className="p-7 hidden md:block">
-          <span className="text-lg font-black text-white tracking-wider uppercase">
-            Optimal<span className="text-teal-400">Motion</span>
+          <span className="text-lg font-black text-on-dark tracking-wider uppercase">
+            Optimal<span className="text-accent">Motion</span>
           </span>
-          <div className="text-[10px] font-extrabold text-stone-500 tracking-widest uppercase mt-1">Practitioner Console</div>
+          <div className="text-[10px] font-extrabold text-on-dark-muted tracking-widest uppercase mt-1">Practitioner Console</div>
         </div>
 
         <nav className="flex-1 overflow-y-auto p-4 space-y-1 font-medium mt-4 md:mt-0">
           {NAV_ITEMS.map(({ id, label, icon: Icon }) => {
             const isActive = adminTab === id;
             const isVideoReviews = id === "video_reviews";
-            const activeClasses = "bg-white/95 text-stone-950 font-extrabold";
+            const activeClasses = "bg-accent text-accent-ink font-extrabold";
             const inactiveClasses = isVideoReviews
-              ? "bg-red-500/10 text-red-400 font-bold hover:bg-red-500/15"
-              : "text-stone-400 hover:bg-white/5 hover:text-white";
+              ? "bg-warning/10 text-warning font-bold hover:bg-warning/15"
+              : "text-on-dark-muted hover:bg-on-dark/5 hover:text-on-dark";
 
             return (
               <button
@@ -83,15 +83,15 @@ export default function AdminSidebar({ adminTab, setAdminTab, isSidebarOpen, set
                   // queue is still a UI mockup, per UX audit finding #8, 2026-09-03) — a
                   // plain dot keeps the attention cue honest without claiming a specific
                   // number. Swap for a real unread-count badge once the tab has live data.
-                  <span className="w-2 h-2 rounded-full bg-red-500 mr-auto" aria-hidden="true" />
+                  <span className="w-2 h-2 rounded-full bg-warning mr-auto" aria-hidden="true" />
                 )}
               </button>
             );
           })}
         </nav>
 
-        <div className="p-4 border-t border-stone-800">
-          <button onClick={onLogout} className="w-full flex items-center gap-3.5 px-4 py-3.5 rounded-2xl hover:bg-white/5 text-stone-500 hover:text-white transition-all font-bold text-sm">
+        <div className="p-4 border-t border-line-dark">
+          <button onClick={onLogout} className="w-full flex items-center gap-3.5 px-4 py-3.5 rounded-2xl hover:bg-on-dark/5 text-on-dark-muted hover:text-on-dark transition-all font-bold text-sm">
             <LogOut size={18} /> התנתק
           </button>
         </div>

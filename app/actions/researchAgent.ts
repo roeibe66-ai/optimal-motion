@@ -56,7 +56,27 @@ interface SemanticScholarSearchResponse {
   data?: SemanticScholarPaper[];
 }
 
-export type ResearchAgentResult = { ok: true; findings: ResearchFinding[] } | { ok: false; error: string };
+// How the free-text request was understood — returned to the admin UI so a
+// surprising result set can be traced back to the query that produced it.
+export interface ResearchInterpretation {
+  topicHe: string;
+  focusEn: string;
+  pubmedQuery: string;
+  semanticScholarQuery: string;
+}
+
+export type ResearchAgentResult =
+  | { ok: true; findings: ResearchFinding[]; interpretation: ResearchInterpretation }
+  | { ok: false; error: string };
+
+const SUMMARY_MODEL = "claude-sonnet-5";
+// Query planning and relevance screening are short structured calls on the
+// critical path before summarization even starts — the fast model keeps the
+// whole search inside a reasonable wait.
+const ROUTING_MODEL = "claude-haiku-4-5-20251001";
+const MIN_POOL_BEFORE_BROADENING = 4;
+const MIN_RELEVANCE_SCORE = 2;
+const SCREENING_ABSTRACT_CHARS = 600;
 
 async function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -361,7 +381,7 @@ function classifyEvidence(candidate: CandidatePaper): EvidenceTier {
 }
 // -------------------------------------------------------------------------
 
-// Ranks by evidence tier first (meta-analyses and systematic reviews above
+// Ranks by relevance score (when screening ran), then evidence tier (meta-analyses and systematic reviews above
 // RCTs above cohort/observational studies above everything else, case
 // reports last), then by whether it's in a recognized top-tier journal,
 // then by citation count — implementing "hierarchy of evidence" as an
@@ -374,8 +394,13 @@ function classifyEvidence(candidate: CandidatePaper): EvidenceTier {
 // the final selection when PubMed returned any — swapping it in for the
 // weakest-ranked slot — rather than letting the sort quietly exclude it
 // every time.
-function selectTopPapers(pool: CandidatePaper[], count: number): CandidatePaper[] {
+function selectTopPapers(pool: CandidatePaper[], count: number, relevanceOf: (p: CandidatePaper) => number = () => 0): CandidatePaper[] {
   const ranked = [...pool].sort((a, b) => {
+    // Directly-on-question papers first: for a specific question, a paper
+    // that actually answers it beats a stronger study design on an adjacent
+    // topic. Only screened-in papers reach here, so this is 3-vs-2.
+    const relevanceDiff = relevanceOf(b) - relevanceOf(a);
+    if (relevanceDiff !== 0) return relevanceDiff;
     const tierDiff = EVIDENCE_TIER_RANK[classifyEvidence(b)] - EVIDENCE_TIER_RANK[classifyEvidence(a)];
     if (tierDiff !== 0) return tierDiff;
     const journalDiff = Number(isTopTierJournal(b.venue)) - Number(isTopTierJournal(a.venue));
@@ -389,6 +414,99 @@ function selectTopPapers(pool: CandidatePaper[], count: number): CandidatePaper[
   if (bestPubMed && top.length > 0) top[top.length - 1] = bestPubMed;
   return top;
 }
+
+// --- Free-text routing ---------------------------------------------------
+//
+// The admin types whatever they're curious about ("למה כואב אחרי אימון
+// ביום השני", "does foam rolling actually do anything", "kinesiophobia") —
+// in Hebrew or English, as a keyword or a whole question. Neither index
+// understands that well: PubMed's esearch wants English terms (ideally
+// MeSH-mapped boolean syntax) and Semantic Scholar's relevance search works
+// best on a handful of keywords. The planner translates the request into
+// both, plus a broader fallback used when the precise query comes back thin.
+const queryPlanSchema = z.object({
+  topicHe: z.string().describe("תיאור קצר בעברית (עד 10 מילים) של מה שהבנת שהמשתמש מחפש"),
+  focusEn: z.string().describe("The underlying research question in one English sentence"),
+  pubmedQuery: z
+    .string()
+    .describe('PubMed esearch term in English using boolean syntax, e.g. (kinesiophobia OR "fear of movement") AND (rehabilitation OR exercise). No field tags other than [MeSH Terms]/[tiab].'),
+  semanticScholarQuery: z.string().describe("3-8 English keywords for Semantic Scholar relevance search, no boolean operators or quotes"),
+  broadQuery: z.string().describe("2-4 English keywords for a broader fallback search on the same topic"),
+});
+
+type QueryPlan = z.infer<typeof queryPlanSchema>;
+
+const QUERY_PLANNER_SYSTEM_PROMPT = `You route free-text research requests for a physiotherapy / strength-training / rehabilitation app to academic search engines (PubMed and Semantic Scholar).
+
+The request may be in Hebrew or English, a single term or a full question, casual or clinical. Infer the underlying research question in the context of exercise, sports medicine, physiotherapy, pain science and rehabilitation, and translate it into precise English search queries using standard scientific terminology (e.g. "שרירים תפוסים אחרי אימון" -> delayed onset muscle soreness; "כאבי גב" -> low back pain).
+
+Keep the PubMed query focused enough to return on-topic papers but not so narrow that it returns nothing — prefer OR-grouped synonyms over long AND chains (at most 2-3 AND-ed concepts). Always wrap every OR group in parentheses and quote multi-word phrases — PubMed evaluates AND/OR strictly left to right, so an unparenthesized query silently means something else.`;
+
+function fallbackPlan(input: string): QueryPlan {
+  return { topicHe: input, focusEn: input, pubmedQuery: input, semanticScholarQuery: input, broadQuery: input };
+}
+
+async function planQuery(input: string): Promise<QueryPlan> {
+  try {
+    const { object } = await generateObject({
+      model: anthropic(ROUTING_MODEL),
+      schema: queryPlanSchema,
+      system: QUERY_PLANNER_SYSTEM_PROMPT,
+      prompt: `Request: ${input}`,
+    });
+    return object;
+  } catch (err) {
+    // Degrade to searching the raw text rather than failing the whole search
+    // — still useful for plain English keyword input.
+    console.error("Research query planning failed:", err);
+    return fallbackPlan(input);
+  }
+}
+
+const relevanceSchema = z.object({
+  scores: z
+    .array(z.object({ index: z.number().int(), score: z.number().int().min(0).max(3) }))
+    .describe(
+      "One entry per paper: 3 = its main finding directly answers the question, 2 = studies the same specific phenomenon and adds useful insight on it, 1 = same general topic but a different question (e.g. a supplement trial when the question is about mechanism), 0 = off-topic. Be strict: most papers in a keyword search are 1."
+    ),
+});
+
+// The evidence-tier sort in selectTopPapers knows nothing about the
+// question — left alone it happily picks an unrelated meta-analysis over an
+// on-topic RCT. This screens the pool against the planner's research
+// question first, so the tier ranking only chooses among relevant papers.
+// Returns null when screening fails, meaning "don't filter".
+async function scoreRelevance(focusEn: string, pool: CandidatePaper[]): Promise<Map<number, number> | null> {
+  const listing = pool.map((p, i) => `[${i}] ${p.title}\n${p.abstract.slice(0, SCREENING_ABSTRACT_CHARS)}`).join("\n\n");
+  try {
+    const { object } = await generateObject({
+      model: anthropic(ROUTING_MODEL),
+      schema: relevanceSchema,
+      system: "You screen academic papers for relevance to a research question. Score every paper listed, judging only from the title and abstract excerpt.",
+      prompt: `Research question: ${focusEn}\n\nPapers:\n\n${listing}`,
+    });
+    return new Map(object.scores.map((s) => [s.index, s.score]));
+  } catch (err) {
+    console.error("Research relevance screening failed:", err);
+    return null;
+  }
+}
+
+async function fetchPool(pubmedQuery: string, semanticScholarQuery: string) {
+  const [s2Result, pubmedResult] = await Promise.allSettled([fetchSemanticScholarCandidates(semanticScholarQuery), fetchPubMedCandidates(pubmedQuery)]);
+  if (s2Result.status === "rejected") console.error("Semantic Scholar fetch failed:", s2Result.reason);
+  if (pubmedResult.status === "rejected") console.error("PubMed fetch failed:", pubmedResult.reason);
+  return {
+    candidates: [...(s2Result.status === "fulfilled" ? s2Result.value : []), ...(pubmedResult.status === "fulfilled" ? pubmedResult.value : [])],
+    bothFailed: s2Result.status === "rejected" && pubmedResult.status === "rejected",
+    firstError: s2Result.status === "rejected" ? s2Result.reason : pubmedResult.status === "rejected" ? pubmedResult.reason : null,
+  };
+}
+
+function errorMessage(err: unknown): string {
+  return err instanceof Error ? err.message : String(err);
+}
+// -------------------------------------------------------------------------
 
 const paperFactSchema = z.object({
   summaryHe: z.string().describe("תקציר קצר ופשוט של מסקנת המחקר, 2-3 משפטים, בעברית ברורה להדיוט"),
@@ -409,54 +527,69 @@ const RESEARCH_AGENT_SYSTEM_PROMPT = `את/ה עוזר/ת מחקר עבור אפ
 - אל תטען בשום צורה שהמאמר פורסם בכתב עת "Q1" או בעל "Impact Factor" גבוה - מידע כזה לא סופק לך ואסור להמציא אותו.
 - כתוב בעברית תקנית וטבעית בלבד, ללא מילים באנגלית.`;
 
-async function summarizePaperInHebrew(paper: { title: string; abstract: string; year: number | null }) {
+async function summarizePaperInHebrew(paper: { title: string; abstract: string; year: number | null }, focusEn: string) {
   const { object } = await generateObject({
-    model: anthropic("claude-sonnet-5"),
+    model: anthropic(SUMMARY_MODEL),
     schema: paperFactSchema,
     system: RESEARCH_AGENT_SYSTEM_PROMPT,
-    prompt: `כותרת: ${paper.title}\nשנת פרסום: ${paper.year ?? "לא ידוע"}\nתקציר: ${paper.abstract}`,
+    prompt: `השאלה שהמשתמש התעניין בה (באנגלית): ${focusEn}\nאם המאמר עונה עליה, הדגש בעובדת ה"הידעת" את הזווית הזו. אם לא — כתוב פשוט את הממצא המעניין ביותר שלו, בלי להזכיר את השאלה ובלי לציין שהמאמר לא עונה עליה.\n\nכותרת: ${paper.title}\nשנת פרסום: ${paper.year ?? "לא ידוע"}\nתקציר: ${paper.abstract}`,
   });
   return object;
 }
 
 /**
- * Hybrid literature search: queries Semantic Scholar (citation-ranked) and
- * PubMed/NCBI E-utilities (clinical coverage) concurrently, both scoped to
- * the last RECENCY_YEARS_LIMIT years, pools and deduplicates the results,
- * ranks by evidence hierarchy (meta-analyses/systematic reviews > RCTs >
- * cohort studies > case reports) then citation count, picks the best 3
- * (with at least one PubMed result guaranteed when available), and asks
- * Claude to turn each abstract into a Hebrew summary + "Did you know?" fact
- * for the app. Safe to call directly from a client component (e.g. the
- * admin research tab).
+ * Free-text hybrid literature search: a fast model first routes the admin's
+ * request (Hebrew or English, keyword or full question) into English
+ * PubMed/Semantic Scholar queries, both indexes are searched concurrently
+ * (last RECENCY_YEARS_LIMIT years, broadening automatically when the precise
+ * query comes back thin), the pooled/deduplicated results are screened for
+ * relevance to the question, ranked by evidence hierarchy (meta-analyses/
+ * systematic reviews > RCTs > cohort studies > case reports) then citation
+ * count, and the best 3 (at least one PubMed result when available) are
+ * turned into a Hebrew summary + "Did you know?" fact each. Safe to call
+ * directly from a client component (e.g. the admin research tab).
  */
 export async function generateResearchFacts(query: string): Promise<ResearchAgentResult> {
   const trimmed = query.trim();
   if (!trimmed) return { ok: false, error: "יש להזין נושא לחיפוש" };
+  // Without this every model call fails and the search surfaces only a
+  // generic "summaries failed" — which is exactly how a missing key in the
+  // Vercel project went unnoticed.
+  if (!process.env.ANTHROPIC_API_KEY) return { ok: false, error: "ANTHROPIC_API_KEY לא מוגדר בסביבת השרת — יש להוסיף אותו להגדרות הפרויקט" };
 
-  const [s2Result, pubmedResult] = await Promise.allSettled([fetchSemanticScholarCandidates(trimmed), fetchPubMedCandidates(trimmed)]);
+  const plan = await planQuery(trimmed);
 
-  if (s2Result.status === "rejected") console.error("Semantic Scholar fetch failed:", s2Result.reason);
-  if (pubmedResult.status === "rejected") console.error("PubMed fetch failed:", pubmedResult.reason);
+  let fetched = await fetchPool(plan.pubmedQuery, plan.semanticScholarQuery);
+  let combinedPool = dedupeCandidates(fetched.candidates);
+  if (combinedPool.length < MIN_POOL_BEFORE_BROADENING && plan.broadQuery && plan.broadQuery !== plan.pubmedQuery) {
+    const broad = await fetchPool(plan.broadQuery, plan.broadQuery);
+    combinedPool = dedupeCandidates([...combinedPool, ...broad.candidates]);
+    if (!broad.bothFailed) fetched = { ...fetched, bothFailed: false };
+  }
 
   // Only fail outright if BOTH sources failed — one down shouldn't sink a
   // hybrid search when the other came back with usable results.
-  if (s2Result.status === "rejected" && pubmedResult.status === "rejected") {
-    const message = s2Result.reason instanceof Error ? s2Result.reason.message : "שגיאה בחיפוש מאמרים";
-    return { ok: false, error: `החיפוש נכשל בשני מאגרי המידע: ${message}` };
+  if (combinedPool.length === 0 && fetched.bothFailed) {
+    return { ok: false, error: `החיפוש נכשל בשני מאגרי המידע: ${errorMessage(fetched.firstError)}` };
+  }
+  if (combinedPool.length === 0) return { ok: false, error: `לא נמצאו מאמרים עם תקציר זמין בנושא "${plan.topicHe}" ב-20 השנים האחרונות. נסה ניסוח רחב יותר.` };
+
+  const relevance = await scoreRelevance(plan.focusEn, combinedPool);
+  let screenedPool = combinedPool;
+  if (relevance) {
+    const relevant = combinedPool.filter((_, i) => (relevance.get(i) ?? 0) >= MIN_RELEVANCE_SCORE);
+    if (relevant.length === 0) {
+      return { ok: false, error: `נמצאו מאמרים, אך אף אחד מהם לא עוסק ישירות ב"${plan.topicHe}". נסה ניסוח אחר או רחב יותר.` };
+    }
+    screenedPool = relevant;
   }
 
-  const combinedPool = dedupeCandidates([
-    ...(s2Result.status === "fulfilled" ? s2Result.value : []),
-    ...(pubmedResult.status === "fulfilled" ? pubmedResult.value : []),
-  ]);
-  if (combinedPool.length === 0) return { ok: false, error: "לא נמצאו מאמרים רלוונטיים עם תקציר זמין לנושא זה בטווח 20 השנים האחרונות" };
-
-  const papers = selectTopPapers(combinedPool, TOP_PAPERS_COUNT);
+  const relevanceByPaper = new Map(combinedPool.map((p, i) => [p, relevance?.get(i) ?? 0]));
+  const papers = selectTopPapers(screenedPool, TOP_PAPERS_COUNT, (p) => relevanceByPaper.get(p) ?? 0);
 
   const settled = await Promise.allSettled(
     papers.map(async (paper): Promise<ResearchFinding> => {
-      const facts = await summarizePaperInHebrew({ title: paper.title, abstract: paper.abstract, year: paper.year });
+      const facts = await summarizePaperInHebrew({ title: paper.title, abstract: paper.abstract, year: paper.year }, plan.focusEn);
       const evidenceLabelHe = EVIDENCE_LABEL_HE[classifyEvidence(paper)];
       return {
         paperTitle: paper.title,
@@ -473,8 +606,16 @@ export async function generateResearchFacts(query: string): Promise<ResearchAgen
     })
   );
 
+  const rejections = settled.filter((r): r is PromiseRejectedResult => r.status === "rejected");
+  rejections.forEach((r) => console.error("Research summary failed:", r.reason));
   const findings = settled.filter((r): r is PromiseFulfilledResult<ResearchFinding> => r.status === "fulfilled").map((r) => r.value);
 
-  if (findings.length === 0) return { ok: false, error: "אחזור המאמרים הצליח אך יצירת הסיכומים נכשלה" };
-  return { ok: true, findings };
+  if (findings.length === 0) {
+    return { ok: false, error: `אחזור המאמרים הצליח אך יצירת הסיכומים נכשלה: ${errorMessage(rejections[0]?.reason)}` };
+  }
+  return {
+    ok: true,
+    findings,
+    interpretation: { topicHe: plan.topicHe, focusEn: plan.focusEn, pubmedQuery: plan.pubmedQuery, semanticScholarQuery: plan.semanticScholarQuery },
+  };
 }

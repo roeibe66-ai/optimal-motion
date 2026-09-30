@@ -1,45 +1,127 @@
 @import "tailwindcss";
 
+/* Single source of truth for every color in the app. No raw hex/rgb value
+   should appear anywhere outside this block — components reach these either
+   as Tailwind utilities (bg-surface, text-on-dark, border-line-light, ... —
+   mapped in @theme below) or as var(--token) in inline styles/SVG attributes.
+
+   The tokens marked "a11y adjustment" are not in the original spec; they
+   exist because the spec value failed WCAG AA for a pair it's used in (same
+   hue, adjusted lightness) — see the comment on each. */
 :root {
-  --background: #f5f5f0;
-  --foreground: #4e342e;
+  /* Brand shell (dark) */
+  --bg-base: #0F1620;          /* page background, header, footer */
+  --bg-elevated: #172231;      /* nav, modals, dark panels */
+  --border-dark: #243247;
+
+  /* Light surfaces (readability for exercise content) */
+  --surface: #F4F6F5;          /* exercise cards, content blocks, forms */
+  --surface-alt: #E8EDEC;      /* table stripes, hover on light */
+  --border-light: #D5DCDF;     /* decorative dividers on light */
+  --border-input: #748B95;     /* a11y adjustment: input boundaries on light — --border-light is only 1.28:1 on --surface (needs 3:1) */
+
+  /* Text */
+  --text-on-dark: #F4F6F5;
+  --text-on-dark-muted: #8A97A6;
+  --text-on-light: #0F1620;
+  --text-on-light-muted: #4B5A6B;
+
+  /* Primary accent (teal) */
+  --accent: #2DD4BF;
+  --accent-hover: #5EEAD4;
+  --accent-active: #14B8A6;
+  --accent-text-on: #0F1620;   /* text on accent backgrounds, never white */
+  --accent-on-light: #0F766E;  /* teal for links/icons on light surfaces (contrast) */
+
+  /* Warm secondary accent (use sparingly) */
+  --warm: #F5A524;
+  --warm-on-light: #935D07;    /* a11y adjustment: --warm text on --surface is 1.88:1 */
+
+  /* States */
+  --success: #2DD4BF;
+  --warning: #F5A524;
+  --danger: #E01313;           /* a11y adjustment (was #EF4444): white text on #EF4444 is 3.76:1 */
+  --danger-on-dark: #F05050;   /* a11y adjustment: error text on --bg-elevated (#E01313 there is < 4.5:1) */
+  --text-on-danger: #FFFFFF;   /* destructive button label */
+  --focus-ring: #5EEAD4;
+  --focus-ring-on-light: #0F766E; /* a11y adjustment: --focus-ring on --surface is 1.36:1 (needs 3:1) */
+
+  /* Muscle figure (SVG) — never red */
+  --muscle-primary: #2DD4BF;   /* active/primary muscle */
+  --muscle-secondary: #F5A524; /* secondary/assisting muscle */
+  --muscle-inactive-dark: #2A3646;
+  --muscle-inactive-light: #CBD5DC;
+
+  /* Third-party brand marks (Google sign-in button logo) — fixed by the
+     brand's own guidelines, not part of the theme; kept here only so no raw
+     hex lives outside :root. */
+  --brand-google-blue: #4285F4;
+  --brand-google-green: #34A853;
+  --brand-google-yellow: #FBBC05;
+  --brand-google-red: #EA4335;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  /* Drop Tailwind's built-in palette entirely, so a stray bg-stone-500 /
+     text-white can't silently reintroduce an off-system color — it simply
+     won't generate. Only the role tokens below exist as color utilities. */
+  --color-*: initial;
+
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 
-  /* "Organic Motion" brand palette — replaces the earlier "Onyx &
-     Champagne" gold/onyx/alabaster system across the patient app and DIY
-     builder. A single flat brand-terracotta (not a full 50-900 ramp) is
-     intentional: Tailwind v4 generates opacity variants (brand-terracotta/10,
-     /50, …) for any custom color automatically via color-mix(), which covers
-     every light-tint-badge use case. Darkening for hover states uses the
-     `brightness-90` filter utility instead of a second hardcoded shade, for
-     the same reason.
+  /* `shell`, not `base`: `text-base` is Tailwind's font-size utility, and a
+     color named `base` would hijack it. */
+  --color-shell: var(--bg-base);
+  --color-elevated: var(--bg-elevated);
+  --color-line-dark: var(--border-dark);
 
-     Unlike the pale champagne gold it replaces, brand-terracotta is dark/
-     saturated enough (~5:1 contrast against white) that solid-fill buttons
-     pair it with white text, not brand-espresso — espresso-on-terracotta is
-     only ~2:1, well under WCAG AA. Light terracotta *tints* (opacity
-     modifiers, badges/chips) still pair with brand-espresso or
-     brand-terracotta text, same as before. */
-  --color-brand-terracotta: #a15d38;
-  --color-brand-espresso: #4e342e;
-  --color-brand-stone: #f5f5f0;
-}
+  --color-surface: var(--surface);
+  --color-surface-alt: var(--surface-alt);
+  --color-line-light: var(--border-light);
+  --color-line-input: var(--border-input);
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-on-dark: var(--text-on-dark);
+  --color-on-dark-muted: var(--text-on-dark-muted);
+  --color-on-light: var(--text-on-light);
+  --color-on-light-muted: var(--text-on-light-muted);
+
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-active: var(--accent-active);
+  --color-accent-ink: var(--accent-text-on);
+  --color-accent-on-light: var(--accent-on-light);
+
+  --color-warm: var(--warm);
+  --color-warm-on-light: var(--warm-on-light);
+
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+  --color-danger-on-dark: var(--danger-on-dark);
+  --color-on-danger: var(--text-on-danger);
+  --color-focus: var(--focus-ring);
+  --color-focus-on-light: var(--focus-ring-on-light);
+
+  --color-muscle-primary: var(--muscle-primary);
+  --color-muscle-secondary: var(--muscle-secondary);
+  --color-muscle-inactive-dark: var(--muscle-inactive-dark);
+  --color-muscle-inactive-light: var(--muscle-inactive-light);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background: var(--bg-base);
+  color: var(--text-on-dark);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+/* Visible 2px focus ring on every interactive element (keyboard focus only,
+   so mouse clicks don't flash it). Light surfaces opt into the darker ring
+   via .on-light on any ancestor. */
+:where(a, button, input, select, textarea, summary, [role="button"], [tabindex]):focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+:where(.on-light) :where(a, button, input, select, textarea, summary, [role="button"], [tabindex]):focus-visible {
+  outline-color: var(--focus-ring-on-light);
 }

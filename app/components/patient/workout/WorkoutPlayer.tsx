@@ -1,14 +1,36 @@
 "use client";
 
 import { useState } from "react";
-import { Dumbbell, FlipHorizontal, Info, Minus, Pause, Play, Plus, SkipForward, Trophy, X } from "lucide-react";
+import { Dumbbell, FlaskConical, FlipHorizontal, Info, Minus, Pause, Play, Plus, SkipForward, Trophy, X } from "lucide-react";
 import { useAuth } from "@/app/context/AuthContext";
 import ExerciseInfoModal from "@/app/components/patient/workout/ExerciseInfoModal";
 import PreWorkoutFlow from "@/app/components/patient/PreWorkoutFlow";
 import WorkoutFinishFlow from "@/app/components/patient/workout/WorkoutFinishFlow";
+import Toast from "@/app/components/ui/Toast";
 import { formatTime, getExerciseName } from "@/app/utils/format";
 import type { HapticType } from "@/app/hooks/useHaptics";
 import type { useWorkoutSession } from "@/app/hooks/useWorkoutSession";
+
+// Sticky warning strip shown for the whole duration of an admin Run/Test
+// session (both the live player and the finish flow) — amber for "this is a
+// distinct, non-real state", not the emerald used for the simulator's own
+// pre-session config screen (ProgramSimulatorModal), which is a different UI
+// entirely. onExit reuses session.closeWorkout, the same action the real
+// close (X) button triggers, so "exit simulation" just backs out to the
+// simulator's config screen rather than needing a separate code path.
+function SimulationBanner({ onExit }: { onExit: () => void }) {
+  return (
+    <div className="sticky top-0 inset-x-0 z-[200] pt-safe px-4 pt-3 print:hidden">
+      <div className="flex items-center gap-2.5 bg-warm/15 border border-warm/40 text-warm text-xs font-bold px-4 py-2.5 rounded-2xl shadow-[0_4px_20px_color-mix(in_srgb,var(--bg-base)_6%,transparent)]">
+        <FlaskConical size={16} className="text-warm shrink-0" />
+        <span className="flex-1">מצב סימולציה פעיל — הנתונים לא נשמרים</span>
+        <button onClick={onExit} className="shrink-0 bg-warm hover:brightness-110 text-accent-ink font-extrabold px-3 py-1.5 rounded-full transition-colors">
+          יציאה
+        </button>
+      </div>
+    </div>
+  );
+}
 
 interface WorkoutPlayerProps {
   session: ReturnType<typeof useWorkoutSession>;
@@ -25,10 +47,9 @@ const REST_SQUARE_PERIMETER = 4 * (REST_SQUARE_SIZE - REST_SQUARE_STROKE - 2 * R
 const RIR_OPTIONS = [0, 1, 2, 3, 4];
 
 // Shared "frosted glass" recipe used across every floating control in this
-// screen — light glass now (bg-white/70 backdrop-blur-md per the boutique-
-// clinic palette), a soft diffused shadow standing in for the old inset
-// highlight, which only reads correctly against a dark surface.
-const GLASS = "bg-white/70 backdrop-blur-md border border-brand-espresso/5 shadow-[0_4px_20px_rgba(0,0,0,0.04)]";
+// screen — dark glass (bg-elevated/90 backdrop-blur-md) with a soft
+// diffused shadow, on the dark --bg-base player background.
+const GLASS = "bg-elevated/90 backdrop-blur-md border border-line-dark shadow-[0_4px_20px_color-mix(in_srgb,var(--bg-base)_4%,transparent)]";
 
 // The whole active-workout experience: the pre-workout pain check-in, the
 // immersive full-screen player, and the post-workout feedback flow. Renders
@@ -71,12 +92,16 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
 
   if (session.workoutFinished) {
     return (
-      <WorkoutFinishFlow
-        feedbackPhase={session.feedbackPhase}
-        onSelectRpe={session.handleRpeSelect}
-        onSubmitPainAfter={(num) => session.submitFinalFeedback(num)}
-        onClose={session.closeWorkout}
-      />
+      <>
+        {session.isSimulation && <SimulationBanner onExit={session.closeWorkout} />}
+        <WorkoutFinishFlow
+          feedbackPhase={session.feedbackPhase}
+          onSelectRpe={session.handleRpeSelect}
+          onSubmitPainAfter={(num) => session.submitFinalFeedback(num)}
+          onClose={session.closeWorkout}
+        />
+        {session.simulationToast && <Toast message={session.simulationToast} onDismiss={session.dismissSimulationToast} />}
+      </>
     );
   }
 
@@ -106,7 +131,7 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
 
   return (
     <div
-      className="fixed inset-0 z-[150] bg-brand-stone text-brand-espresso flex flex-col overflow-hidden"
+      className="fixed inset-0 z-[150] bg-shell text-on-dark flex flex-col overflow-hidden"
       dir={dir}
       onTouchStart={session.onTouchStart}
       onTouchMove={session.onTouchMove}
@@ -120,10 +145,13 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
         />
       )}
 
-      {/* Background — solid warm off-white for both states now; the active
+      {session.isSimulation && <SimulationBanner onExit={session.closeWorkout} />}
+      {session.simulationToast && <Toast message={session.simulationToast} onDismiss={session.dismissSimulationToast} />}
+
+      {/* Background — solid --bg-base for both states; the active
           screen's exercise media lives only inside its own contained
           player below, never as a full-bleed background. */}
-      <div className="absolute inset-0 z-0 bg-brand-stone"></div>
+      <div className="absolute inset-0 z-0 bg-shell"></div>
 
       {!isPostSet ? (
         /* Top bar for the active-set screen: one continuous progress line
@@ -134,25 +162,25 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
             <button
               onClick={() => ex && session.setViewingExInfo(ex)}
               aria-label="פרטי תרגיל"
-              className="w-7 h-7 shrink-0 rounded-full border border-stone-300 text-stone-500 hover:text-brand-espresso hover:border-stone-400 active:scale-90 transition-all duration-150 ease-out flex items-center justify-center"
+              className="w-7 h-7 shrink-0 rounded-full border border-line-dark text-on-dark-muted hover:text-on-dark hover:border-on-dark-muted active:scale-90 transition-all duration-150 ease-out flex items-center justify-center"
             >
               <Info size={13} />
             </button>
-            <div className="flex-1 h-[3px] rounded-full bg-stone-200 overflow-hidden">
-              <div className="h-full bg-brand-terracotta rounded-full transition-all duration-500 ease-out" style={{ width: `${overallProgress * 100}%` }}></div>
+            <div className="flex-1 h-[3px] rounded-full bg-on-dark/10 overflow-hidden">
+              <div className="h-full bg-accent rounded-full transition-all duration-500 ease-out" style={{ width: `${overallProgress * 100}%` }}></div>
             </div>
             <button
               onClick={session.closeWorkout}
               aria-label="סגור אימון"
-              className="w-7 h-7 shrink-0 flex items-center justify-center text-stone-500 hover:text-brand-espresso active:scale-90 transition-all duration-150 ease-out"
+              className="w-7 h-7 shrink-0 flex items-center justify-center text-on-dark-muted hover:text-on-dark active:scale-90 transition-all duration-150 ease-out"
             >
               <X size={18} />
             </button>
           </div>
 
           <div className="text-center">
-            <h2 className="text-2xl md:text-3xl font-black italic text-brand-espresso tracking-tight">{ex && getExerciseName(ex, lang)}</h2>
-            <p className="text-stone-500 text-sm font-bold mt-1 tabular-nums">
+            <h2 className="text-2xl md:text-3xl font-black italic text-on-dark tracking-tight">{ex && getExerciseName(ex, lang)}</h2>
+            <p className="text-on-dark-muted text-sm font-bold mt-1 tabular-nums">
               סט {session.currentBlockSet} / {session.maxSetsInBlock}
             </p>
           </div>
@@ -165,7 +193,7 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
           <button
             onClick={session.closeWorkout}
             aria-label="סגור אימון"
-            className={`w-11 h-11 rounded-full flex items-center justify-center text-stone-700 hover:bg-stone-50 active:scale-90 active:bg-stone-100 transition-all duration-200 ease-out ${GLASS}`}
+            className={`w-11 h-11 rounded-full flex items-center justify-center text-on-dark hover:bg-line-dark active:scale-90 active:bg-on-dark/10 transition-all duration-200 ease-out ${GLASS}`}
           >
             <X size={20} />
           </button>
@@ -177,8 +205,8 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
           the old ring's !isSupersetCheck guard made. */}
       {isPostSet && !session.isSupersetCheck && (
         <div className="relative z-10 flex flex-col items-center pt-2 animate-in fade-in duration-500">
-          <span className="text-[11px] font-bold tracking-[0.25em] uppercase text-stone-400 mb-1">מנוחה</span>
-          <span className="text-6xl font-black tabular-nums text-brand-espresso tracking-tighter" dir="ltr">
+          <span className="text-[11px] font-bold tracking-[0.25em] uppercase text-on-dark-muted mb-1">מנוחה</span>
+          <span className="text-6xl font-black tabular-nums text-on-dark tracking-tighter" dir="ltr">
             {formatTime(session.restTimer)}
           </span>
         </div>
@@ -193,19 +221,19 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
             {/* Dynamic hero metric — a massive countdown for a timed set, or
                 split reps/RIR typography for a countable one. */}
             {session.activeAssign?.is_time ? (
-              <div className="text-7xl md:text-8xl font-black tracking-tighter tabular-nums text-brand-espresso" dir="ltr">
+              <div className="text-7xl md:text-8xl font-black tracking-tighter tabular-nums text-on-dark" dir="ltr">
                 {formatTime(session.exTimer ?? session.effectiveTargetReps ?? session.activeAssign.reps)}
               </div>
             ) : (
               <div className="flex items-end justify-center gap-10">
                 <div className="flex flex-col items-center">
-                  <span className="text-7xl font-black text-brand-espresso tabular-nums leading-none">{session.effectiveTargetReps}</span>
-                  <span className="text-[11px] font-bold text-stone-500 uppercase tracking-wide mt-2">חזרות</span>
+                  <span className="text-7xl font-black text-on-dark tabular-nums leading-none">{session.effectiveTargetReps}</span>
+                  <span className="text-[11px] font-bold text-on-dark-muted uppercase tracking-wide mt-2">חזרות</span>
                 </div>
                 {session.effectiveTargetRir !== null && (
                   <div className="flex flex-col items-center">
-                    <span className="text-7xl font-black text-brand-terracotta tabular-nums leading-none">{session.effectiveTargetRir}</span>
-                    <span className="text-[11px] font-bold text-stone-500 uppercase tracking-wide mt-2">RIR</span>
+                    <span className="text-7xl font-black text-accent tabular-nums leading-none">{session.effectiveTargetRir}</span>
+                    <span className="text-[11px] font-bold text-on-dark-muted uppercase tracking-wide mt-2">RIR</span>
                   </div>
                 )}
               </div>
@@ -222,7 +250,7 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
               const hasSecondAngle = Boolean(ex?.secondary_gif_url);
 
               return (
-                <div className="relative w-full max-w-[280px] aspect-square rounded-[2rem] overflow-hidden border border-stone-200 bg-stone-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+                <div className="relative w-full max-w-[280px] aspect-square rounded-[2rem] overflow-hidden border border-line-dark bg-on-dark/10 shadow-[0_8px_30px_color-mix(in_srgb,var(--bg-base)_4%,transparent)]">
                   {currentUrl ? (
                     isVideo ? (
                       <video src={currentUrl} autoPlay muted playsInline loop className="w-full h-full object-cover" />
@@ -230,21 +258,18 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
                       <img src={currentUrl} alt={ex ? getExerciseName(ex, lang) : "Exercise media"} className="w-full h-full object-cover" />
                     )
                   ) : (
-                    // Adapted to this screen's light theme rather than the
-                    // literal "dark gradient block" spec — a black block
-                    // would clash against everything else here now being
-                    // bg-stone-50/white; same muted-icon-plus-caption idea,
-                    // just in the palette this screen actually uses.
-                    <div className="w-full h-full bg-gradient-to-br from-stone-100 to-stone-200 flex flex-col items-center justify-center gap-2">
-                      <Dumbbell size={40} className="text-stone-300" />
-                      <span className="text-stone-400 text-sm font-bold">אין מדיה זמינה</span>
+                    // Muted-icon-plus-caption placeholder on a dark
+                    // elevated gradient, matching the player's dark shell.
+                    <div className="w-full h-full bg-gradient-to-br from-elevated to-line-dark flex flex-col items-center justify-center gap-2">
+                      <Dumbbell size={40} className="text-on-dark-muted" />
+                      <span className="text-on-dark-muted text-sm font-bold">אין מדיה זמינה</span>
                     </div>
                   )}
 
                   {hasSecondAngle && (
                     <button
                       onClick={() => setActiveMediaIndex((i) => (i === 0 ? 1 : 0))}
-                      className={`absolute bottom-3 left-3 flex items-center gap-1.5 px-3 py-2 rounded-full text-stone-700 text-xs font-bold active:scale-90 transition-all duration-150 ease-out ${GLASS}`}
+                      className={`absolute bottom-3 left-3 flex items-center gap-1.5 px-3 py-2 rounded-full text-on-dark text-xs font-bold active:scale-90 transition-all duration-150 ease-out ${GLASS}`}
                     >
                       <FlipHorizontal size={14} />
                       החלף זווית
@@ -259,7 +284,7 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
               session.exTimer === 0 ? (
                 <button
                   onClick={session.handleFinishAction}
-                  className="w-full max-w-[220px] bg-brand-terracotta hover:brightness-90 text-white py-4 rounded-full font-black text-base transition-all duration-200 ease-out hover:scale-[1.02] active:scale-[0.97] shadow-[0_12px_32px_-8px_rgba(161,93,56,0.4)]"
+                  className="w-full max-w-[220px] bg-accent hover:bg-accent-hover active:bg-accent-active text-accent-ink py-4 rounded-full font-black text-base transition-all duration-200 ease-out hover:scale-[1.02] active:scale-[0.97] shadow-[0_12px_32px_-8px_color-mix(in_srgb,var(--accent)_40%,transparent)]"
                 >
                   המשך
                 </button>
@@ -267,7 +292,7 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
                 <div className="flex items-center justify-center gap-8">
                   <button
                     onClick={session.skipExerciseTimer}
-                    className="flex flex-col items-center gap-1 text-stone-500 hover:text-brand-espresso active:scale-90 transition-all duration-150 ease-out"
+                    className="flex flex-col items-center gap-1 text-on-dark-muted hover:text-on-dark active:scale-90 transition-all duration-150 ease-out"
                   >
                     <SkipForward size={20} />
                     <span className="text-[10px] font-bold uppercase tracking-wide">דלג</span>
@@ -275,9 +300,9 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
                   <button
                     onClick={session.toggleExerciseTimer}
                     aria-label={session.isExTimerRunning ? "השהה טיימר" : "הפעל טיימר"}
-                    className="w-16 h-16 rounded-full bg-brand-terracotta flex items-center justify-center text-white shadow-[0_12px_32px_-8px_rgba(161,93,56,0.4)] active:scale-95 transition-transform duration-150 ease-out"
+                    className="w-16 h-16 rounded-full bg-accent flex items-center justify-center text-accent-ink shadow-[0_12px_32px_-8px_color-mix(in_srgb,var(--accent)_40%,transparent)] active:scale-95 transition-transform duration-150 ease-out"
                   >
-                    {session.isExTimerRunning ? <Pause size={24} className="fill-white" /> : <Play size={24} className="fill-white ms-0.5" />}
+                    {session.isExTimerRunning ? <Pause size={24} className="fill-accent-ink" /> : <Play size={24} className="fill-accent-ink ms-0.5" />}
                   </button>
                 </div>
               )
@@ -286,13 +311,13 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
                 <button
                   onClick={session.makeEasier}
                   aria-label="הפוך לקל יותר"
-                  className="w-12 h-12 shrink-0 rounded-full bg-stone-100 hover:bg-stone-200 flex items-center justify-center text-stone-500 hover:text-brand-espresso active:scale-90 transition-all duration-150 ease-out"
+                  className="w-12 h-12 shrink-0 rounded-full bg-on-dark/10 hover:bg-line-dark flex items-center justify-center text-on-dark-muted hover:text-on-dark active:scale-90 transition-all duration-150 ease-out"
                 >
                   <Minus size={18} />
                 </button>
                 <button
                   onClick={session.handleFinishAction}
-                  className="flex-1 bg-brand-terracotta hover:brightness-90 text-white font-black text-base py-4 rounded-full flex items-center justify-center gap-2 transition-all duration-200 ease-out hover:scale-[1.02] active:scale-[0.97] shadow-[0_12px_32px_-8px_rgba(161,93,56,0.4)]"
+                  className="flex-1 bg-accent hover:bg-accent-hover active:bg-accent-active text-accent-ink font-black text-base py-4 rounded-full flex items-center justify-center gap-2 transition-all duration-200 ease-out hover:scale-[1.02] active:scale-[0.97] shadow-[0_12px_32px_-8px_color-mix(in_srgb,var(--accent)_40%,transparent)]"
                 >
                   <SkipForward size={18} />
                   סיום סט
@@ -300,7 +325,7 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
                 <button
                   onClick={session.makeHarder}
                   aria-label="הפוך לקשה יותר"
-                  className="w-12 h-12 shrink-0 rounded-full bg-stone-100 hover:bg-stone-200 flex items-center justify-center text-stone-500 hover:text-brand-espresso active:scale-90 transition-all duration-150 ease-out"
+                  className="w-12 h-12 shrink-0 rounded-full bg-on-dark/10 hover:bg-line-dark flex items-center justify-center text-on-dark-muted hover:text-on-dark active:scale-90 transition-all duration-150 ease-out"
                 >
                   <Plus size={18} />
                 </button>
@@ -330,14 +355,12 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
                     className="absolute inset-0 -rotate-90"
                   >
                     <defs>
-                      {/* Brand-terracotta gradient — darker stops than a
-                          bright single terracotta would give, tuned to read
-                          clearly against the stone page without needing a
-                          glow (dropped below, glows are a dark-surface
-                          technique that just looks smudgy here). */}
+                      {/* Accent gradient (hover -> active teal) for the rest
+                          countdown border. Colors via `style` so the CSS
+                          variables resolve on every browser. */}
                       <linearGradient id="restSquareGradient" x1="0" y1="0" x2="1" y2="1">
-                        <stop offset="0%" stopColor="#C98F6B" />
-                        <stop offset="100%" stopColor="#7A3E22" />
+                        <stop offset="0%" style={{ stopColor: "var(--accent-hover)" }} />
+                        <stop offset="100%" style={{ stopColor: "var(--accent-active)" }} />
                       </linearGradient>
                     </defs>
                     <rect
@@ -347,7 +370,7 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
                       height={REST_SQUARE_SIZE - REST_SQUARE_STROKE}
                       rx={REST_SQUARE_RADIUS}
                       fill="none"
-                      stroke="rgba(0,0,0,0.08)"
+                      style={{ stroke: "var(--border-dark)" }}
                       strokeWidth={REST_SQUARE_STROKE}
                     />
                     {showProgress && (
@@ -366,7 +389,7 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
                       />
                     )}
                   </svg>
-                  <div className="absolute rounded-[1.5rem] overflow-hidden bg-stone-100" style={{ inset: REST_SQUARE_STROKE + 5 }}>
+                  <div className="absolute rounded-[1.5rem] overflow-hidden bg-on-dark/10" style={{ inset: REST_SQUARE_STROKE + 5 }}>
                     {heroUrl ? (
                       isVideo ? (
                         <video src={heroUrl} autoPlay muted playsInline loop className="w-full h-full object-cover" />
@@ -376,9 +399,9 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
                     ) : (
                       // Passive glance at what's next — no toggle button here,
                       // just the same fallback placeholder as the active box.
-                      <div className="w-full h-full bg-gradient-to-br from-stone-100 to-stone-200 flex flex-col items-center justify-center gap-1.5">
-                        <Dumbbell size={28} className="text-stone-300" />
-                        <span className="text-stone-400 text-[11px] font-bold">אין מדיה זמינה</span>
+                      <div className="w-full h-full bg-gradient-to-br from-elevated to-line-dark flex flex-col items-center justify-center gap-1.5">
+                        <Dumbbell size={28} className="text-on-dark-muted" />
+                        <span className="text-on-dark-muted text-[11px] font-bold">אין מדיה זמינה</span>
                       </div>
                     )}
                   </div>
@@ -389,28 +412,28 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
             {/* Text hierarchy: eyebrow label, set count, exercise name. */}
             {isSameExerciseNext ? (
               <div className="flex flex-col items-center gap-1.5">
-                <span className="text-[11px] font-bold tracking-[0.2em] uppercase text-stone-400">הסט הבא</span>
-                <span className="text-stone-500 text-sm font-bold tabular-nums">
+                <span className="text-[11px] font-bold tracking-[0.2em] uppercase text-on-dark-muted">הסט הבא</span>
+                <span className="text-on-dark-muted text-sm font-bold tabular-nums">
                   סט {session.currentBlockSet + 1} מתוך {session.maxSetsInBlock}
                 </span>
-                <h3 className="text-xl font-black text-brand-espresso">{ex && getExerciseName(ex, lang)}</h3>
+                <h3 className="text-xl font-black text-on-dark">{ex && getExerciseName(ex, lang)}</h3>
               </div>
             ) : next ? (
               <div className="flex flex-col items-center gap-1.5">
-                <span className="text-[11px] font-bold tracking-[0.2em] uppercase text-stone-400">הבא בתור</span>
-                <span className="text-stone-500 text-sm font-bold tabular-nums">סט 1 מתוך {next.sets}</span>
+                <span className="text-[11px] font-bold tracking-[0.2em] uppercase text-on-dark-muted">הבא בתור</span>
+                <span className="text-on-dark-muted text-sm font-bold tabular-nums">סט 1 מתוך {next.sets}</span>
                 <button
                   onClick={() => session.setViewingExInfo(next.exercise)}
                   className="flex items-center gap-1.5 active:scale-95 transition-transform duration-150 ease-out"
                 >
-                  <h3 className="text-xl font-black text-brand-espresso">{getExerciseName(next.exercise, lang)}</h3>
-                  <Info size={14} className="text-stone-400" />
+                  <h3 className="text-xl font-black text-on-dark">{getExerciseName(next.exercise, lang)}</h3>
+                  <Info size={14} className="text-on-dark-muted" />
                 </button>
               </div>
             ) : (
               <div className="flex flex-col items-center gap-2">
-                <Trophy size={32} className="text-brand-terracotta" />
-                <h3 className="text-xl font-black text-brand-espresso">הסט האחרון לאימון!</h3>
+                <Trophy size={32} className="text-accent" />
+                <h3 className="text-xl font-black text-on-dark">הסט האחרון לאימון!</h3>
               </div>
             )}
 
@@ -424,32 +447,32 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
               <div className="flex items-center gap-6">
                 <button
                   onClick={() => session.adjustRestReps(session.activeAssign?.is_time ? -5 : -1)}
-                  className="w-9 h-9 rounded-full bg-stone-100 border border-stone-200 flex items-center justify-center text-stone-700 active:scale-90 transition-transform duration-150 ease-out"
+                  className="w-9 h-9 rounded-full bg-on-dark/10 border border-line-dark flex items-center justify-center text-on-dark active:scale-90 transition-transform duration-150 ease-out"
                 >
                   <Minus size={15} />
                 </button>
                 <div className="flex flex-col items-center">
-                  <span className="text-4xl font-black text-brand-espresso tabular-nums" dir="ltr">
+                  <span className="text-4xl font-black text-on-dark tabular-nums" dir="ltr">
                     {session.actualRepsLogged}
                   </span>
-                  <span className="text-[10px] font-bold text-stone-500 uppercase tracking-wide mt-0.5">
+                  <span className="text-[10px] font-bold text-on-dark-muted uppercase tracking-wide mt-0.5">
                     {session.activeAssign?.is_time ? "שניות שהוחזקו" : "חזרות שבוצעו"}
                   </span>
                 </div>
                 <button
                   onClick={() => session.adjustRestReps(session.activeAssign?.is_time ? 5 : 1)}
-                  className="w-9 h-9 rounded-full bg-brand-terracotta/10 border border-brand-terracotta/25 flex items-center justify-center text-brand-terracotta active:scale-90 transition-transform duration-150 ease-out"
+                  className="w-9 h-9 rounded-full bg-accent/15 border border-accent/25 flex items-center justify-center text-accent active:scale-90 transition-transform duration-150 ease-out"
                 >
                   <Plus size={15} />
                 </button>
               </div>
 
               <div className="relative flex items-center gap-2">
-                <span className="text-[11px] font-bold text-stone-500 uppercase tracking-wide">RIR</span>
+                <span className="text-[11px] font-bold text-on-dark-muted uppercase tracking-wide">RIR</span>
                 <button
                   onClick={() => setShowRirInfo((prev) => !prev)}
                   aria-label="מה זה RIR"
-                  className="text-stone-400 hover:text-stone-600 transition-colors ml-1"
+                  className="text-on-dark-muted hover:text-on-dark transition-colors ml-1"
                 >
                   <Info size={13} />
                 </button>
@@ -457,8 +480,8 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
                 {showRirInfo && (
                   <>
                     <div className="fixed inset-0 z-40" onClick={() => setShowRirInfo(false)} />
-                    <div className="absolute bottom-full right-0 mb-3 z-50 w-64 bg-white text-stone-700 rounded-2xl shadow-2xl border border-stone-100 p-4 text-start animate-in fade-in zoom-in-95 duration-150">
-                      <p className="font-black text-brand-espresso text-[13px] mb-1.5">מהו RIR?</p>
+                    <div className="absolute bottom-full right-0 mb-3 z-50 w-64 bg-elevated text-on-dark rounded-2xl shadow-2xl border border-line-dark p-4 text-start animate-in fade-in zoom-in-95 duration-150">
+                      <p className="font-black text-on-dark text-[13px] mb-1.5">מהו RIR?</p>
                       <p className="text-xs leading-relaxed">
                         Reps In Reserve — כמה חזרות נוספות היית יכול לבצע בטכניקה תקינה. לדוגמה, RIR 2 אומר שצריך לעצור את הסט כשאתה מרגיש שנשארו לך עוד 2 חזרות בלבד עד הכשל.
                       </p>
@@ -473,7 +496,7 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
                       key={val}
                       onClick={() => session.selectRestRir(val)}
                       className={`w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold transition-all duration-150 ease-out active:scale-90 ${
-                        isSelected ? "bg-brand-terracotta text-white scale-110 shadow-[0_2px_10px_-2px_rgba(161,93,56,0.5)]" : "text-stone-500 border border-stone-200"
+                        isSelected ? "bg-accent text-accent-ink scale-110 shadow-[0_2px_10px_-2px_color-mix(in_srgb,var(--accent)_50%,transparent)]" : "text-on-dark-muted border border-line-dark"
                       }`}
                     >
                       {val === 4 ? "4+" : val}
@@ -485,7 +508,7 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
 
             {/* Bottom controls — minimal media-control feel: a ghost
                 secondary action and one solid primary pill, not two
-                stretched full-width cards. The old "bg-white" primary
+                stretched full-width cards. The old "bg-elevated" primary
                 buttons only read as a pop of contrast against black — on
                 this cream background they'd be nearly invisible, so both
                 convert to the solid brand-terracotta accent instead. */}
@@ -493,7 +516,7 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
               {session.isSupersetCheck ? (
                 <button
                   onClick={session.handleContinueSuperset}
-                  className="bg-brand-terracotta hover:brightness-90 text-white font-black px-10 py-4 rounded-full transition-transform ease-out hover:scale-[1.02] active:scale-[0.97] shadow-[0_12px_32px_-8px_rgba(161,93,56,0.4)]"
+                  className="bg-accent hover:bg-accent-hover active:bg-accent-active text-accent-ink font-black px-10 py-4 rounded-full transition-transform ease-out hover:scale-[1.02] active:scale-[0.97] shadow-[0_12px_32px_-8px_color-mix(in_srgb,var(--accent)_40%,transparent)]"
                 >
                   המשך לתרגיל הבא
                 </button>
@@ -501,14 +524,14 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
                 <>
                   <button
                     onClick={session.addRestTime}
-                    className="flex flex-col items-center gap-1 text-stone-500 hover:text-brand-espresso active:scale-90 transition-all duration-150 ease-out"
+                    className="flex flex-col items-center gap-1 text-on-dark-muted hover:text-on-dark active:scale-90 transition-all duration-150 ease-out"
                   >
                     <span className="text-lg font-black">+15</span>
                     <span className="text-[10px] font-bold uppercase tracking-wide">שניות</span>
                   </button>
                   <button
                     onClick={session.handleEndRest}
-                    className="bg-brand-terracotta hover:brightness-90 text-white font-black px-10 py-4 rounded-full transition-transform ease-out hover:scale-[1.02] active:scale-[0.97] shadow-[0_12px_32px_-8px_rgba(161,93,56,0.4)]"
+                    className="bg-accent hover:bg-accent-hover active:bg-accent-active text-accent-ink font-black px-10 py-4 rounded-full transition-transform ease-out hover:scale-[1.02] active:scale-[0.97] shadow-[0_12px_32px_-8px_color-mix(in_srgb,var(--accent)_40%,transparent)]"
                   >
                     דלג
                   </button>
