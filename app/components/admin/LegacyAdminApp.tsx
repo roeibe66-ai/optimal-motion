@@ -850,6 +850,19 @@ export default function LegacyAdminApp() {
                             <span className="text-[10px] font-bold text-muted uppercase">כאב אחרי</span>
                             <span className="text-xl font-black text-fg">{log.pain_after ?? "-"}</span>
                           </div>
+                          {log.result_rounds != null && (
+                            // AMRAP result: completed rounds + reps into the unfinished one.
+                            <div
+                              title={`AMRAP: ${log.result_rounds} סבבים${log.result_extra_reps ? ` + ${log.result_extra_reps} חזרות` : ""}`}
+                              className="flex flex-col items-center justify-center w-full md:w-20 h-16 rounded-xl border-2 border-accent/30 bg-accent/15 text-accent-fg"
+                            >
+                              <span className="text-[10px] font-bold uppercase mb-0.5">סבבים</span>
+                              <span className="text-xl font-black leading-none tabular-nums" dir="ltr">
+                                {log.result_rounds}
+                                {log.result_extra_reps ? <span className="text-sm">+{log.result_extra_reps}</span> : null}
+                              </span>
+                            </div>
+                          )}
                           <div className={`flex flex-col items-center justify-center w-full md:w-16 h-16 rounded-xl border-2 ${rpeColor}`}>
                             <span className="text-[10px] font-bold uppercase mb-0.5">RPE</span>
                             <span className="text-xl font-black leading-none">{log.rpe}</span>
