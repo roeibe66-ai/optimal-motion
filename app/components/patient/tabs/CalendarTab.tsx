@@ -2,9 +2,9 @@
 
 import { useState } from "react";
 import { CalendarDays, CheckCircle2, ChevronLeft, ChevronRight } from "lucide-react";
-import type { HydratedPatientExercise } from "@/app/hooks/useWorkoutSession";
+import { programNameOf, type HydratedPatientExercise } from "@/app/hooks/useWorkoutSession";
 import type { WorkoutLog } from "@/app/types";
-import { ADMIN_CATEGORY_STYLES, DEFAULT_ADMIN_CATEGORY_STYLE } from "@/app/constants/catalog";
+import { PROGRAM_TAG_STYLE } from "@/app/constants/catalog";
 
 interface CalendarTabProps {
   patientExercises: HydratedPatientExercise[];
@@ -103,7 +103,7 @@ export default function CalendarTab({ patientExercises, workoutLogs, patientId, 
     setSelectedDate(null);
   };
 
-  // Workouts (one card per distinct category) scheduled on the selected
+  // Workouts (one card per distinct program) scheduled on the selected
   // date — same week/day computation the grid itself uses per-cell below.
   const selectedWeek = selectedDate ? getWeekForDate(selectedDate) : null;
   const selectedDayId = selectedDate ? selectedDate.getDay().toString() : null;
@@ -111,12 +111,12 @@ export default function CalendarTab({ patientExercises, workoutLogs, patientId, 
     selectedWeek !== null && selectedDayId !== null
       ? patientExercises.filter((pe) => (pe.week || 1) === selectedWeek && matchesScheduledDay(pe, selectedDayId))
       : [];
-  const selectedDayCategories = Array.from(new Set(selectedDayExercises.flatMap((pe) => pe.exercise.categories)));
+  const selectedDayCategories = Array.from(new Set(selectedDayExercises.map(programNameOf)));
 
   return (
     <div className="animate-in fade-in duration-500">
-      <h2 className="text-xl md:text-2xl font-black text-on-dark tracking-tight flex items-center gap-2 mb-6">
-        <CalendarDays size={22} className="text-accent" />
+      <h2 className="text-xl md:text-2xl font-black text-fg tracking-tight flex items-center gap-2 mb-6">
+        <CalendarDays size={22} className="text-accent-fg" />
         לוח שנה
       </h2>
 
@@ -126,15 +126,15 @@ export default function CalendarTab({ patientExercises, workoutLogs, patientId, 
         <button
           onClick={() => handleChangeMonth(-1)}
           aria-label="חודש קודם"
-          className="text-on-dark-muted hover:text-on-dark active:scale-90 transition-all duration-150 ease-out p-2 -m-2"
+          className="text-muted hover:text-fg active:scale-90 transition-all duration-150 ease-out p-2 -m-2"
         >
           <ChevronRight size={22} />
         </button>
-        <h3 className="font-black text-2xl md:text-3xl text-on-dark tracking-tight">{monthLabel}</h3>
+        <h3 className="font-black text-2xl md:text-3xl text-fg tracking-tight">{monthLabel}</h3>
         <button
           onClick={() => handleChangeMonth(1)}
           aria-label="חודש הבא"
-          className="text-on-dark-muted hover:text-on-dark active:scale-90 transition-all duration-150 ease-out p-2 -m-2"
+          className="text-muted hover:text-fg active:scale-90 transition-all duration-150 ease-out p-2 -m-2"
         >
           <ChevronLeft size={22} />
         </button>
@@ -142,7 +142,7 @@ export default function CalendarTab({ patientExercises, workoutLogs, patientId, 
 
       <div className="grid grid-cols-7 mb-4">
         {WEEKDAY_LABELS.map((label) => (
-          <div key={label} className="text-center text-[11px] font-bold text-on-dark-muted tracking-wide">
+          <div key={label} className="text-center text-[11px] font-bold text-muted tracking-wide">
             {label}
           </div>
         ))}
@@ -160,7 +160,7 @@ export default function CalendarTab({ patientExercises, workoutLogs, patientId, 
           const scheduledCategories =
             week === null
               ? []
-              : Array.from(new Set(patientExercises.filter((pe) => (pe.week || 1) === week && matchesScheduledDay(pe, dayId)).flatMap((pe) => pe.exercise.categories)));
+              : Array.from(new Set(patientExercises.filter((pe) => (pe.week || 1) === week && matchesScheduledDay(pe, dayId)).map(programNameOf)));
           const isCompleted = completedDateKeys.has(toDateKey(date));
           const isClickable = scheduledCategories.length > 0 && week !== null;
           const isSelected = selectedDate !== null && isSameDay(date, selectedDate);
@@ -176,21 +176,21 @@ export default function CalendarTab({ patientExercises, workoutLogs, patientId, 
               <span
                 className={`relative w-9 h-9 rounded-full flex items-center justify-center text-[13px] font-bold tabular-nums transition-all duration-200 ease-out ${
                   isSelected
-                    ? "bg-accent text-accent-ink shadow-[0_4px_14px_-2px_color-mix(in_srgb,var(--accent)_50%,transparent)]"
+                    ? "bg-accent text-on-accent shadow-[0_4px_14px_-2px_color-mix(in_srgb,var(--accent)_50%,transparent)]"
                     : isClickable
-                      ? "text-on-dark group-hover:bg-line-dark group-active:scale-90"
-                      : "text-on-dark-muted"
+                      ? "text-fg group-hover:bg-line group-active:scale-90"
+                      : "text-muted"
                 }`}
               >
                 {date.getDate()}
-                {isCompleted && <CheckCircle2 size={11} className="absolute -top-1 -right-1 text-success bg-shell rounded-full" />}
+                {isCompleted && <CheckCircle2 size={11} className="absolute -top-1 -right-1 text-success bg-page rounded-full" />}
               </span>
               <div className="flex items-center gap-1 h-1.5">
                 {scheduledCategories.slice(0, 3).map((cat) => (
                   <span
                     key={cat}
                     className="w-1.5 h-1.5 rounded-full"
-                    style={{ background: (ADMIN_CATEGORY_STYLES[cat] ?? DEFAULT_ADMIN_CATEGORY_STYLE).text }}
+                    style={{ background: PROGRAM_TAG_STYLE.text }}
                   />
                 ))}
               </div>
@@ -199,10 +199,10 @@ export default function CalendarTab({ patientExercises, workoutLogs, patientId, 
         })}
       </div>
 
-      <div className="flex items-center gap-4 mt-6 mb-8 text-[11px] text-on-dark-muted">
+      <div className="flex items-center gap-4 mt-6 mb-8 text-[11px] text-muted">
         <div className="flex items-center gap-1.5">
-          <span className="w-2 h-2 rounded-full" style={{ background: ADMIN_CATEGORY_STYLES["קליסטניקס"].text }} />
-          נקודה צבעונית = קטגוריית אימון מתוזמנת
+          <span className="w-2 h-2 rounded-full" style={{ background: PROGRAM_TAG_STYLE.text }} />
+          נקודה צבעונית = תוכנית אימון מתוזמנת
         </div>
         <div className="flex items-center gap-1.5">
           <CheckCircle2 size={11} className="text-success" />
@@ -216,29 +216,29 @@ export default function CalendarTab({ patientExercises, workoutLogs, patientId, 
           list can never overlap PatientShell's sticky header or bottom nav —
           it just grows and the page scrolls, which is the safer choice for
           a list whose length varies with how many categories are scheduled. */}
-      <div className="on-light -mx-4 md:-mx-8 bg-surface rounded-t-[2rem] px-5 pt-3 pb-10 shadow-[0_-8px_30px_-8px_color-mix(in_srgb,var(--bg-base)_10%,transparent)]">
-        <div className="w-10 h-1.5 rounded-full bg-surface-alt mx-auto mb-5"></div>
+      <div className="on-light -mx-4 md:-mx-8 bg-surface rounded-t-[2rem] px-5 pt-3 pb-10 shadow-[0_-8px_30px_-8px_color-mix(in_srgb,var(--shadow-ink)_10%,transparent)]">
+        <div className="on-light w-10 h-1.5 rounded-full bg-surface-alt mx-auto mb-5"></div>
 
         <div className="flex items-center justify-between mb-4">
-          <h4 className="font-black text-on-light text-base">
+          <h4 className="font-black text-fg text-base">
             {selectedDayCategories.length} {selectedDayCategories.length === 1 ? "אימון" : "אימונים"}
           </h4>
           {selectedDate && (
-            <span className="text-[12px] font-bold text-on-light-muted">
+            <span className="text-[12px] font-bold text-muted">
               {selectedDate.toLocaleDateString("he-IL", { weekday: "long", day: "numeric", month: "long" })}
             </span>
           )}
         </div>
 
         {!selectedDate ? (
-          <p className="text-on-light-muted text-sm text-center py-6">בחר יום כדי לראות את האימונים שלו.</p>
+          <p className="text-muted text-sm text-center py-6">בחר יום כדי לראות את האימונים שלו.</p>
         ) : selectedDayCategories.length === 0 ? (
-          <p className="text-on-light-muted text-sm text-center py-6">אין אימונים מתוזמנים ביום הזה.</p>
+          <p className="text-muted text-sm text-center py-6">אין אימונים מתוזמנים ביום הזה.</p>
         ) : (
           <div className="flex flex-col gap-2">
             {selectedDayCategories.map((cat) => {
-              const style = ADMIN_CATEGORY_STYLES[cat] ?? DEFAULT_ADMIN_CATEGORY_STYLE;
-              const catExercises = selectedDayExercises.filter((pe) => pe.exercise.categories.includes(cat));
+              const style = PROGRAM_TAG_STYLE;
+              const catExercises = selectedDayExercises.filter((pe) => programNameOf(pe) === cat);
               const thumbUrl = catExercises.find((pe) => pe.exercise.gif_url && !/\.(mp4|webm)$/i.test(pe.exercise.gif_url))?.exercise.gif_url;
 
               return (
@@ -252,8 +252,8 @@ export default function CalendarTab({ patientExercises, workoutLogs, patientId, 
                     <div className="absolute bottom-0 inset-x-0 h-[3px]" style={{ background: style.text }}></div>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h5 className="font-black text-on-light text-[15px] truncate">{cat}</h5>
-                    <p className="text-on-light-muted text-[12px] font-semibold mt-0.5">
+                    <h5 className="font-black text-fg text-[15px] truncate">{cat}</h5>
+                    <p className="text-muted text-[12px] font-semibold mt-0.5">
                       שבוע {selectedWeek} · {catExercises.length} תרגילים
                     </p>
                   </div>

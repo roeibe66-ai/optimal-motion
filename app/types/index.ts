@@ -119,9 +119,19 @@ export interface PackageExercise {
   tempo_concentric?: number | null;
 }
 
+// A named program the admin assigned to a patient (patient_programs). Its
+// name is the title the patient sees for that workout.
+export interface PatientProgram {
+  id: string;
+  patient_id: string;
+  name: string;
+  created_at: string;
+}
+
 export interface PatientExercise {
   id: string;
   patient_id: string;
+  program_id?: string | null; // null = patient-created via the DIY builder
   exercise_id: string;
   exercise?: Exercise; // joined client-side after fetch, not a DB column
   block: string;
@@ -202,6 +212,14 @@ export interface ResearchFinding {
   // ("מקור: סקירה שיטתית, 2023").
   evidenceLabelHe: string;
   citationLabelHe: string;
+  // Quality signals shown next to each result in the admin research tab —
+  // all deterministic (API metadata or regex over the abstract), never
+  // LLM-generated. A = meta-analysis/systematic review, B = RCT, C = other.
+  evidenceGrade: "A" | "B" | "C";
+  citationCount: number | null; // Semantic Scholar only; PubMed doesn't expose it
+  venue: string | null;
+  isTopTierJournal: boolean;
+  sampleSizeHe: string | null; // e.g. "124 משתתפים" / "23 מחקרים", when the abstract states it
 }
 
 // A ResearchFinding the admin has approved and published — the curated_facts
@@ -215,6 +233,7 @@ export interface CuratedFact {
   year: number | null;
   summary_he: string;
   did_you_know_he: string;
+  is_hidden: boolean; // hidden from patients, still listed in the admin research tab
   created_at: string;
 }
 

@@ -1,127 +1,258 @@
 @import "tailwindcss";
 
-/* Single source of truth for every color in the app. No raw hex/rgb value
-   should appear anywhere outside this block — components reach these either
-   as Tailwind utilities (bg-surface, text-on-dark, border-line-light, ... —
-   mapped in @theme below) or as var(--token) in inline styles/SVG attributes.
+/* Tailwind's `dark:` variant follows the data-theme attribute on <html>,
+   not the OS setting directly (ThemeProvider/the inline script in
+   app/layout.tsx resolve "system" into data-theme). */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
-   The tokens marked "a11y adjustment" are not in the original spec; they
-   exist because the spec value failed WCAG AA for a pair it's used in (same
-   hue, adjusted lightness) — see the comment on each. */
-:root {
-  /* Brand shell (dark) */
-  --bg-base: #0F1620;          /* page background, header, footer */
-  --bg-elevated: #172231;      /* nav, modals, dark panels */
-  --border-dark: #243247;
+/* ------------------------------------------------------------------------
+   Color system — the only place raw color values live.
 
-  /* Light surfaces (readability for exercise content) */
-  --surface: #F4F6F5;          /* exercise cards, content blocks, forms */
-  --surface-alt: #E8EDEC;      /* table stripes, hover on light */
-  --border-light: #D5DCDF;     /* decorative dividers on light */
-  --border-input: #748B95;     /* a11y adjustment: input boundaries on light — --border-light is only 1.28:1 on --surface (needs 3:1) */
+   Components consume SEMANTIC tokens (--text, --surface, --accent-fg, ...)
+   through Tailwind utilities (text-fg, bg-surface, text-accent-fg, ...) or
+   var(--token) in inline styles/SVG. Values are defined per theme on
+   <html data-theme="dark|light">, and can be re-scoped for a subtree:
 
-  /* Text */
-  --text-on-dark: #F4F6F5;
-  --text-on-dark-muted: #8A97A6;
-  --text-on-light: #0F1620;
-  --text-on-light-muted: #4B5A6B;
+   .on-light     A light card inside the dark theme (dark mode's exercise
+                 cards, forms, admin content). Re-points text/border/accent
+                 tokens at their on-light values. No-op in the light theme,
+                 where everything is already light.
+   .scheme-dark  Always-dark areas in BOTH themes: landing hero, premium
+                 store glow headers, workout hero photo, muscle-figure panels.
+   .scheme-paper PDF/print sheets — pinned to the same values in both
+                 themes so printed output never changes with the theme.
 
-  /* Primary accent (teal) */
+   Tokens marked "a11y" are lightness-only adjustments (same hue) made where
+   a spec value failed WCAG AA for a pair it's used in.
+   ------------------------------------------------------------------------ */
+
+/* Dark theme — identical to the pre-theming palette. Also the default
+   before the inline theme script runs (and for no-JS visitors). */
+:root,
+[data-theme="dark"],
+.scheme-dark {
+  color-scheme: dark;
+
+  --bg-page: #0F1620;
+  --bg-elevated: #172231;
+  --surface: #F4F6F5;          /* dark mode's light cards */
+  --surface-alt: #E8EDEC;
+  --border: #243247;
+  --border-input: #748B95;
+
+  --text: #F4F6F5;
+  --text-muted: #8A97A6;
+
   --accent: #2DD4BF;
   --accent-hover: #5EEAD4;
   --accent-active: #14B8A6;
-  --accent-text-on: #0F1620;   /* text on accent backgrounds, never white */
-  --accent-on-light: #0F766E;  /* teal for links/icons on light surfaces (contrast) */
+  --accent-fg: #2DD4BF;
+  --on-accent: #0F1620;        /* text/icons on an --accent fill */
 
-  /* Warm secondary accent (use sparingly) */
+  --btn-primary-bg: #2DD4BF;
+  --btn-primary-fg: #0F1620;
+  --btn-primary-hover: #5EEAD4;
+  --btn-primary-active: #14B8A6;
+  --btn-secondary-border: #2DD4BF;
+  --btn-secondary-hover: color-mix(in srgb, #2DD4BF 12%, transparent);
+
   --warm: #F5A524;
-  --warm-on-light: #935D07;    /* a11y adjustment: --warm text on --surface is 1.88:1 */
+  --warm-fg: #F5A524;
+  --warm-strong: #935D07;      /* solid fill behind light text (high RPE/pain) */
 
-  /* States */
   --success: #2DD4BF;
   --warning: #F5A524;
-  --danger: #E01313;           /* a11y adjustment (was #EF4444): white text on #EF4444 is 3.76:1 */
-  --danger-on-dark: #F05050;   /* a11y adjustment: error text on --bg-elevated (#E01313 there is < 4.5:1) */
-  --text-on-danger: #FFFFFF;   /* destructive button label */
+  --danger: #E01313;           /* a11y: was #EF4444 — white text on it was 3.76:1 */
+  --danger-fg: #F05050;
+  --text-on-danger: #FFFFFF;
+
   --focus-ring: #5EEAD4;
-  --focus-ring-on-light: #0F766E; /* a11y adjustment: --focus-ring on --surface is 1.36:1 (needs 3:1) */
 
-  /* Muscle figure (SVG) — never red */
-  --muscle-primary: #2DD4BF;   /* active/primary muscle */
-  --muscle-secondary: #F5A524; /* secondary/assisting muscle */
-  --muscle-inactive-dark: #2A3646;
-  --muscle-inactive-light: #CBD5DC;
+  --disabled-bg: #172231;
+  --disabled-fg: #8A97A6;
+  --scrim: #0F1620;            /* modal/sheet backdrops, photo scrims */
+  --backdrop: color-mix(in srgb, #0F1620 60%, transparent);
+  --shadow-ink: #0F1620;       /* arbitrary shadow color */
+  --shadow-black: #000000;     /* Tailwind's shadow-sm…2xl scale color */
+  --shadow-card: 0 8px 30px color-mix(in srgb, #0F1620 6%, transparent);
+  --shadow-elevated: 0 25px 50px -12px color-mix(in srgb, #000000 25%, transparent);
 
-  /* Third-party brand marks (Google sign-in button logo) — fixed by the
-     brand's own guidelines, not part of the theme; kept here only so no raw
-     hex lives outside :root. */
+  --muscle-primary: #2DD4BF;
+  --muscle-secondary: #F5A524;
+  --muscle-inactive: #2A3646;
+
+  /* Third-party brand marks (Google sign-in logo) — fixed by the brand's own
+     guidelines, identical in both themes. */
   --brand-google-blue: #4285F4;
   --brand-google-green: #34A853;
   --brand-google-yellow: #FBBC05;
   --brand-google-red: #EA4335;
 }
 
+/* Light cards inside the dark theme (and print sheets in either theme). */
+[data-theme="dark"] .on-light,
+.scheme-dark .on-light,
+.scheme-paper {
+  color-scheme: light;
+
+  --surface: #F4F6F5;
+  --surface-alt: #E8EDEC;
+  --border: #D5DCDF;
+  --border-input: #748B95;     /* a11y: #D5DCDF is 1.28:1 on --surface; inputs need 3:1 */
+  --text: #0F1620;
+  --text-muted: #4B5A6B;
+  --accent-fg: #0F766E;
+  --warm-fg: #935D07;          /* a11y: #F5A524 text on --surface is 1.88:1 */
+  --danger-fg: #E01313;
+  --focus-ring: #0F766E;       /* a11y: #5EEAD4 on --surface is 1.36:1 */
+}
+
+.scheme-paper {
+  --bg-page: #F4F6F5;
+  --bg-elevated: #F4F6F5;
+}
+
+[data-theme="light"] {
+  color-scheme: light;
+
+  --bg-page: #F4F6F5;
+  --bg-elevated: #FFFFFF;
+  --surface: #FFFFFF;
+  --surface-alt: #EDF1F0;
+  --border: #D5DCDF;
+  --border-input: #748B95;
+
+  --text: #0F1620;
+  --text-muted: #4B5A6B;
+
+  --accent: #2DD4BF;
+  --accent-hover: #14B8A6;
+  --accent-active: #0F766E;
+  --accent-fg: #0F766E;
+  --on-accent: #0F1620;
+
+  --btn-primary-bg: #0F766E;
+  --btn-primary-fg: #FFFFFF;
+  --btn-primary-hover: #115E59;
+  --btn-primary-active: #134E4A;
+  --btn-secondary-border: #0F766E;
+  --btn-secondary-hover: color-mix(in srgb, #0F766E 8%, transparent);
+
+  --warm: #F5A524;
+  --warm-fg: #935D07;
+  --warm-strong: #935D07;
+
+  --success: #0F766E;
+  --warning: #AA4F09;          /* a11y: was #B45309 — 4.41:1 on --surface-alt */
+  --danger: #E01313;
+  --danger-fg: #B61B1B;        /* a11y: was #C81E1E — 4.48:1 on a 10% danger tint */
+  --text-on-danger: #FFFFFF;
+
+  --focus-ring: #0F766E;
+
+  --disabled-bg: #EDF1F0;
+  --disabled-fg: #4B5A6B;
+  --scrim: #0F1620;
+  --backdrop: rgba(15, 22, 32, 0.5);
+  --shadow-ink: #0F1620;
+  --shadow-black: #0F1620;
+  /* Elevation in light mode = shadow + a 1px --border ring (drawn as a
+     box-shadow so it adds no layout). */
+  --shadow-card: 0 0 0 1px #D5DCDF, 0 1px 3px rgba(15, 22, 32, 0.08), 0 1px 2px rgba(15, 22, 32, 0.04);
+  --shadow-elevated: 0 0 0 1px #D5DCDF, 0 8px 24px rgba(15, 22, 32, 0.12);
+
+  --muscle-primary: #2DD4BF;
+  --muscle-secondary: #F5A524;
+  --muscle-inactive: #2A3646;  /* muscle figures always sit on a dark panel */
+}
+
 @theme inline {
   /* Drop Tailwind's built-in palette entirely, so a stray bg-stone-500 /
-     text-white can't silently reintroduce an off-system color — it simply
-     won't generate. Only the role tokens below exist as color utilities. */
+     text-white can't reintroduce an off-system color — it simply won't
+     generate. Only the semantic tokens below exist as color utilities.
+     `inline` matters: utilities must emit var(--text) etc. directly so the
+     .on-light / .scheme-* re-scoping resolves per element. */
   --color-*: initial;
 
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 
-  /* `shell`, not `base`: `text-base` is Tailwind's font-size utility, and a
-     color named `base` would hijack it. */
-  --color-shell: var(--bg-base);
+  /* `page`, not `base`: `text-base` is Tailwind's font-size utility. */
+  --color-page: var(--bg-page);
   --color-elevated: var(--bg-elevated);
-  --color-line-dark: var(--border-dark);
-
   --color-surface: var(--surface);
   --color-surface-alt: var(--surface-alt);
-  --color-line-light: var(--border-light);
+  --color-line: var(--border);
   --color-line-input: var(--border-input);
 
-  --color-on-dark: var(--text-on-dark);
-  --color-on-dark-muted: var(--text-on-dark-muted);
-  --color-on-light: var(--text-on-light);
-  --color-on-light-muted: var(--text-on-light-muted);
+  --color-fg: var(--text);
+  --color-muted: var(--text-muted);
 
   --color-accent: var(--accent);
   --color-accent-hover: var(--accent-hover);
   --color-accent-active: var(--accent-active);
-  --color-accent-ink: var(--accent-text-on);
-  --color-accent-on-light: var(--accent-on-light);
+  --color-accent-fg: var(--accent-fg);
+  --color-on-accent: var(--on-accent);
+
+  --color-btn-primary: var(--btn-primary-bg);
+  --color-btn-primary-fg: var(--btn-primary-fg);
+  --color-btn-primary-hover: var(--btn-primary-hover);
+  --color-btn-primary-active: var(--btn-primary-active);
+  --color-btn-secondary: var(--btn-secondary-border);
+  --color-btn-secondary-hover: var(--btn-secondary-hover);
 
   --color-warm: var(--warm);
-  --color-warm-on-light: var(--warm-on-light);
+  --color-warm-fg: var(--warm-fg);
+  --color-warm-strong: var(--warm-strong);
 
   --color-success: var(--success);
   --color-warning: var(--warning);
   --color-danger: var(--danger);
-  --color-danger-on-dark: var(--danger-on-dark);
+  --color-danger-fg: var(--danger-fg);
   --color-on-danger: var(--text-on-danger);
   --color-focus: var(--focus-ring);
-  --color-focus-on-light: var(--focus-ring-on-light);
+
+  --color-disabled: var(--disabled-bg);
+  --color-disabled-fg: var(--disabled-fg);
+  --color-scrim: var(--scrim);
+  --color-backdrop: var(--backdrop);
 
   --color-muscle-primary: var(--muscle-primary);
   --color-muscle-secondary: var(--muscle-secondary);
-  --color-muscle-inactive-dark: var(--muscle-inactive-dark);
-  --color-muscle-inactive-light: var(--muscle-inactive-light);
+  --color-muscle-inactive: var(--muscle-inactive);
+
+  --shadow-card: var(--shadow-card);
+  --shadow-elevated: var(--shadow-elevated);
+
+  /* Tailwind's default shadow scale, re-expressed with a themed color:
+     identical to stock (pure black) in dark, brand ink in light. */
+  --shadow-2xs: 0 1px color-mix(in srgb, var(--shadow-black) 5%, transparent);
+  --shadow-xs: 0 1px 2px 0 color-mix(in srgb, var(--shadow-black) 5%, transparent);
+  --shadow-sm: 0 1px 3px 0 color-mix(in srgb, var(--shadow-black) 10%, transparent), 0 1px 2px -1px color-mix(in srgb, var(--shadow-black) 10%, transparent);
+  --shadow-md: 0 4px 6px -1px color-mix(in srgb, var(--shadow-black) 10%, transparent), 0 2px 4px -2px color-mix(in srgb, var(--shadow-black) 10%, transparent);
+  --shadow-lg: 0 10px 15px -3px color-mix(in srgb, var(--shadow-black) 10%, transparent), 0 4px 6px -4px color-mix(in srgb, var(--shadow-black) 10%, transparent);
+  --shadow-xl: 0 20px 25px -5px color-mix(in srgb, var(--shadow-black) 10%, transparent), 0 8px 10px -6px color-mix(in srgb, var(--shadow-black) 10%, transparent);
+  --shadow-2xl: 0 25px 50px -12px color-mix(in srgb, var(--shadow-black) 25%, transparent);
 }
 
 body {
-  background: var(--bg-base);
-  color: var(--text-on-dark);
+  background: var(--bg-page);
+  color: var(--text);
   font-family: Arial, Helvetica, sans-serif;
 }
 
+::selection {
+  background: color-mix(in srgb, var(--accent) 35%, transparent);
+  color: var(--text);
+}
+
+html {
+  scrollbar-color: var(--border) transparent;
+}
+
 /* Visible 2px focus ring on every interactive element (keyboard focus only,
-   so mouse clicks don't flash it). Light surfaces opt into the darker ring
-   via .on-light on any ancestor. */
+   so mouse clicks don't flash it). --focus-ring re-scopes with .on-light. */
 :where(a, button, input, select, textarea, summary, [role="button"], [tabindex]):focus-visible {
   outline: 2px solid var(--focus-ring);
   outline-offset: 2px;
-}
-:where(.on-light) :where(a, button, input, select, textarea, summary, [role="button"], [tabindex]):focus-visible {
-  outline-color: var(--focus-ring-on-light);
 }

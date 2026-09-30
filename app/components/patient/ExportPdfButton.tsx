@@ -63,22 +63,22 @@ export default function ExportPdfButton({ program, exerciseCatalog }: ExportPdfB
     <>
       <button
         onClick={() => setIsPrinting(true)}
-        className="flex items-center gap-1.5 text-[11px] font-bold text-on-light-muted hover:text-accent-on-light transition-colors print:hidden"
+        className="flex items-center gap-1.5 text-[11px] font-bold text-muted hover:text-accent-fg transition-colors print:hidden"
       >
         <Printer size={13} />
         ייצוא PDF
       </button>
 
       {isPrinting && (
-        <div className="hidden print:block print:bg-surface print:text-on-light fixed inset-0 z-[999] p-8" dir="rtl">
+        <div className="scheme-paper hidden print:block print:bg-surface print:text-fg fixed inset-0 z-[999] p-8" dir="rtl">
           <style>{`@page { margin: 14mm; }`}</style>
 
-          <div className="flex items-start justify-between pb-4 border-b-2 border-on-light print:shadow-none">
+          <div className="flex items-start justify-between pb-4 border-b-2 border-fg print:shadow-none">
             <div>
               <h1 className="text-2xl font-black">{program.name}</h1>
-              <p className="text-xs text-on-light-muted mt-1">{days.length} ימים</p>
+              <p className="text-xs text-muted mt-1">{days.length} ימים</p>
             </div>
-            <div className="text-left text-xs text-on-light-muted shrink-0">
+            <div className="text-left text-xs text-muted shrink-0">
               <div>הופק בתאריך</div>
               <div className="font-bold">{new Date().toLocaleDateString("he-IL")}</div>
             </div>
@@ -89,10 +89,10 @@ export default function ExportPdfButton({ program, exerciseCatalog }: ExportPdfB
               const dayExercises = day.exercise_ids.map((id) => exerciseCatalog.find((e) => e.id === id)).filter((e): e is Exercise => !!e);
               return (
                 <div key={day.day_number} className="break-inside-avoid">
-                  <h2 className="text-base font-extrabold border-b border-line-light pb-1.5 mb-3">יום {day.day_number}</h2>
+                  <h2 className="text-base font-extrabold border-b border-line pb-1.5 mb-3">יום {day.day_number}</h2>
 
                   {dayExercises.length === 0 ? (
-                    <p className="text-sm text-on-light-muted">אין תרגילים ביום זה.</p>
+                    <p className="text-sm text-muted">אין תרגילים ביום זה.</p>
                   ) : (
                     <div className="space-y-4">
                       {dayExercises.map((exercise) => {
@@ -101,7 +101,7 @@ export default function ExportPdfButton({ program, exerciseCatalog }: ExportPdfB
                         return (
                           <div key={exercise.id} className="break-inside-avoid">
                             <h3 className="font-bold text-sm">{getExerciseName(exercise, "he")}</h3>
-                            {exercise.description && <p className="text-xs text-on-light-muted mt-1">{exercise.description}</p>}
+                            {exercise.description && <p className="text-xs text-muted mt-1">{exercise.description}</p>}
 
                             {(dos.length > 0 || donts.length > 0) && (
                               <div className="mt-1.5 grid grid-cols-2 gap-3">

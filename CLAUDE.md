@@ -46,7 +46,9 @@ Actual feature code lives under `app/components/`, organized by domain:
 `server-only` service-role client (bypasses RLS) used from server actions that
 must run before a session exists, e.g. the passkey login lookup in
 `app/actions/passkeyAuth.ts` — never import it from client code. Tables in use:
-`patients`, `exercises`, `packages`, `package_exercises`, `patient_exercises`,
+`patients`, `exercises`, `packages`, `package_exercises`, `patient_programs` (named
+programs assigned to a patient — `patient_exercises.program_id` points at one; the
+program name is the workout title the patient sees), `patient_exercises`,
 `workout_logs`, `patient_saved_programs`, `patient_passkeys`, `workouts`,
 `workout_likes`, `curated_facts`, `exercise_internal_notes`. Migrations live under
 `supabase/migrations/`.

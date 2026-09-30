@@ -127,7 +127,7 @@ export default function AnatomyHeatmap({ primeMovers, synergists, className }: A
       {svgMarkup && <div ref={containerRef} className="absolute inset-0 w-full h-full" dangerouslySetInnerHTML={{ __html: svgMarkup }} />}
 
       {loadFailed && (
-        <div className="absolute inset-0 flex items-center justify-center text-xs font-bold text-on-dark-muted bg-elevated/80">
+        <div className="absolute inset-0 flex items-center justify-center text-xs font-bold text-muted bg-elevated/80">
           לא ניתן לטעון את שכבת השרירים
         </div>
       )}

@@ -21,10 +21,10 @@ import type { useWorkoutSession } from "@/app/hooks/useWorkoutSession";
 function SimulationBanner({ onExit }: { onExit: () => void }) {
   return (
     <div className="sticky top-0 inset-x-0 z-[200] pt-safe px-4 pt-3 print:hidden">
-      <div className="flex items-center gap-2.5 bg-warm/15 border border-warm/40 text-warm text-xs font-bold px-4 py-2.5 rounded-2xl shadow-[0_4px_20px_color-mix(in_srgb,var(--bg-base)_6%,transparent)]">
-        <FlaskConical size={16} className="text-warm shrink-0" />
+      <div className="flex items-center gap-2.5 bg-warm/15 border border-warm/40 text-warm-fg text-xs font-bold px-4 py-2.5 rounded-2xl shadow-[0_4px_20px_color-mix(in_srgb,var(--shadow-ink)_6%,transparent)]">
+        <FlaskConical size={16} className="text-warm-fg shrink-0" />
         <span className="flex-1">מצב סימולציה פעיל — הנתונים לא נשמרים</span>
-        <button onClick={onExit} className="shrink-0 bg-warm hover:brightness-110 text-accent-ink font-extrabold px-3 py-1.5 rounded-full transition-colors">
+        <button onClick={onExit} className="shrink-0 bg-warm hover:brightness-110 text-on-accent font-extrabold px-3 py-1.5 rounded-full transition-colors">
           יציאה
         </button>
       </div>
@@ -48,8 +48,8 @@ const RIR_OPTIONS = [0, 1, 2, 3, 4];
 
 // Shared "frosted glass" recipe used across every floating control in this
 // screen — dark glass (bg-elevated/90 backdrop-blur-md) with a soft
-// diffused shadow, on the dark --bg-base player background.
-const GLASS = "bg-elevated/90 backdrop-blur-md border border-line-dark shadow-[0_4px_20px_color-mix(in_srgb,var(--bg-base)_4%,transparent)]";
+// diffused shadow, on the --bg-page player background.
+const GLASS = "bg-elevated/90 backdrop-blur-md border border-line shadow-[0_4px_20px_color-mix(in_srgb,var(--shadow-ink)_4%,transparent)]";
 
 // The whole active-workout experience: the pre-workout pain check-in, the
 // immersive full-screen player, and the post-workout feedback flow. Renders
@@ -131,7 +131,7 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
 
   return (
     <div
-      className="fixed inset-0 z-[150] bg-shell text-on-dark flex flex-col overflow-hidden"
+      className="fixed inset-0 z-[150] bg-page text-fg flex flex-col overflow-hidden"
       dir={dir}
       onTouchStart={session.onTouchStart}
       onTouchMove={session.onTouchMove}
@@ -148,10 +148,10 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
       {session.isSimulation && <SimulationBanner onExit={session.closeWorkout} />}
       {session.simulationToast && <Toast message={session.simulationToast} onDismiss={session.dismissSimulationToast} />}
 
-      {/* Background — solid --bg-base for both states; the active
+      {/* Background — solid --bg-page for both states; the active
           screen's exercise media lives only inside its own contained
           player below, never as a full-bleed background. */}
-      <div className="absolute inset-0 z-0 bg-shell"></div>
+      <div className="absolute inset-0 z-0 bg-page"></div>
 
       {!isPostSet ? (
         /* Top bar for the active-set screen: one continuous progress line
@@ -162,25 +162,25 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
             <button
               onClick={() => ex && session.setViewingExInfo(ex)}
               aria-label="פרטי תרגיל"
-              className="w-7 h-7 shrink-0 rounded-full border border-line-dark text-on-dark-muted hover:text-on-dark hover:border-on-dark-muted active:scale-90 transition-all duration-150 ease-out flex items-center justify-center"
+              className="w-7 h-7 shrink-0 rounded-full border border-line text-muted hover:text-fg hover:border-muted active:scale-90 transition-all duration-150 ease-out flex items-center justify-center"
             >
               <Info size={13} />
             </button>
-            <div className="flex-1 h-[3px] rounded-full bg-on-dark/10 overflow-hidden">
+            <div className="flex-1 h-[3px] rounded-full bg-fg/10 overflow-hidden">
               <div className="h-full bg-accent rounded-full transition-all duration-500 ease-out" style={{ width: `${overallProgress * 100}%` }}></div>
             </div>
             <button
               onClick={session.closeWorkout}
               aria-label="סגור אימון"
-              className="w-7 h-7 shrink-0 flex items-center justify-center text-on-dark-muted hover:text-on-dark active:scale-90 transition-all duration-150 ease-out"
+              className="w-7 h-7 shrink-0 flex items-center justify-center text-muted hover:text-fg active:scale-90 transition-all duration-150 ease-out"
             >
               <X size={18} />
             </button>
           </div>
 
           <div className="text-center">
-            <h2 className="text-2xl md:text-3xl font-black italic text-on-dark tracking-tight">{ex && getExerciseName(ex, lang)}</h2>
-            <p className="text-on-dark-muted text-sm font-bold mt-1 tabular-nums">
+            <h2 className="text-2xl md:text-3xl font-black italic text-fg tracking-tight">{ex && getExerciseName(ex, lang)}</h2>
+            <p className="text-muted text-sm font-bold mt-1 tabular-nums">
               סט {session.currentBlockSet} / {session.maxSetsInBlock}
             </p>
           </div>
@@ -193,7 +193,7 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
           <button
             onClick={session.closeWorkout}
             aria-label="סגור אימון"
-            className={`w-11 h-11 rounded-full flex items-center justify-center text-on-dark hover:bg-line-dark active:scale-90 active:bg-on-dark/10 transition-all duration-200 ease-out ${GLASS}`}
+            className={`w-11 h-11 rounded-full flex items-center justify-center text-fg hover:bg-line active:scale-90 active:bg-fg/10 transition-all duration-200 ease-out ${GLASS}`}
           >
             <X size={20} />
           </button>
@@ -205,8 +205,8 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
           the old ring's !isSupersetCheck guard made. */}
       {isPostSet && !session.isSupersetCheck && (
         <div className="relative z-10 flex flex-col items-center pt-2 animate-in fade-in duration-500">
-          <span className="text-[11px] font-bold tracking-[0.25em] uppercase text-on-dark-muted mb-1">מנוחה</span>
-          <span className="text-6xl font-black tabular-nums text-on-dark tracking-tighter" dir="ltr">
+          <span className="text-[11px] font-bold tracking-[0.25em] uppercase text-muted mb-1">מנוחה</span>
+          <span className="text-6xl font-black tabular-nums text-fg tracking-tighter" dir="ltr">
             {formatTime(session.restTimer)}
           </span>
         </div>
@@ -221,19 +221,19 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
             {/* Dynamic hero metric — a massive countdown for a timed set, or
                 split reps/RIR typography for a countable one. */}
             {session.activeAssign?.is_time ? (
-              <div className="text-7xl md:text-8xl font-black tracking-tighter tabular-nums text-on-dark" dir="ltr">
+              <div className="text-7xl md:text-8xl font-black tracking-tighter tabular-nums text-fg" dir="ltr">
                 {formatTime(session.exTimer ?? session.effectiveTargetReps ?? session.activeAssign.reps)}
               </div>
             ) : (
               <div className="flex items-end justify-center gap-10">
                 <div className="flex flex-col items-center">
-                  <span className="text-7xl font-black text-on-dark tabular-nums leading-none">{session.effectiveTargetReps}</span>
-                  <span className="text-[11px] font-bold text-on-dark-muted uppercase tracking-wide mt-2">חזרות</span>
+                  <span className="text-7xl font-black text-fg tabular-nums leading-none">{session.effectiveTargetReps}</span>
+                  <span className="text-[11px] font-bold text-muted uppercase tracking-wide mt-2">חזרות</span>
                 </div>
                 {session.effectiveTargetRir !== null && (
                   <div className="flex flex-col items-center">
-                    <span className="text-7xl font-black text-accent tabular-nums leading-none">{session.effectiveTargetRir}</span>
-                    <span className="text-[11px] font-bold text-on-dark-muted uppercase tracking-wide mt-2">RIR</span>
+                    <span className="text-7xl font-black text-accent-fg tabular-nums leading-none">{session.effectiveTargetRir}</span>
+                    <span className="text-[11px] font-bold text-muted uppercase tracking-wide mt-2">RIR</span>
                   </div>
                 )}
               </div>
@@ -250,7 +250,7 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
               const hasSecondAngle = Boolean(ex?.secondary_gif_url);
 
               return (
-                <div className="relative w-full max-w-[280px] aspect-square rounded-[2rem] overflow-hidden border border-line-dark bg-on-dark/10 shadow-[0_8px_30px_color-mix(in_srgb,var(--bg-base)_4%,transparent)]">
+                <div className="relative w-full max-w-[280px] aspect-square rounded-[2rem] overflow-hidden border border-line bg-fg/10 shadow-card">
                   {currentUrl ? (
                     isVideo ? (
                       <video src={currentUrl} autoPlay muted playsInline loop className="w-full h-full object-cover" />
@@ -260,16 +260,16 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
                   ) : (
                     // Muted-icon-plus-caption placeholder on a dark
                     // elevated gradient, matching the player's dark shell.
-                    <div className="w-full h-full bg-gradient-to-br from-elevated to-line-dark flex flex-col items-center justify-center gap-2">
-                      <Dumbbell size={40} className="text-on-dark-muted" />
-                      <span className="text-on-dark-muted text-sm font-bold">אין מדיה זמינה</span>
+                    <div className="w-full h-full bg-gradient-to-br from-elevated to-line flex flex-col items-center justify-center gap-2">
+                      <Dumbbell size={40} className="text-muted" />
+                      <span className="text-muted text-sm font-bold">אין מדיה זמינה</span>
                     </div>
                   )}
 
                   {hasSecondAngle && (
                     <button
                       onClick={() => setActiveMediaIndex((i) => (i === 0 ? 1 : 0))}
-                      className={`absolute bottom-3 left-3 flex items-center gap-1.5 px-3 py-2 rounded-full text-on-dark text-xs font-bold active:scale-90 transition-all duration-150 ease-out ${GLASS}`}
+                      className={`absolute bottom-3 left-3 flex items-center gap-1.5 px-3 py-2 rounded-full text-fg text-xs font-bold active:scale-90 transition-all duration-150 ease-out ${GLASS}`}
                     >
                       <FlipHorizontal size={14} />
                       החלף זווית
@@ -284,7 +284,7 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
               session.exTimer === 0 ? (
                 <button
                   onClick={session.handleFinishAction}
-                  className="w-full max-w-[220px] bg-accent hover:bg-accent-hover active:bg-accent-active text-accent-ink py-4 rounded-full font-black text-base transition-all duration-200 ease-out hover:scale-[1.02] active:scale-[0.97] shadow-[0_12px_32px_-8px_color-mix(in_srgb,var(--accent)_40%,transparent)]"
+                  className="w-full max-w-[220px] bg-btn-primary hover:bg-btn-primary-hover active:bg-btn-primary-active text-btn-primary-fg py-4 rounded-full font-black text-base transition-all duration-200 ease-out hover:scale-[1.02] active:scale-[0.97] shadow-[0_12px_32px_-8px_color-mix(in_srgb,var(--accent)_40%,transparent)]"
                 >
                   המשך
                 </button>
@@ -292,7 +292,7 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
                 <div className="flex items-center justify-center gap-8">
                   <button
                     onClick={session.skipExerciseTimer}
-                    className="flex flex-col items-center gap-1 text-on-dark-muted hover:text-on-dark active:scale-90 transition-all duration-150 ease-out"
+                    className="flex flex-col items-center gap-1 text-muted hover:text-fg active:scale-90 transition-all duration-150 ease-out"
                   >
                     <SkipForward size={20} />
                     <span className="text-[10px] font-bold uppercase tracking-wide">דלג</span>
@@ -300,9 +300,9 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
                   <button
                     onClick={session.toggleExerciseTimer}
                     aria-label={session.isExTimerRunning ? "השהה טיימר" : "הפעל טיימר"}
-                    className="w-16 h-16 rounded-full bg-accent flex items-center justify-center text-accent-ink shadow-[0_12px_32px_-8px_color-mix(in_srgb,var(--accent)_40%,transparent)] active:scale-95 transition-transform duration-150 ease-out"
+                    className="w-16 h-16 rounded-full bg-accent flex items-center justify-center text-on-accent shadow-[0_12px_32px_-8px_color-mix(in_srgb,var(--accent)_40%,transparent)] active:scale-95 transition-transform duration-150 ease-out"
                   >
-                    {session.isExTimerRunning ? <Pause size={24} className="fill-accent-ink" /> : <Play size={24} className="fill-accent-ink ms-0.5" />}
+                    {session.isExTimerRunning ? <Pause size={24} className="fill-on-accent" /> : <Play size={24} className="fill-on-accent ms-0.5" />}
                   </button>
                 </div>
               )
@@ -311,13 +311,13 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
                 <button
                   onClick={session.makeEasier}
                   aria-label="הפוך לקל יותר"
-                  className="w-12 h-12 shrink-0 rounded-full bg-on-dark/10 hover:bg-line-dark flex items-center justify-center text-on-dark-muted hover:text-on-dark active:scale-90 transition-all duration-150 ease-out"
+                  className="w-12 h-12 shrink-0 rounded-full bg-fg/10 hover:bg-line flex items-center justify-center text-muted hover:text-fg active:scale-90 transition-all duration-150 ease-out"
                 >
                   <Minus size={18} />
                 </button>
                 <button
                   onClick={session.handleFinishAction}
-                  className="flex-1 bg-accent hover:bg-accent-hover active:bg-accent-active text-accent-ink font-black text-base py-4 rounded-full flex items-center justify-center gap-2 transition-all duration-200 ease-out hover:scale-[1.02] active:scale-[0.97] shadow-[0_12px_32px_-8px_color-mix(in_srgb,var(--accent)_40%,transparent)]"
+                  className="flex-1 bg-btn-primary hover:bg-btn-primary-hover active:bg-btn-primary-active text-btn-primary-fg font-black text-base py-4 rounded-full flex items-center justify-center gap-2 transition-all duration-200 ease-out hover:scale-[1.02] active:scale-[0.97] shadow-[0_12px_32px_-8px_color-mix(in_srgb,var(--accent)_40%,transparent)]"
                 >
                   <SkipForward size={18} />
                   סיום סט
@@ -325,7 +325,7 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
                 <button
                   onClick={session.makeHarder}
                   aria-label="הפוך לקשה יותר"
-                  className="w-12 h-12 shrink-0 rounded-full bg-on-dark/10 hover:bg-line-dark flex items-center justify-center text-on-dark-muted hover:text-on-dark active:scale-90 transition-all duration-150 ease-out"
+                  className="w-12 h-12 shrink-0 rounded-full bg-fg/10 hover:bg-line flex items-center justify-center text-muted hover:text-fg active:scale-90 transition-all duration-150 ease-out"
                 >
                   <Plus size={18} />
                 </button>
@@ -370,7 +370,7 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
                       height={REST_SQUARE_SIZE - REST_SQUARE_STROKE}
                       rx={REST_SQUARE_RADIUS}
                       fill="none"
-                      style={{ stroke: "var(--border-dark)" }}
+                      style={{ stroke: "var(--border)" }}
                       strokeWidth={REST_SQUARE_STROKE}
                     />
                     {showProgress && (
@@ -389,7 +389,7 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
                       />
                     )}
                   </svg>
-                  <div className="absolute rounded-[1.5rem] overflow-hidden bg-on-dark/10" style={{ inset: REST_SQUARE_STROKE + 5 }}>
+                  <div className="absolute rounded-[1.5rem] overflow-hidden bg-fg/10" style={{ inset: REST_SQUARE_STROKE + 5 }}>
                     {heroUrl ? (
                       isVideo ? (
                         <video src={heroUrl} autoPlay muted playsInline loop className="w-full h-full object-cover" />
@@ -399,9 +399,9 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
                     ) : (
                       // Passive glance at what's next — no toggle button here,
                       // just the same fallback placeholder as the active box.
-                      <div className="w-full h-full bg-gradient-to-br from-elevated to-line-dark flex flex-col items-center justify-center gap-1.5">
-                        <Dumbbell size={28} className="text-on-dark-muted" />
-                        <span className="text-on-dark-muted text-[11px] font-bold">אין מדיה זמינה</span>
+                      <div className="w-full h-full bg-gradient-to-br from-elevated to-line flex flex-col items-center justify-center gap-1.5">
+                        <Dumbbell size={28} className="text-muted" />
+                        <span className="text-muted text-[11px] font-bold">אין מדיה זמינה</span>
                       </div>
                     )}
                   </div>
@@ -412,28 +412,28 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
             {/* Text hierarchy: eyebrow label, set count, exercise name. */}
             {isSameExerciseNext ? (
               <div className="flex flex-col items-center gap-1.5">
-                <span className="text-[11px] font-bold tracking-[0.2em] uppercase text-on-dark-muted">הסט הבא</span>
-                <span className="text-on-dark-muted text-sm font-bold tabular-nums">
+                <span className="text-[11px] font-bold tracking-[0.2em] uppercase text-muted">הסט הבא</span>
+                <span className="text-muted text-sm font-bold tabular-nums">
                   סט {session.currentBlockSet + 1} מתוך {session.maxSetsInBlock}
                 </span>
-                <h3 className="text-xl font-black text-on-dark">{ex && getExerciseName(ex, lang)}</h3>
+                <h3 className="text-xl font-black text-fg">{ex && getExerciseName(ex, lang)}</h3>
               </div>
             ) : next ? (
               <div className="flex flex-col items-center gap-1.5">
-                <span className="text-[11px] font-bold tracking-[0.2em] uppercase text-on-dark-muted">הבא בתור</span>
-                <span className="text-on-dark-muted text-sm font-bold tabular-nums">סט 1 מתוך {next.sets}</span>
+                <span className="text-[11px] font-bold tracking-[0.2em] uppercase text-muted">הבא בתור</span>
+                <span className="text-muted text-sm font-bold tabular-nums">סט 1 מתוך {next.sets}</span>
                 <button
                   onClick={() => session.setViewingExInfo(next.exercise)}
                   className="flex items-center gap-1.5 active:scale-95 transition-transform duration-150 ease-out"
                 >
-                  <h3 className="text-xl font-black text-on-dark">{getExerciseName(next.exercise, lang)}</h3>
-                  <Info size={14} className="text-on-dark-muted" />
+                  <h3 className="text-xl font-black text-fg">{getExerciseName(next.exercise, lang)}</h3>
+                  <Info size={14} className="text-muted" />
                 </button>
               </div>
             ) : (
               <div className="flex flex-col items-center gap-2">
-                <Trophy size={32} className="text-accent" />
-                <h3 className="text-xl font-black text-on-dark">הסט האחרון לאימון!</h3>
+                <Trophy size={32} className="text-accent-fg" />
+                <h3 className="text-xl font-black text-fg">הסט האחרון לאימון!</h3>
               </div>
             )}
 
@@ -447,32 +447,32 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
               <div className="flex items-center gap-6">
                 <button
                   onClick={() => session.adjustRestReps(session.activeAssign?.is_time ? -5 : -1)}
-                  className="w-9 h-9 rounded-full bg-on-dark/10 border border-line-dark flex items-center justify-center text-on-dark active:scale-90 transition-transform duration-150 ease-out"
+                  className="w-9 h-9 rounded-full bg-fg/10 border border-line flex items-center justify-center text-fg active:scale-90 transition-transform duration-150 ease-out"
                 >
                   <Minus size={15} />
                 </button>
                 <div className="flex flex-col items-center">
-                  <span className="text-4xl font-black text-on-dark tabular-nums" dir="ltr">
+                  <span className="text-4xl font-black text-fg tabular-nums" dir="ltr">
                     {session.actualRepsLogged}
                   </span>
-                  <span className="text-[10px] font-bold text-on-dark-muted uppercase tracking-wide mt-0.5">
+                  <span className="text-[10px] font-bold text-muted uppercase tracking-wide mt-0.5">
                     {session.activeAssign?.is_time ? "שניות שהוחזקו" : "חזרות שבוצעו"}
                   </span>
                 </div>
                 <button
                   onClick={() => session.adjustRestReps(session.activeAssign?.is_time ? 5 : 1)}
-                  className="w-9 h-9 rounded-full bg-accent/15 border border-accent/25 flex items-center justify-center text-accent active:scale-90 transition-transform duration-150 ease-out"
+                  className="w-9 h-9 rounded-full bg-accent/15 border border-accent/25 flex items-center justify-center text-accent-fg active:scale-90 transition-transform duration-150 ease-out"
                 >
                   <Plus size={15} />
                 </button>
               </div>
 
               <div className="relative flex items-center gap-2">
-                <span className="text-[11px] font-bold text-on-dark-muted uppercase tracking-wide">RIR</span>
+                <span className="text-[11px] font-bold text-muted uppercase tracking-wide">RIR</span>
                 <button
                   onClick={() => setShowRirInfo((prev) => !prev)}
                   aria-label="מה זה RIR"
-                  className="text-on-dark-muted hover:text-on-dark transition-colors ml-1"
+                  className="text-muted hover:text-fg transition-colors ml-1"
                 >
                   <Info size={13} />
                 </button>
@@ -480,8 +480,8 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
                 {showRirInfo && (
                   <>
                     <div className="fixed inset-0 z-40" onClick={() => setShowRirInfo(false)} />
-                    <div className="absolute bottom-full right-0 mb-3 z-50 w-64 bg-elevated text-on-dark rounded-2xl shadow-2xl border border-line-dark p-4 text-start animate-in fade-in zoom-in-95 duration-150">
-                      <p className="font-black text-on-dark text-[13px] mb-1.5">מהו RIR?</p>
+                    <div className="absolute bottom-full right-0 mb-3 z-50 w-64 bg-elevated text-fg rounded-2xl shadow-elevated border border-line p-4 text-start animate-in fade-in zoom-in-95 duration-150">
+                      <p className="font-black text-fg text-[13px] mb-1.5">מהו RIR?</p>
                       <p className="text-xs leading-relaxed">
                         Reps In Reserve — כמה חזרות נוספות היית יכול לבצע בטכניקה תקינה. לדוגמה, RIR 2 אומר שצריך לעצור את הסט כשאתה מרגיש שנשארו לך עוד 2 חזרות בלבד עד הכשל.
                       </p>
@@ -496,7 +496,7 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
                       key={val}
                       onClick={() => session.selectRestRir(val)}
                       className={`w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold transition-all duration-150 ease-out active:scale-90 ${
-                        isSelected ? "bg-accent text-accent-ink scale-110 shadow-[0_2px_10px_-2px_color-mix(in_srgb,var(--accent)_50%,transparent)]" : "text-on-dark-muted border border-line-dark"
+                        isSelected ? "bg-accent text-on-accent scale-110 shadow-[0_2px_10px_-2px_color-mix(in_srgb,var(--accent)_50%,transparent)]" : "text-muted border border-line"
                       }`}
                     >
                       {val === 4 ? "4+" : val}
@@ -516,7 +516,7 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
               {session.isSupersetCheck ? (
                 <button
                   onClick={session.handleContinueSuperset}
-                  className="bg-accent hover:bg-accent-hover active:bg-accent-active text-accent-ink font-black px-10 py-4 rounded-full transition-transform ease-out hover:scale-[1.02] active:scale-[0.97] shadow-[0_12px_32px_-8px_color-mix(in_srgb,var(--accent)_40%,transparent)]"
+                  className="bg-btn-primary hover:bg-btn-primary-hover active:bg-btn-primary-active text-btn-primary-fg font-black px-10 py-4 rounded-full transition-transform ease-out hover:scale-[1.02] active:scale-[0.97] shadow-[0_12px_32px_-8px_color-mix(in_srgb,var(--accent)_40%,transparent)]"
                 >
                   המשך לתרגיל הבא
                 </button>
@@ -524,14 +524,14 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
                 <>
                   <button
                     onClick={session.addRestTime}
-                    className="flex flex-col items-center gap-1 text-on-dark-muted hover:text-on-dark active:scale-90 transition-all duration-150 ease-out"
+                    className="flex flex-col items-center gap-1 text-muted hover:text-fg active:scale-90 transition-all duration-150 ease-out"
                   >
                     <span className="text-lg font-black">+15</span>
                     <span className="text-[10px] font-bold uppercase tracking-wide">שניות</span>
                   </button>
                   <button
                     onClick={session.handleEndRest}
-                    className="bg-accent hover:bg-accent-hover active:bg-accent-active text-accent-ink font-black px-10 py-4 rounded-full transition-transform ease-out hover:scale-[1.02] active:scale-[0.97] shadow-[0_12px_32px_-8px_color-mix(in_srgb,var(--accent)_40%,transparent)]"
+                    className="bg-btn-primary hover:bg-btn-primary-hover active:bg-btn-primary-active text-btn-primary-fg font-black px-10 py-4 rounded-full transition-transform ease-out hover:scale-[1.02] active:scale-[0.97] shadow-[0_12px_32px_-8px_color-mix(in_srgb,var(--accent)_40%,transparent)]"
                   >
                     דלג
                   </button>

@@ -12,7 +12,7 @@ interface ProgramPdfExportProps {
   onClose: () => void;
 }
 
-const BRAND = "var(--accent-on-light)";
+const BRAND = "var(--accent-fg)";
 
 type HydratedRow = PackageExercise & { exercise: Exercise };
 
@@ -44,7 +44,7 @@ export default function ProgramPdfExport({ pkg, packageExercises, exerciseCatalo
   const weeks = Array.from(new Set(rows.map((r) => r.week || 1))).sort((a, b) => a - b);
 
   return (
-    <div className="fixed inset-0 z-[300] bg-shell/70 backdrop-blur-sm flex items-start justify-center overflow-y-auto p-4 md:p-10 print:p-0 print:bg-surface print:block print:static print:overflow-visible">
+    <div className="fixed inset-0 z-[300] bg-scrim/70 backdrop-blur-sm flex items-start justify-center overflow-y-auto p-4 md:p-10 print:p-0 print:bg-surface print:block print:static print:overflow-visible">
       <style>{`
         @media print {
           body * { visibility: hidden; }
@@ -58,32 +58,32 @@ export default function ProgramPdfExport({ pkg, packageExercises, exerciseCatalo
         <div className="flex items-center justify-end gap-2 mb-4 print:hidden">
           <button
             onClick={() => window.print()}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-accent text-accent-ink text-sm font-extrabold hover:bg-accent-hover active:bg-accent-active transition-colors"
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-btn-primary text-btn-primary-fg text-sm font-extrabold hover:bg-btn-primary-hover active:bg-btn-primary-active transition-colors"
           >
             <Printer size={16} /> הדפס / שמור כ-PDF
           </button>
-          <button onClick={onClose} className="w-10 h-10 rounded-full bg-on-dark/10 text-on-dark flex items-center justify-center hover:bg-on-dark/20 transition-colors">
+          <button onClick={onClose} className="w-10 h-10 rounded-full bg-fg/10 text-fg flex items-center justify-center hover:bg-fg/20 transition-colors">
             <X size={18} />
           </button>
         </div>
 
-        <div id="om-pdf-export" className="on-light bg-surface text-on-light rounded-2xl shadow-2xl p-10 md:p-14" dir="rtl">
+        <div id="om-pdf-export" className="scheme-paper bg-surface text-fg rounded-2xl shadow-elevated p-10 md:p-14" dir="rtl">
           <div className="flex items-start justify-between pb-6 border-b-2" style={{ borderColor: BRAND }}>
             <div>
               <div className="text-xs font-black tracking-[0.3em] uppercase" style={{ color: BRAND }}>
-                Optimal<span className="text-on-light">Motion</span>
+                Optimal<span className="text-fg">Motion</span>
               </div>
-              <h1 className="text-3xl font-black text-on-light mt-3">{pkg.title}</h1>
-              {pkg.description && <p className="text-on-light-muted mt-1.5 max-w-lg">{pkg.description}</p>}
+              <h1 className="text-3xl font-black text-fg mt-3">{pkg.title}</h1>
+              {pkg.description && <p className="text-muted mt-1.5 max-w-lg">{pkg.description}</p>}
             </div>
-            <div className="text-left text-xs text-on-light-muted shrink-0">
+            <div className="text-left text-xs text-muted shrink-0">
               <div>הופק בתאריך</div>
-              <div className="font-bold text-on-light-muted">{new Date().toLocaleDateString("he-IL")}</div>
+              <div className="font-bold text-muted">{new Date().toLocaleDateString("he-IL")}</div>
             </div>
           </div>
 
           {rows.length === 0 ? (
-            <p className="text-on-light-muted text-center py-14">לתבנית הזו עדיין אין תרגילים.</p>
+            <p className="text-muted text-center py-14">לתבנית הזו עדיין אין תרגילים.</p>
           ) : (
             <div className="mt-8 space-y-10">
               {weeks.map((week) => {
@@ -105,35 +105,35 @@ export default function ProgramPdfExport({ pkg, packageExercises, exerciseCatalo
 
                         return (
                           <div key={dayId} className="break-inside-avoid">
-                            <h3 className="text-sm font-extrabold text-on-light mb-2 flex items-center gap-2">
+                            <h3 className="text-sm font-extrabold text-fg mb-2 flex items-center gap-2">
                               <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: BRAND }} />
                               {dayLabel(dayId) ? `יום ${dayLabel(dayId)}` : "כל השבוע"}
                             </h3>
                             <table className="w-full text-sm border-collapse">
                               <thead>
                                 <tr className="border-b-2" style={{ borderColor: BRAND }}>
-                                  <th className="text-right py-2 font-extrabold text-on-light-muted text-xs uppercase tracking-wide">תרגיל</th>
-                                  <th className="text-center py-2 font-extrabold text-on-light-muted text-xs uppercase tracking-wide">סטים</th>
-                                  <th className="text-center py-2 font-extrabold text-on-light-muted text-xs uppercase tracking-wide">יעד</th>
-                                  <th className="text-center py-2 font-extrabold text-on-light-muted text-xs uppercase tracking-wide">RIR</th>
-                                  <th className="text-center py-2 font-extrabold text-on-light-muted text-xs uppercase tracking-wide">טמפו</th>
-                                  <th className="text-center py-2 font-extrabold text-on-light-muted text-xs uppercase tracking-wide">מנוחה</th>
+                                  <th className="text-right py-2 font-extrabold text-muted text-xs uppercase tracking-wide">תרגיל</th>
+                                  <th className="text-center py-2 font-extrabold text-muted text-xs uppercase tracking-wide">סטים</th>
+                                  <th className="text-center py-2 font-extrabold text-muted text-xs uppercase tracking-wide">יעד</th>
+                                  <th className="text-center py-2 font-extrabold text-muted text-xs uppercase tracking-wide">RIR</th>
+                                  <th className="text-center py-2 font-extrabold text-muted text-xs uppercase tracking-wide">טמפו</th>
+                                  <th className="text-center py-2 font-extrabold text-muted text-xs uppercase tracking-wide">מנוחה</th>
                                 </tr>
                               </thead>
                               <tbody>
                                 {dayRows.map((row) => (
-                                  <tr key={row.id} className="border-b border-line-light">
-                                    <td className="py-2.5 font-bold text-on-light">
+                                  <tr key={row.id} className="border-b border-line">
+                                    <td className="py-2.5 font-bold text-fg">
                                       {getExerciseName(row.exercise, "he")}
-                                      {row.block && row.block !== "A" && <span className="text-on-light-muted font-medium mr-1.5">· בלוק {row.block}</span>}
+                                      {row.block && row.block !== "A" && <span className="text-muted font-medium mr-1.5">· בלוק {row.block}</span>}
                                     </td>
-                                    <td className="py-2.5 text-center text-on-light tabular-nums">{row.sets}</td>
-                                    <td className="py-2.5 text-center text-on-light tabular-nums">
+                                    <td className="py-2.5 text-center text-fg tabular-nums">{row.sets}</td>
+                                    <td className="py-2.5 text-center text-fg tabular-nums">
                                       {row.reps} {row.is_time ? "שנ׳" : "חז׳"}
                                     </td>
-                                    <td className="py-2.5 text-center text-on-light tabular-nums">{row.rir ?? "—"}</td>
-                                    <td className="py-2.5 text-center text-on-light tabular-nums">{formatTempo(row)}</td>
-                                    <td className="py-2.5 text-center text-on-light tabular-nums">{row.rest_time_seconds ?? 60}s</td>
+                                    <td className="py-2.5 text-center text-fg tabular-nums">{row.rir ?? "—"}</td>
+                                    <td className="py-2.5 text-center text-fg tabular-nums">{formatTempo(row)}</td>
+                                    <td className="py-2.5 text-center text-fg tabular-nums">{row.rest_time_seconds ?? 60}s</td>
                                   </tr>
                                 ))}
                               </tbody>
@@ -148,7 +148,7 @@ export default function ProgramPdfExport({ pkg, packageExercises, exerciseCatalo
             </div>
           )}
 
-          <div className="mt-12 pt-6 border-t border-line-light text-center text-[10px] text-on-light-muted tracking-wide">
+          <div className="mt-12 pt-6 border-t border-line text-center text-[10px] text-muted tracking-wide">
             נבנה באמצעות OptimalMotion · תוכנית אישית מבוססת ראיות
           </div>
         </div>

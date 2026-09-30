@@ -19,7 +19,7 @@ export default function BodyDiagram({ highlightedMuscles, onMuscleClick }: BodyD
     <BodyModel
       data={[{ name: "Pain Areas", muscles: highlightedMuscles as never }]}
       onClick={({ muscle }: { muscle: string }) => onMuscleClick(muscle)}
-      bodyColor="var(--muscle-inactive-dark)"
+      bodyColor="var(--muscle-inactive)"
       highlightedColors={["var(--warning)"]}
     />
   );

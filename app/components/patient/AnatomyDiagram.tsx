@@ -22,15 +22,15 @@ const isDevMode = process.env.NODE_ENV !== "production";
 // units so nothing touches the SVG edge.
 const VIEW_BOX: Record<View, string> = { front: "140 10 445 875", back: "746 8 440 873" };
 
-// One clean medical-chart look everywhere: solid --muscle-inactive-dark
+// One clean medical-chart look everywhere: solid --muscle-inactive
 // base fill, muted outlines, on an opaque dark (--bg-elevated) panel in
 // both variants. The diagram is always drawn on dark — even inside a light
 // --surface sheet — because the muscle tokens only clear 3:1 against the
-// dark inactive fill (teal/warm vs --muscle-inactive-light is ~1.3:1).
+// dark inactive fill (teal/warm vs a light #CBD5DC inactive fill is ~1.3:1). Wrapped in .scheme-dark so it stays dark in the light theme too.
 // Colors go through `style` (not fill/stroke attributes) so the CSS
 // variables resolve.
-const BASE_FILL = "var(--muscle-inactive-dark)";
-const STROKE_COLOR = "var(--text-on-dark-muted)";
+const BASE_FILL = "var(--muscle-inactive)";
+const STROKE_COLOR = "var(--text-muted)";
 // Tuned for this source's much larger coordinate space (viewBox ~445 units
 // wide) — the previous body-muscles-based version used 0.25 for a ~35-unit
 // viewBox; the equivalent visual weight here is roughly 13x that.
@@ -127,8 +127,8 @@ export default function AnatomyDiagram({ primaryMuscles, secondaryMuscles = [], 
   const viewWrapperClassName = size ? undefined : "flex-1 max-w-[130px]";
   const containerClassName =
     variant === "card"
-      ? `flex items-center justify-center gap-3 bg-elevated rounded-2xl py-3 ${className ?? ""}`
-      : `flex items-center gap-0.5 bg-elevated rounded-2xl p-1.5 shadow-[0_8px_20px_-4px_color-mix(in_srgb,var(--bg-base)_35%,transparent)] ${className ?? ""}`;
+      ? `scheme-dark flex items-center justify-center gap-3 bg-elevated rounded-2xl py-3 ${className ?? ""}`
+      : `scheme-dark flex items-center gap-0.5 bg-elevated rounded-2xl p-1.5 shadow-[0_8px_20px_-4px_color-mix(in_srgb,var(--shadow-ink)_35%,transparent)] ${className ?? ""}`;
 
   return (
     <div className={containerClassName} dir="ltr">

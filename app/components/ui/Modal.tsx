@@ -26,24 +26,24 @@ interface ModalProps {
 // now matches them instead of being the odd one out.
 export default function Modal({ onClose, title, icon, children }: ModalProps) {
   return (
-    <div className="fixed inset-0 z-[200] bg-shell/60 backdrop-blur-sm flex items-end justify-center" onClick={onClose}>
+    <div className="fixed inset-0 z-[200] bg-backdrop backdrop-blur-sm flex items-end justify-center" onClick={onClose}>
       <div
-        className="bg-elevated text-on-dark w-full overflow-hidden shadow-2xl relative flex flex-col max-h-[92vh] rounded-t-3xl m-0 pb-[env(safe-area-inset-bottom)] animate-in slide-in-from-bottom duration-300 ease-out"
+        className="bg-elevated text-fg w-full overflow-hidden shadow-elevated relative flex flex-col max-h-[92vh] rounded-t-3xl m-0 pb-[env(safe-area-inset-bottom)] animate-in slide-in-from-bottom duration-300 ease-out"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex justify-between items-center p-5 border-b border-line-dark">
-          <h3 className="text-xl font-black flex items-center gap-2 text-on-dark">
+        <div className="flex justify-between items-center p-5 border-b border-line">
+          <h3 className="text-xl font-black flex items-center gap-2 text-fg">
             {icon} {title}
           </h3>
           <button
             onClick={onClose}
             aria-label="סגור"
-            className="text-on-dark-muted hover:text-on-dark bg-line-dark hover:bg-on-dark/15 p-2 rounded-full transition-colors"
+            className="text-muted hover:text-fg bg-line hover:bg-fg/15 p-2 rounded-full transition-colors"
           >
             <X size={20} />
           </button>
         </div>
-        <div className="on-light p-6 overflow-y-auto flex-1 bg-surface text-on-light">{children}</div>
+        <div className="on-light p-6 overflow-y-auto flex-1 bg-surface text-fg">{children}</div>
       </div>
     </div>
   );

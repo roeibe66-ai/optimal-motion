@@ -30,7 +30,7 @@ export default function RegisterPage() {
   return (
     <div
       className="relative min-h-screen flex items-center justify-center p-4"
-      style={{ background: "radial-gradient(120% 70% at 50% 0%, var(--bg-elevated) 0%, var(--bg-base) 62%), linear-gradient(180deg, var(--bg-elevated), var(--bg-base) 55%)" }}
+      style={{ background: "radial-gradient(120% 70% at 50% 0%, var(--bg-elevated) 0%, var(--bg-page) 62%), linear-gradient(180deg, var(--bg-elevated), var(--bg-page) 55%)" }}
       dir={lang === "he" ? "rtl" : "ltr"}
     >
       <div
@@ -40,24 +40,24 @@ export default function RegisterPage() {
             "radial-gradient(circle at 20% 20%, color-mix(in srgb, var(--accent) 18%, transparent), transparent 45%), radial-gradient(circle at 85% 10%, color-mix(in srgb, var(--accent) 10%, transparent), transparent 40%)",
         }}
       ></div>
-      <div className="on-light bg-surface backdrop-blur-xl p-8 md:p-12 rounded-[2rem] shadow-2xl w-full max-w-md relative z-10 border border-line-light animate-in zoom-in duration-300">
+      <div className="on-light bg-surface backdrop-blur-xl p-8 md:p-12 rounded-[2rem] shadow-elevated w-full max-w-md relative z-10 border border-line animate-in zoom-in duration-300">
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-3xl font-black text-on-light flex items-center gap-2">
-            <UserPlus size={28} className="text-accent-on-light" /> {t.signup}
+          <h2 className="text-3xl font-black text-fg flex items-center gap-2">
+            <UserPlus size={28} className="text-accent-fg" /> {t.signup}
           </h2>
           <button
             onClick={() => setLang(lang === "he" ? "en" : "he")}
-            className="bg-surface-alt hover:bg-line-light text-on-light px-3 py-1 rounded-full font-bold text-xs flex items-center gap-1"
+            className="on-light bg-surface-alt hover:bg-line text-fg px-3 py-1 rounded-full font-bold text-xs flex items-center gap-1"
           >
             <Globe size={14} /> {lang === "he" ? "English" : "עברית"}
           </button>
         </div>
-        <p className="text-sm text-on-light-muted mb-6 font-medium">הצטרף למערכת כדי לקבל גישה לתוכניות המקצועיות שלנו.</p>
+        <p className="text-sm text-muted mb-6 font-medium">הצטרף למערכת כדי לקבל גישה לתוכניות המקצועיות שלנו.</p>
 
         <form onSubmit={handleRegister} className="space-y-4">
           <div className="flex gap-4">
             <div className="w-1/2">
-              <label htmlFor="reg-first-name" className="block text-xs font-bold text-on-light-muted mb-1.5">
+              <label htmlFor="reg-first-name" className="block text-xs font-bold text-muted mb-1.5">
                 שם פרטי
               </label>
               <input
@@ -66,12 +66,12 @@ export default function RegisterPage() {
                 placeholder="שם פרטי"
                 value={regFirstName}
                 onChange={(e) => setRegFirstName(e.target.value)}
-                className="w-full border-b-2 border-line-input p-3 bg-transparent focus:border-focus-on-light focus:ring-2 focus:ring-focus-on-light outline-none transition-colors"
+                className="w-full border-b-2 border-line-input p-3 bg-transparent focus:border-focus focus:ring-2 focus:ring-focus outline-none transition-colors"
                 required
               />
             </div>
             <div className="w-1/2">
-              <label htmlFor="reg-last-name" className="block text-xs font-bold text-on-light-muted mb-1.5">
+              <label htmlFor="reg-last-name" className="block text-xs font-bold text-muted mb-1.5">
                 שם משפחה
               </label>
               <input
@@ -80,13 +80,13 @@ export default function RegisterPage() {
                 placeholder="שם משפחה"
                 value={regLastName}
                 onChange={(e) => setRegLastName(e.target.value)}
-                className="w-full border-b-2 border-line-input p-3 bg-transparent focus:border-focus-on-light focus:ring-2 focus:ring-focus-on-light outline-none transition-colors"
+                className="w-full border-b-2 border-line-input p-3 bg-transparent focus:border-focus focus:ring-2 focus:ring-focus outline-none transition-colors"
                 required
               />
             </div>
           </div>
           <div>
-            <label htmlFor="reg-email" className="block text-xs font-bold text-on-light-muted mb-1.5">
+            <label htmlFor="reg-email" className="block text-xs font-bold text-muted mb-1.5">
               אימייל
             </label>
             <input
@@ -95,20 +95,20 @@ export default function RegisterPage() {
               placeholder="אימייל"
               value={regEmail}
               onChange={(e) => setRegEmail(e.target.value)}
-              className="w-full border-b-2 border-line-input p-3 bg-transparent focus:border-focus-on-light focus:ring-2 focus:ring-focus-on-light outline-none transition-colors"
+              className="w-full border-b-2 border-line-input p-3 bg-transparent focus:border-focus focus:ring-2 focus:ring-focus outline-none transition-colors"
               required
             />
           </div>
           <PasswordFieldsWithStrength password={regPass} setPassword={setRegPass} confirmPassword={regConfirmPass} setConfirmPassword={setRegConfirmPass} />
 
           <div>
-            <label className="block text-xs font-bold text-on-light-muted mb-2 uppercase">מסלול</label>
+            <label className="block text-xs font-bold text-muted mb-2 uppercase">מסלול</label>
             <div className="flex gap-3">
               <button
                 type="button"
                 onClick={() => setRegPatientType("clinical")}
                 className={`flex-1 py-3 rounded-xl text-sm font-bold flex flex-col items-center gap-2 border-2 transition-all ${
-                  regPatientType === "clinical" ? "border-accent bg-accent/15 text-accent-on-light" : "border-line-light bg-surface text-on-light-muted hover:border-line-input"
+                  regPatientType === "clinical" ? "border-accent bg-accent/15 text-accent-fg" : "border-line bg-surface text-muted hover:border-line-input"
                 }`}
               >
                 <HeartPulse size={20} /> שיקום
@@ -117,7 +117,7 @@ export default function RegisterPage() {
                 type="button"
                 onClick={() => setRegPatientType("fitness")}
                 className={`flex-1 py-3 rounded-xl text-sm font-bold flex flex-col items-center gap-2 border-2 transition-all ${
-                  regPatientType === "fitness" ? "border-accent bg-accent/15 text-accent-on-light" : "border-line-light bg-surface text-on-light-muted hover:border-line-input"
+                  regPatientType === "fitness" ? "border-accent bg-accent/15 text-accent-fg" : "border-line bg-surface text-muted hover:border-line-input"
                 }`}
               >
                 <Dumbbell size={20} /> כושר
@@ -128,22 +128,22 @@ export default function RegisterPage() {
           <button
             type="submit"
             disabled={!canSubmit}
-            className="w-full bg-accent text-accent-ink py-4 rounded-xl font-bold hover:bg-accent-hover active:bg-accent-active transition-colors mt-6 shadow-md text-lg disabled:bg-elevated disabled:text-on-dark-muted disabled:cursor-not-allowed disabled:hover:bg-elevated"
+            className="w-full bg-btn-primary text-btn-primary-fg py-4 rounded-xl font-bold hover:bg-btn-primary-hover active:bg-btn-primary-active transition-colors mt-6 shadow-md text-lg disabled:bg-disabled disabled:text-disabled-fg disabled:cursor-not-allowed disabled:hover:bg-disabled"
           >
             צור משתמש
           </button>
         </form>
 
         <div className="flex items-center gap-3 my-5">
-          <div className="flex-1 h-px bg-line-light"></div>
-          <span className="text-xs font-bold text-on-light-muted">או</span>
-          <div className="flex-1 h-px bg-line-light"></div>
+          <div className="flex-1 h-px bg-line"></div>
+          <span className="text-xs font-bold text-muted">או</span>
+          <div className="flex-1 h-px bg-line"></div>
         </div>
 
         <button
           type="button"
           onClick={handleGoogleSignIn}
-          className="w-full flex items-center justify-center gap-3 border-2 border-accent text-accent-on-light py-3.5 rounded-xl font-bold hover:bg-accent/12 transition-colors"
+          className="w-full flex items-center justify-center gap-3 border-2 border-btn-secondary text-accent-fg py-3.5 rounded-xl font-bold hover:bg-btn-secondary-hover transition-colors"
         >
           <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
             <path style={{ fill: "var(--brand-google-blue)" }} d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.9c1.7-1.56 2.7-3.86 2.7-6.62Z" />
@@ -157,7 +157,7 @@ export default function RegisterPage() {
         <div className="mt-6 text-center">
           <button
             onClick={() => setCurrentView("login")}
-            className="text-sm font-bold text-on-light-muted hover:text-on-light transition-colors"
+            className="text-sm font-bold text-muted hover:text-fg transition-colors"
           >
             כבר יש לך משתמש? לחץ להתחברות
           </button>

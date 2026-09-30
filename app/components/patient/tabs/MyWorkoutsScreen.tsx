@@ -29,7 +29,7 @@ function relativeCreatedLabel(createdAt: string): string {
   return months === 1 ? "נוצר לפני חודש" : `נוצר לפני ${months} חודשים`;
 }
 
-// Dark page (--bg-base) with light --surface program cards, per the global
+// Page (--bg-page) with --surface program cards, per the global
 // color system in app/globals.css.
 //
 // Each program can hold several ordinal days (Day 1, Day 2, ...), so
@@ -51,28 +51,28 @@ export default function MyWorkoutsScreen({ savedPrograms, exerciseCatalog, onBac
       <div className="flex items-center gap-3 mb-6">
         <button
           onClick={onBack}
-          className="w-[38px] h-[38px] rounded-full bg-elevated shadow-[0_8px_30px_color-mix(in_srgb,var(--bg-base)_4%,transparent)] flex items-center justify-center shrink-0 hover:bg-line-dark active:scale-90 transition-all duration-150 ease-out"
+          className="w-[38px] h-[38px] rounded-full bg-elevated shadow-card flex items-center justify-center shrink-0 hover:bg-line active:scale-90 transition-all duration-150 ease-out"
         >
           {/* ChevronRight, not Left: this is a "back" action, and in RTL that points right */}
-          <ChevronRight size={16} className="text-on-dark" />
+          <ChevronRight size={16} className="text-fg" />
         </button>
         <div>
-          <h2 className="text-xl md:text-2xl font-black text-on-dark tracking-tight">התוכניות שלי</h2>
-          <p className="text-xs text-on-dark-muted mt-0.5">{savedPrograms.length} תוכניות שבועיות שמורות</p>
+          <h2 className="text-xl md:text-2xl font-black text-fg tracking-tight">התוכניות שלי</h2>
+          <p className="text-xs text-muted mt-0.5">{savedPrograms.length} תוכניות שבועיות שמורות</p>
         </div>
       </div>
 
       <div className="flex flex-col gap-4">
         {savedPrograms.length === 0 ? (
-          <div className="on-light bg-surface rounded-[2rem] shadow-[0_8px_30px_color-mix(in_srgb,var(--bg-base)_8%,transparent)] p-10 flex flex-col items-center text-center gap-2">
-            <div className="w-14 h-14 rounded-full bg-accent/15 text-accent-on-light flex items-center justify-center mb-1.5">
+          <div className="on-light bg-surface rounded-[2rem] shadow-card p-10 flex flex-col items-center text-center gap-2">
+            <div className="w-14 h-14 rounded-full bg-accent/15 text-accent-fg flex items-center justify-center mb-1.5">
               <Dumbbell size={26} />
             </div>
-            <h3 className="text-lg font-black text-on-light">עדיין לא שמרת תוכניות אימון</h3>
-            <p className="text-on-light-muted text-sm max-w-xs">בנה תוכנית שבועית מהמאגר הפתוח ושמור אותה כאן לשימוש חוזר בכל זמן.</p>
+            <h3 className="text-lg font-black text-fg">עדיין לא שמרת תוכניות אימון</h3>
+            <p className="text-muted text-sm max-w-xs">בנה תוכנית שבועית מהמאגר הפתוח ושמור אותה כאן לשימוש חוזר בכל זמן.</p>
             <button
               onClick={onBack}
-              className="mt-4 bg-accent hover:bg-accent-hover active:bg-accent-active text-accent-ink font-black text-[13px] px-6 py-3.5 rounded-2xl flex items-center justify-center gap-2 transition-colors"
+              className="mt-4 bg-btn-primary hover:bg-btn-primary-hover active:bg-btn-primary-active text-btn-primary-fg font-black text-[13px] px-6 py-3.5 rounded-2xl flex items-center justify-center gap-2 transition-colors"
             >
               <Plus size={16} />
               בנה תוכנית חדשה
@@ -98,18 +98,18 @@ export default function MyWorkoutsScreen({ savedPrograms, exerciseCatalog, onBac
                 }, {});
 
               return (
-                <div key={program.id} className="on-light bg-surface rounded-2xl shadow-[0_8px_30px_color-mix(in_srgb,var(--bg-base)_8%,transparent)] p-4.5 flex flex-col gap-3.5">
+                <div key={program.id} className="on-light bg-surface rounded-2xl shadow-card p-4.5 flex flex-col gap-3.5">
                   <div className="flex justify-between items-start gap-2.5">
                     <div>
-                      <div className="text-base font-black text-on-light">{program.name}</div>
-                      <div className="text-[11px] text-on-light-muted mt-0.5">
+                      <div className="text-base font-black text-fg">{program.name}</div>
+                      <div className="text-[11px] text-muted mt-0.5">
                         {days.length} ימים · {totalExerciseCount} תרגילים · {relativeCreatedLabel(program.created_at)}
                       </div>
                     </div>
                     <button
                       onClick={() => handleDelete(program)}
                       aria-label="מחק תוכנית"
-                      className="w-8 h-8 rounded-full bg-surface-alt flex items-center justify-center text-on-light-muted hover:text-danger hover:bg-danger/10 transition-colors shrink-0"
+                      className="on-light w-8 h-8 rounded-full bg-surface-alt flex items-center justify-center text-muted hover:text-danger-fg hover:bg-danger/10 transition-colors shrink-0"
                     >
                       <Trash2 size={14} />
                     </button>
@@ -141,7 +141,7 @@ export default function MyWorkoutsScreen({ savedPrograms, exerciseCatalog, onBac
                       <button
                         key={d.day_number}
                         onClick={() => onStartProgramDay(program, d.day_number)}
-                        className="flex items-center gap-1.5 bg-accent text-accent-ink font-black text-[12px] py-2.5 px-3.5 rounded-2xl hover:bg-accent-hover active:bg-accent-active transition-colors"
+                        className="flex items-center gap-1.5 bg-btn-primary text-btn-primary-fg font-black text-[12px] py-2.5 px-3.5 rounded-2xl hover:bg-btn-primary-hover active:bg-btn-primary-active transition-colors"
                       >
                         <Play size={12} fill="currentColor" />
                         יום {d.day_number} ({d.exercises.length})
@@ -151,7 +151,7 @@ export default function MyWorkoutsScreen({ savedPrograms, exerciseCatalog, onBac
 
                   <button
                     onClick={() => onEditProgram(program)}
-                    className="w-full bg-transparent border-[1.5px] border-accent text-accent-on-light font-bold text-[13px] py-3 rounded-2xl hover:bg-accent/12 transition-colors"
+                    className="w-full bg-transparent border-[1.5px] border-btn-secondary text-accent-fg font-bold text-[13px] py-3 rounded-2xl hover:bg-btn-secondary-hover transition-colors"
                   >
                     ערוך תוכנית
                   </button>
@@ -161,7 +161,7 @@ export default function MyWorkoutsScreen({ savedPrograms, exerciseCatalog, onBac
 
             <button
               onClick={onBack}
-              className="w-full bg-accent/8 border-[1.5px] border-dashed border-accent/35 text-accent font-extrabold text-[13px] py-4 rounded-[1.25rem] flex items-center justify-center gap-2 hover:bg-accent/12 transition-colors"
+              className="w-full bg-accent/8 border-[1.5px] border-dashed border-accent/35 text-accent-fg font-extrabold text-[13px] py-4 rounded-[1.25rem] flex items-center justify-center gap-2 hover:bg-accent/12 transition-colors"
             >
               <Plus size={16} />
               בנה תוכנית חדשה

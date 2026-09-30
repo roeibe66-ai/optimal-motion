@@ -96,11 +96,11 @@ export const MUSCLE_TO_BODY_PARTS: Record<string, string[]> = {
 // global color tokens (app/globals.css) — no per-category hues any more:
 // the theme has one accent (teal) for tags, and --warm is reserved for a
 // single highlight type (premium/featured), not for any category. `text`/`bg`/`border` are for tags on
-// a light --surface (accent-on-light text on a 15% accent tint clears
+// a light --surface (--accent-fg text on a 15% accent tint clears
 // WCAG AA); `solid` is a small filled dot/indicator.
 const mix = (token: string, pct: number) => `color-mix(in srgb, var(${token}) ${pct}%, transparent)`;
-const ACCENT_TAG = { text: "var(--accent-on-light)", bg: mix("--accent", 15), border: mix("--accent", 30), solid: "var(--accent)" };
-const NEUTRAL_TAG = { text: "var(--text-on-light-muted)", bg: mix("--text-on-light-muted", 12), border: mix("--text-on-light-muted", 30), solid: "var(--text-on-light-muted)" };
+const ACCENT_TAG = { text: "var(--accent-fg)", bg: mix("--accent", 15), border: mix("--accent", 30), solid: "var(--accent)" };
+const NEUTRAL_TAG = { text: "var(--text-muted)", bg: mix("--text-muted", 12), border: mix("--text-muted", 30), solid: "var(--text-muted)" };
 
 export const BODY_PART_STYLES: Record<string, { text: string; bg: string; border: string; solid: string }> = {
   chest: ACCENT_TAG,
@@ -212,7 +212,7 @@ const darkTag = (token: string) => ({
   text: `var(${token})`,
   bg: mix(token, 15),
   border: mix(token, 30),
-  glow: `color-mix(in srgb, var(${token}) 22%, var(--bg-base))`,
+  glow: `color-mix(in srgb, var(${token}) 22%, var(--bg-page))`,
   radial: mix(token, 30),
 });
 export const ADMIN_CATEGORY_STYLES: Record<string, { text: string; bg: string; border: string; glow: string; radial: string }> = {
@@ -224,7 +224,10 @@ export const ADMIN_CATEGORY_STYLES: Record<string, { text: string; bg: string; b
   "פליומטרי": darkTag("--accent"),
   "שיקום": darkTag("--accent"),
 };
-export const DEFAULT_ADMIN_CATEGORY_STYLE = { ...darkTag("--text-on-dark-muted"), glow: "var(--bg-elevated)" };
+// Patient calendar: one style for every assigned program (programs are
+// free-text names, so there is no per-program color).
+export const PROGRAM_TAG_STYLE = darkTag("--accent");
+export const DEFAULT_ADMIN_CATEGORY_STYLE = { ...darkTag("--text-muted"), glow: "var(--bg-elevated)" };
 
 // react-body-highlighter (the muscle-diagram library backing ExerciseMuscleMap
 // and PlanTab's hero diagram) only recognizes a fixed ~21-muscle vocabulary and

@@ -10,7 +10,17 @@ import type { Exercise, PatientExercise, SessionPerformanceEntry, WorkoutLog } f
 // A PatientExercise as it's actually consumed here: already joined with its
 // Exercise (that join happens in usePatientData, which filters out any
 // assignment whose exercise failed to resolve before this hook ever sees it).
-export type HydratedPatientExercise = PatientExercise & { exercise: Exercise };
+// program_name is joined client-side from patient_programs (see
+// usePatientData). Optional because the offline plan cache can predate it.
+export type HydratedPatientExercise = PatientExercise & { exercise: Exercise; program_name?: string };
+
+// Title for rows the patient saved themselves from the DIY builder — those
+// have no admin program (program_id is null).
+export const SELF_BUILT_PROGRAM_NAME = "האימונים שלי";
+
+// The patient's plan is grouped by the named program the admin assigned
+// (not by exercise category): the program name is the workout's title.
+export const programNameOf = (pe: HydratedPatientExercise) => pe.program_name ?? SELF_BUILT_PROGRAM_NAME;
 
 // One entry in the active session's block grid. Plan-based sets are
 // HydratedPatientExercise as-is; a DIY session synthesizes objects with this
@@ -131,13 +141,15 @@ export function useWorkoutSession({
 
   const weekFilteredPatientExercises = patientExercises.filter((pe) => (pe.week || 1) === activePatientWeek);
 
-  // The category picker on the Plan tab's overview screen — every distinct
-  // category assigned in the currently-selected week (regardless of the
-  // day/category filters below, which only narrow the active workout).
-  const patientCategories = Array.from(new Set(weekFilteredPatientExercises.flatMap((pe) => pe.exercise.categories)));
+  // The program picker on the Plan tab's overview screen — every distinct
+  // assigned program in the currently-selected week (regardless of the
+  // day/program filters below, which only narrow the active workout).
+  // Named `patientCategories`/`selectedCategory` for history: these hold
+  // program names now, not exercise categories.
+  const patientCategories = Array.from(new Set(weekFilteredPatientExercises.map(programNameOf)));
 
   const displayedExercises = weekFilteredPatientExercises.filter((pe) => {
-    if (!isDiyMode && (!selectedCategory || !pe.exercise.categories.includes(selectedCategory))) return false;
+    if (!isDiyMode && (!selectedCategory || programNameOf(pe) !== selectedCategory)) return false;
     if (selectedDayFilter === "all") return true;
     if (!pe.scheduled_days || pe.scheduled_days.trim() === "") return true;
     return pe.scheduled_days.split(",").includes(selectedDayFilter);

@@ -379,6 +379,38 @@ function classifyEvidence(candidate: CandidatePaper): EvidenceTier {
     return "cohort";
   return "other";
 }
+// Letter grade shown to the admin next to each result — a coarse, readable
+// summary of the same study-design tier the ranking used.
+const EVIDENCE_GRADE: Record<EvidenceTier, "A" | "B" | "C"> = {
+  meta_analysis: "A",
+  systematic_review: "A",
+  rct: "B",
+  cohort: "C",
+  other: "C",
+  case_report: "C",
+};
+
+// Sample size as the abstract itself states it — "23 studies", "n = 120",
+// "412 participants". Regex over the text, never inferred, so a result with
+// no stated sample simply shows none. For reviews both the study count and
+// the pooled participant count are reported when present.
+const PARTICIPANT_NOUNS =
+  "participants|patients|subjects|athletes|adults|individuals|people|women|men|volunteers|runners|players|children|adolescents|older adults|elderly";
+function parseCount(raw: string): number {
+  return Number(raw.replace(/,/g, ""));
+}
+function extractSampleSizeHe(abstract: string, isReview: boolean): string | null {
+  const parts: string[] = [];
+  // Only reviews report "N studies" as their sample; elsewhere it's usually
+  // a reference to prior work.
+  const studies = isReview && abstract.match(/\b(\d{1,4})\s+(?:randomi[sz]ed\s+)?(?:controlled\s+)?(?:studies|trials|RCTs)\b/i);
+  if (studies) parts.push(`${parseCount(studies[1]).toLocaleString("he-IL")} מחקרים`);
+  const participants =
+    abstract.match(new RegExp(`\\b(\\d{1,3}(?:,\\d{3})+|\\d{2,6})\\s+(?:${PARTICIPANT_NOUNS})\\b`, "i")) ??
+    abstract.match(/\b[nN]\s*=\s*(\d{1,3}(?:,\d{3})+|\d{1,6})\b/);
+  if (participants) parts.push(`${parseCount(participants[1]).toLocaleString("he-IL")} משתתפים`);
+  return parts.length > 0 ? parts.join(" · ") : null;
+}
 // -------------------------------------------------------------------------
 
 // Ranks by relevance score (when screening ran), then evidence tier (meta-analyses and systematic reviews above
@@ -510,7 +542,9 @@ function errorMessage(err: unknown): string {
 
 const paperFactSchema = z.object({
   summaryHe: z.string().describe("תקציר קצר ופשוט של מסקנת המחקר, 2-3 משפטים, בעברית ברורה להדיוט"),
-  didYouKnowHe: z.string().describe("משפט 'הידעת' אחד עד שניים, קליט, בעברית, מבוסס על ממצאי המחקר בלבד"),
+  didYouKnowHe: z
+    .string()
+    .describe("כותרת 'הידעת' קצרה: משפט אחד בלבד, עד 12 מילים, בעברית, הממצא המרכזי בלבד — בלי הקדמות, בלי 'מחקר מצא ש', בלי פרטים משניים"),
 });
 
 const RESEARCH_AGENT_SYSTEM_PROMPT = `את/ה עוזר/ת מחקר עבור אפליקציית כושר ושיקום פיזיותרפי בשם OptimalMotion.
@@ -519,7 +553,9 @@ const RESEARCH_AGENT_SYSTEM_PROMPT = `את/ה עוזר/ת מחקר עבור אפ
 
 בהינתן כותרת ותקציר של מאמר אקדמי (באנגלית), עליך:
 1. לכתוב סיכום קצר ופשוט של מסקנת המחקר, בעברית ברורה ונגישה, ללא ז'רגון מחקרי.
-2. לכתוב עובדת "הידעת" בת משפט עד שניים, קליטה וסקרנית, בעברית, המבוססת אך ורק על ממצאי המאמר, ומנוסחת עבור מתאמנים/מטופלים באפליקציה - לא עבור אנשי מקצוע.
+2. לכתוב כותרת "הידעת" קצרה וחדה: משפט אחד בלבד, עד 12 מילים, בעברית, המבוססת אך ורק על ממצאי המאמר, ומנוסחת עבור מתאמנים/מטופלים באפליקציה - לא עבור אנשי מקצוע. זו כותרת שמוצגת באותיות גדולות — רק הממצא המרכזי, בלי הקדמות ("מחקר חדש מצא ש..."), בלי אחוזים או מספרים משניים ובלי הסברים. את ההסבר המלא שמור לסיכום.
+   דוגמה טובה: "אימון כוח פעמיים בשבוע מפחית כאבי ברך."
+   דוגמה ארוכה מדי: "מחקר שבדק מאות משתתפים מצא שאימוני כוח המבוצעים פעמיים בשבוע לאורך שמונה שבועות עשויים להפחית משמעותית כאבי ברך."
 
 כללים:
 - התבסס אך ורק על התוכן שסופק. אל תמציא נתונים, מספרים או פרטים שלא מופיעים בתקציר.
@@ -590,7 +626,8 @@ export async function generateResearchFacts(query: string): Promise<ResearchAgen
   const settled = await Promise.allSettled(
     papers.map(async (paper): Promise<ResearchFinding> => {
       const facts = await summarizePaperInHebrew({ title: paper.title, abstract: paper.abstract, year: paper.year }, plan.focusEn);
-      const evidenceLabelHe = EVIDENCE_LABEL_HE[classifyEvidence(paper)];
+      const tier = classifyEvidence(paper);
+      const evidenceLabelHe = EVIDENCE_LABEL_HE[tier];
       return {
         paperTitle: paper.title,
         paperUrl: paper.url,
@@ -602,6 +639,11 @@ export async function generateResearchFacts(query: string): Promise<ResearchAgen
         // drift from what actually determined this paper's rank.
         evidenceLabelHe,
         citationLabelHe: `מקור: ${evidenceLabelHe}${paper.year ? `, ${paper.year}` : ""}`,
+        evidenceGrade: EVIDENCE_GRADE[tier],
+        citationCount: paper.citationCount,
+        venue: paper.venue,
+        isTopTierJournal: isTopTierJournal(paper.venue),
+        sampleSizeHe: extractSampleSizeHe(paper.abstract, tier === "meta_analysis" || tier === "systematic_review"),
       };
     })
   );

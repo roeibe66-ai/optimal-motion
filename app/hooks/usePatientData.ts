@@ -33,18 +33,27 @@ export function usePatientData() {
   const fetchPatientData = useCallback(async () => {
     if (!loggedInPatient) return;
 
-    const [assigns, exs, logs] = await Promise.all([
+    const [assigns, exs, logs, programs] = await Promise.all([
       supabase.from("patient_exercises").select("*").eq("patient_id", loggedInPatient.id),
       supabase.from("exercises").select("*"),
       supabase.from("workout_logs").select("*").eq("patient_id", loggedInPatient.id).order("created_at", { ascending: false }),
+      supabase.from("patient_programs").select("id, name").eq("patient_id", loggedInPatient.id),
     ]);
+    const programNameById = new Map((programs.data ?? []).map((p) => [p.id as string, p.name as string]));
 
     const exerciseRows = (exs.data ?? []) as Exercise[];
     const assignmentRows = (assigns.data ?? []) as PatientExercise[];
 
     if (assigns.data && exs.data) {
       const combined = assignmentRows
-        .map((assignment) => ({ ...assignment, exercise: exerciseRows.find((e) => e.id === assignment.exercise_id) }))
+        .map((assignment) => ({
+          ...assignment,
+          exercise: exerciseRows.find((e) => e.id === assignment.exercise_id),
+        }))
+        .map((a) => {
+          const programName = a.program_id ? programNameById.get(a.program_id) : undefined;
+          return programName ? { ...a, program_name: programName } : a;
+        })
         .filter((a): a is HydratedPatientExercise => !!a.exercise);
 
       setPatientExercises(combined);

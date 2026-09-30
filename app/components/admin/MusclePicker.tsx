@@ -30,13 +30,13 @@ export default function MusclePicker({ primeMovers, synergists, onChange }: Musc
   };
 
   return (
-    <div className="flex flex-col md:flex-row gap-6 bg-elevated rounded-2xl border border-line-dark p-5">
+    <div className="scheme-dark flex flex-col md:flex-row gap-6 bg-elevated rounded-2xl border border-line p-5">
       <div className="w-full md:w-56 shrink-0">
         <AnatomyHeatmap primeMovers={primeMovers} synergists={synergists} />
       </div>
 
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-4 mb-3 text-[10px] font-extrabold uppercase tracking-wider text-on-dark-muted">
+        <div className="flex items-center gap-4 mb-3 text-[10px] font-extrabold uppercase tracking-wider text-muted">
           <span className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: "var(--muscle-primary)" }} /> מניע ראשי
           </span>
@@ -56,10 +56,10 @@ export default function MusclePicker({ primeMovers, synergists, onChange }: Musc
                 onClick={() => cycle(id)}
                 className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-colors ${
                   isPrime
-                    ? "bg-muscle-primary text-accent-ink border-muscle-primary"
+                    ? "bg-muscle-primary text-on-accent border-muscle-primary"
                     : isSynergist
                       ? "bg-muscle-secondary/20 text-muscle-secondary border-muscle-secondary/50"
-                      : "bg-transparent text-on-dark-muted border-line-dark hover:border-accent/40 hover:text-on-dark"
+                      : "bg-transparent text-muted border-line hover:border-accent/40 hover:text-fg"
                 }`}
               >
                 {muscleLabel(id)}
