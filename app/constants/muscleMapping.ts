@@ -71,22 +71,14 @@ export const MUSCLE_SVG_PATH_MAP: Record<string, string[]> = {
   biceps: ["left_biceps_brachi", "right_biceps_brachi"],
   triceps: ["left_tricep", "right_tricep", "left_triceps", "right_triceps", "left_triceps_front", "right_triceps_front"],
   lats: ["left_lats", "right_lats"],
-  trapezius: [
-    "left_trap",
-    "right_trap",
-    "right_traps",
-    "left_mid_trap",
-    "right_mid_trap",
-    "right_mid_trap-2",
-    "left_upper_trap",
-    "right_upper_trap",
-    "right_upper_trap-2",
-    "right_upper_trap-3",
-  ],
+  // right_mid_trap, right_upper_trap and right_upper_trap-2 were excluded
+  // (2026-09-28) — despite the "trap" name, those three pieces are traced on
+  // the FRONT-view pose (over the shoulder near the neck), not the back, so
+  // they lit up on the wrong figure whenever trapezius was selected. Confirmed
+  // by rendering overlay.processed.svg and highlighting each id directly.
+  trapezius: ["left_trap", "right_trap", "right_traps", "left_mid_trap", "right_mid_trap-2", "left_upper_trap", "right_upper_trap-3"],
   "serratus-anterior": ["left_low_ser", "right_low_ser", "right_mid_ser", "left_up_ser", "right_up_ser"],
   abs: [
-    "left_ab",
-    "left_ab-2",
     "up_left_rect_ab",
     "up_right_rect_ab",
     "mid_left_rect_ab",
@@ -96,6 +88,15 @@ export const MUSCLE_SVG_PATH_MAP: Record<string, string[]> = {
     "lower_left_rect_ab",
     "lower_right_rect_ab",
   ],
+  // left_ab/left_ab-2 (2026-09-28) — despite the generic "ab" name (and both
+  // pieces being named "left_ab" pre-dedup), these are the side-of-torso
+  // oblique shape, not more rectus abdominis — confirmed by rendering them
+  // isolated from the rect_ab blocks, which also showed the two pieces are a
+  // mirrored left+right pair (the source SVG's artist duplicated the shape
+  // for the other side but never renamed the copy, same side-mislabeling
+  // pattern already seen elsewhere in this file, e.g. vastus_lat vs
+  // vastus_lateralis) — so this renders on both sides despite the name.
+  obliques: ["left_ab", "left_ab-2"],
   gluteal: ["left_glute_max", "right_glute_max", "left_glute_min", "right_glute_min"],
   "glute-medius": ["left_glute_med", "right_glute_med"],
   quadriceps: ["left_vastus_lat", "right_vastus_lateralis", "left_vastus_med", "right_vastus_med", "left_rectus_femoris", "right_rec_femoris"],
