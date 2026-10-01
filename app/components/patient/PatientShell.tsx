@@ -70,6 +70,7 @@ export default function PatientShell() {
     diySelectedExercises: diyActiveDayExercises,
     diyScheduleDay: planSelection.diyScheduleDay,
     adHocSession,
+    referenceDate: planSelection.referenceDate,
     onExitDiyMode: () => {
       planSelection.exitDiyMode();
       setAdHocSession(null);
@@ -100,6 +101,7 @@ export default function PatientShell() {
       return;
     }
     setPatientTab(tab);
+    planSelection.setReferenceDate(new Date());
     planSelection.setIsDiyMode(false);
     setShowMyWorkouts(false);
     setEditingSavedProgramId(null);
@@ -107,10 +109,13 @@ export default function PatientShell() {
 
   // Calendar tab hands off to the existing Plan tab day view rather than
   // rendering its own exercise list - jump to the matching week/day there.
-  const handleSelectCalendarDate = (week: number, dayId: string) => {
+  const handleSelectCalendarDate = (week: number, dayId: string, date: Date) => {
     planSelection.setPatientSelectedWeek(week);
     planSelection.setSelectedDayFilter(dayId);
     switchTab("plan");
+    // After switchTab (which resets it to today): one-time workouts are
+    // matched against the week of the picked date.
+    planSelection.setReferenceDate(date);
   };
 
   // Hydrates a saved program day's ordered exercise_ids against the live
@@ -385,8 +390,8 @@ export default function PatientShell() {
               likedWorkoutIds={explore.likedWorkoutIds}
               onToggleWorkoutLike={explore.toggleWorkoutLike}
               onStartWorkout={handleStartExploreWorkout}
-              onAddWorkoutToDay={async (workoutId, dayId) => {
-                const ok = await explore.addWorkoutToDay(workoutId, dayId);
+              onAddWorkoutToDay={async (workoutId, dayId, date) => {
+                const ok = await explore.addWorkoutToDay(workoutId, dayId, date);
                 if (ok) await patientData.refetch();
                 return ok;
               }}

@@ -15,7 +15,7 @@ interface CalendarTabProps {
   // there's no explicit "program start date" in the schema (confirmed
   // with Roei: created_at is an accepted approximation).
   programStartDate: string;
-  onSelectDate: (week: number, dayId: string) => void;
+  onSelectDate: (week: number, dayId: string, date: Date) => void;
 }
 
 const WEEKDAY_LABELS = ["א'", "ב'", "ג'", "ד'", "ה'", "ו'", "ש'"]; // Sunday first, matches DAYS_OF_WEEK/ProtocolBuilder convention
@@ -78,6 +78,17 @@ export default function CalendarTab({ patientExercises, workoutLogs, patientId, 
     return availableWeeks.includes(weekNum) ? weekNum : availableWeeks[availableWeeks.length - 1];
   };
 
+  // Every row scheduled on a given date: one-time (scheduled_date) rows on
+  // exactly that date, recurring rows by plan week + weekday as before.
+  const rowsOnDate = (date: Date) => {
+    const key = toDateKey(date);
+    const week = getWeekForDate(date);
+    const dayId = date.getDay().toString();
+    return patientExercises.filter((pe) =>
+      pe.scheduled_date ? pe.scheduled_date === key : week !== null && isInWeek(pe, week) && matchesScheduledDay(pe, dayId)
+    );
+  };
+
   const completedDateKeys = new Set(
     workoutLogs.filter((l) => l.patient_id === patientId).map((l) => toDateKey(new Date(l.created_at)))
   );
@@ -105,12 +116,11 @@ export default function CalendarTab({ patientExercises, workoutLogs, patientId, 
 
   // Workouts (one card per distinct program) scheduled on the selected
   // date — same week/day computation the grid itself uses per-cell below.
-  const selectedWeek = selectedDate ? getWeekForDate(selectedDate) : null;
+  // (A one-time workout can fall before the plan's start date, where there
+  // is no plan week — the Plan tab then just opens on its first week.)
+  const selectedWeek = selectedDate ? (getWeekForDate(selectedDate) ?? availableWeeks[0]) : null;
   const selectedDayId = selectedDate ? selectedDate.getDay().toString() : null;
-  const selectedDayExercises =
-    selectedWeek !== null && selectedDayId !== null
-      ? patientExercises.filter((pe) => isInWeek(pe, selectedWeek) && matchesScheduledDay(pe, selectedDayId))
-      : [];
+  const selectedDayExercises = selectedDate ? rowsOnDate(selectedDate) : [];
   const selectedDayCategories = Array.from(new Set(selectedDayExercises.map(programNameOf)));
 
   return (
@@ -155,14 +165,9 @@ export default function CalendarTab({ patientExercises, workoutLogs, patientId, 
         {cells.map((date, idx) => {
           if (!date) return <div key={idx} />;
 
-          const week = getWeekForDate(date);
-          const dayId = date.getDay().toString();
-          const scheduledCategories =
-            week === null
-              ? []
-              : Array.from(new Set(patientExercises.filter((pe) => isInWeek(pe, week) && matchesScheduledDay(pe, dayId)).map(programNameOf)));
+          const scheduledCategories = Array.from(new Set(rowsOnDate(date).map(programNameOf)));
           const isCompleted = completedDateKeys.has(toDateKey(date));
-          const isClickable = scheduledCategories.length > 0 && week !== null;
+          const isClickable = scheduledCategories.length > 0;
           const isSelected = selectedDate !== null && isSameDay(date, selectedDate);
 
           return (
@@ -244,7 +249,7 @@ export default function CalendarTab({ patientExercises, workoutLogs, patientId, 
               return (
                 <button
                   key={cat}
-                  onClick={() => selectedWeek !== null && selectedDayId !== null && onSelectDate(selectedWeek, selectedDayId)}
+                  onClick={() => selectedDate && selectedWeek !== null && selectedDayId !== null && onSelectDate(selectedWeek, selectedDayId, selectedDate)}
                   className="w-full flex items-center gap-3.5 text-right hover:bg-surface-alt active:scale-[0.98] rounded-2xl p-1.5 transition-all duration-150 ease-out"
                 >
                   <div className="relative w-14 h-14 rounded-2xl overflow-hidden shrink-0" style={{ background: style.bg }}>

@@ -173,6 +173,7 @@ export interface PatientExercise {
   is_time: boolean;
   week: number | null; // null = every week (a workout the patient pinned to a weekday)
   scheduled_days?: string | null; // comma-separated DAYS_OF_WEEK ids, or null for "every day"
+  scheduled_date?: string | null; // YYYY-MM-DD: shown only on this date (a one-time workout from Explore)
   rest_time_seconds: number;
 }
 

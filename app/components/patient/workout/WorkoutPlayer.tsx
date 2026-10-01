@@ -52,6 +52,31 @@ const RIR_OPTIONS = [0, 1, 2, 3, 4];
 // diffused shadow, on the --bg-page player background.
 const GLASS = "bg-elevated/90 backdrop-blur-md border border-line shadow-[0_4px_20px_color-mix(in_srgb,var(--shadow-ink)_4%,transparent)]";
 
+// The "what does RIR mean" info icon + popover, next to every RIR label in
+// the player (the active-set target and the rest screen's RIR picker) — a
+// brief explainer, not a full Modal.
+function RirInfoButton() {
+  const [isOpen, setIsOpen] = useState(false);
+  return (
+    <span className="relative inline-flex normal-case tracking-normal">
+      <button onClick={() => setIsOpen((prev) => !prev)} aria-label="מה זה RIR" aria-expanded={isOpen} className="text-muted hover:text-fg transition-colors p-1 -m-1">
+        <Info size={13} />
+      </button>
+      {isOpen && (
+        <>
+          <span className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
+          <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 z-50 w-64 bg-elevated text-fg rounded-2xl shadow-elevated border border-line p-4 text-start font-normal animate-in fade-in zoom-in-95 duration-150 block">
+            <span className="block font-black text-fg text-[13px] mb-1.5">מהו RIR?</span>
+            <span className="block text-xs leading-relaxed">
+              Reps In Reserve — כמה חזרות נוספות היית יכול לבצע בטכניקה תקינה. לדוגמה, RIR 2 אומר שצריך לעצור את הסט כשאתה מרגיש שנשארו לך עוד 2 חזרות בלבד עד הכשל.
+            </span>
+          </span>
+        </>
+      )}
+    </span>
+  );
+}
+
 // Undo an accidental "next": back to the previous set's screen (only shown
 // once at least one set has been marked done).
 function BackButton({ onClick }: { onClick: () => void }) {
@@ -86,9 +111,6 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
     setLastMediaExerciseId(session.displayedExercise?.id);
     setActiveMediaIndex(0);
   }
-  // The rest screen's "what does RIR mean" popover — a brief explainer, not
-  // a full Modal (that would be overkill for one sentence of copy).
-  const [showRirInfo, setShowRirInfo] = useState(false);
 
   if (session.showPreWorkout) {
     return (
@@ -250,7 +272,9 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
                 {session.effectiveTargetRir !== null && (
                   <div className="flex flex-col items-center">
                     <span className="text-7xl font-black text-accent-fg tabular-nums leading-none">{session.effectiveTargetRir}</span>
-                    <span className="text-[11px] font-bold text-muted uppercase tracking-wide mt-2">RIR</span>
+                    <span className="relative flex items-center gap-1 text-[11px] font-bold text-muted uppercase tracking-wide mt-2">
+                      RIR <RirInfoButton />
+                    </span>
                   </div>
                 )}
               </div>
@@ -486,25 +510,7 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
 
               <div className="relative flex items-center gap-2">
                 <span className="text-[11px] font-bold text-muted uppercase tracking-wide">RIR</span>
-                <button
-                  onClick={() => setShowRirInfo((prev) => !prev)}
-                  aria-label="מה זה RIR"
-                  className="text-muted hover:text-fg transition-colors ml-1"
-                >
-                  <Info size={13} />
-                </button>
-
-                {showRirInfo && (
-                  <>
-                    <div className="fixed inset-0 z-40" onClick={() => setShowRirInfo(false)} />
-                    <div className="absolute bottom-full right-0 mb-3 z-50 w-64 bg-elevated text-fg rounded-2xl shadow-elevated border border-line p-4 text-start animate-in fade-in zoom-in-95 duration-150">
-                      <p className="font-black text-fg text-[13px] mb-1.5">מהו RIR?</p>
-                      <p className="text-xs leading-relaxed">
-                        Reps In Reserve — כמה חזרות נוספות היית יכול לבצע בטכניקה תקינה. לדוגמה, RIR 2 אומר שצריך לעצור את הסט כשאתה מרגיש שנשארו לך עוד 2 חזרות בלבד עד הכשל.
-                      </p>
-                    </div>
-                  </>
-                )}
+                <RirInfoButton />
 
                 {RIR_OPTIONS.map((val) => {
                   const isSelected = session.pendingSetRir === val;

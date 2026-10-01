@@ -31,6 +31,21 @@ export const programNameOf = (pe: HydratedPatientExercise) => pe.program_name ??
 // to a weekday from Explore recurs in each week of their plan).
 export const isInWeek = (pe: { week: number | null }, week: number) => pe.week == null || pe.week === week;
 
+// Local YYYY-MM-DD for a Date (matches patient_exercises.scheduled_date).
+export const toDateKey = (d: Date) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
+// Whether a row belongs to the plan week being viewed. Rows with a one-time
+// scheduled_date count only for the calendar week (Sun–Sat) that contains
+// `referenceDate` (today, or the date picked in the calendar); their
+// scheduled_days is that date's weekday, so the day filter does the rest.
+export const isInPlanWeek = (pe: { week: number | null; scheduled_date?: string | null }, week: number, referenceDate: Date) => {
+  if (!pe.scheduled_date) return isInWeek(pe, week);
+  const sunday = new Date(referenceDate.getFullYear(), referenceDate.getMonth(), referenceDate.getDate() - referenceDate.getDay());
+  const saturday = new Date(sunday.getFullYear(), sunday.getMonth(), sunday.getDate() + 6);
+  return pe.scheduled_date >= toDateKey(sunday) && pe.scheduled_date <= toDateKey(saturday);
+};
+
 // The plan's real weeks (ignoring every-week rows); at least [1].
 export const planWeeksOf = (rows: { week: number | null }[]) => {
   const weeks = Array.from(new Set(rows.map((r) => r.week).filter((w): w is number => w != null))).sort((a, b) => a - b);
@@ -76,6 +91,9 @@ interface UseWorkoutSessionParams {
   // admin's own blocks/sets/reps instead of the DIY builder's 3x10 default.
   // Never offered for promotion into the weekly plan, and logged under its title.
   adHocSession?: { title: string; exercises: SessionExercise[] } | null;
+  // Which calendar week one-time (scheduled_date) rows are matched against —
+  // today by default, or the date picked in the Calendar tab.
+  referenceDate?: Date;
   diyScheduleDay: string;
   onExitDiyMode: () => void; // owned by the future useDiyBuilder hook
   triggerHaptic: (type: HapticType) => void;
@@ -98,6 +116,7 @@ export function useWorkoutSession({
   isDiyMode,
   diySelectedExercises,
   adHocSession = null,
+  referenceDate,
   diyScheduleDay,
   onExitDiyMode,
   triggerHaptic,
@@ -165,7 +184,7 @@ export function useWorkoutSession({
 
   // --- Derived session data (recomputed each render, same as the original) ---
 
-  const weekFilteredPatientExercises = patientExercises.filter((pe) => isInWeek(pe, activePatientWeek));
+  const weekFilteredPatientExercises = patientExercises.filter((pe) => isInPlanWeek(pe, activePatientWeek, referenceDate ?? new Date()));
 
   // The program picker on the Plan tab's overview screen — every distinct
   // assigned program in the currently-selected week (regardless of the

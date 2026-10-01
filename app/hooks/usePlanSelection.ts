@@ -13,6 +13,9 @@ export function usePlanSelection(patientExercises: HydratedPatientExercise[]) {
   const [patientSelectedWeek, setPatientSelectedWeek] = useState(1);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedDayFilter, setSelectedDayFilter] = useState(new Date().getDay().toString());
+  // The real date the Plan tab is showing — today, or the day picked in the
+  // Calendar tab. Only one-time (scheduled_date) workouts depend on it.
+  const [referenceDate, setReferenceDate] = useState(() => new Date());
 
   const [isDiyMode, setIsDiyMode] = useState(false);
   // The DIY builder's draft: a full weekly program, keyed by ordinal builder
@@ -72,6 +75,8 @@ export function usePlanSelection(patientExercises: HydratedPatientExercise[]) {
     availablePatientWeeks,
     activePatientWeek,
 
+    referenceDate,
+    setReferenceDate,
     selectedCategory,
     setSelectedCategory,
     selectedDayFilter,

@@ -1533,7 +1533,7 @@ export default function LegacyAdminApp() {
                               <div className="flex flex-col gap-2">
                                 <div className="flex flex-wrap gap-2 text-sm font-medium text-muted">
                                   <span className="on-light bg-surface-alt px-3 py-1 rounded-lg border border-line">
-                                    שבוע: <strong className="text-fg">{assign.week ?? "כל שבוע"}</strong>
+                                    {assign.scheduled_date ? "תאריך: " : "שבוע: "}<strong className="text-fg">{assign.scheduled_date ? new Date(`${assign.scheduled_date}T00:00:00`).toLocaleDateString("he-IL") : (assign.week ?? "כל שבוע")}</strong>
                                   </span>
                                   <span className="on-light bg-surface-alt px-3 py-1 rounded-lg border border-line">
                                     בלוק: <strong className="text-fg">{assign.block || "A"}</strong>

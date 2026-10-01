@@ -5,6 +5,7 @@ import { CalendarPlus, Check, Compass, Crown, Dumbbell, Flame, Heart, Lock, Play
 import Modal from "@/app/components/ui/Modal";
 import { DAYS_OF_WEEK } from "@/app/constants/catalog";
 import { getExerciseName } from "@/app/utils/format";
+import { toDateKey } from "@/app/hooks/useWorkoutSession";
 import { useAuth } from "@/app/context/AuthContext";
 import type { Exercise, ExploreProgram, Workout } from "@/app/types";
 
@@ -23,7 +24,7 @@ interface ExploreTabProps {
   likedWorkoutIds: Set<string>;
   onToggleWorkoutLike: (workoutId: string) => void;
   onStartWorkout: (workout: Workout) => void;
-  onAddWorkoutToDay: (workoutId: string, dayId: string) => Promise<boolean>;
+  onAddWorkoutToDay: (workoutId: string, dayId: string, date?: string) => Promise<boolean>;
 }
 
 const workoutFormatLabel = (w: Workout) => (w.format === "amrap" ? `AMRAP · ${Math.round((w.time_cap_seconds ?? 0) / 60)} דק׳` : `${w.items.length} תרגילים`);
@@ -221,6 +222,10 @@ export default function ExploreTab({
   const [workoutPreview, setWorkoutPreview] = useState<Workout | null>(null);
   // The "add to a day in my plan" picker inside the workout preview.
   const [pickDayFor, setPickDayFor] = useState<string | null>(null);
+  // Inside that picker: every week on a weekday, or once on a specific date.
+  const [scheduleMode, setScheduleMode] = useState<"weekly" | "date">("weekly");
+  const todayKey = toDateKey(new Date());
+  const [pickedDate, setPickedDate] = useState(todayKey);
   const [isBusy, setIsBusy] = useState(false);
 
   const renderWorkoutCard = (workout: Workout) => (
@@ -237,14 +242,19 @@ export default function ExploreTab({
     />
   );
 
-  const handleAddWorkoutToDay = async (dayId: string) => {
+  const handleAddWorkoutToDay = async (dayId: string, date?: string) => {
     if (!workoutPreview) return;
     setIsBusy(true);
-    const ok = await onAddWorkoutToDay(String(workoutPreview.id), dayId);
+    const ok = await onAddWorkoutToDay(String(workoutPreview.id), dayId, date);
     setIsBusy(false);
     if (ok) {
-      const dayLabel = DAYS_OF_WEEK.find((d) => d.id === dayId)?.label ?? "";
-      alert(`"${workoutPreview.title}" נוסף לתוכנית שלך בכל יום ${dayLabel}.`);
+      if (date) {
+        const [y, m, d] = date.split("-").map(Number);
+        alert(`"${workoutPreview.title}" נוסף ללו"ז שלך ב-${new Date(y, m - 1, d).toLocaleDateString("he-IL", { weekday: "long", day: "numeric", month: "numeric" })}.`);
+      } else {
+        const dayLabel = DAYS_OF_WEEK.find((d) => d.id === dayId)?.label ?? "";
+        alert(`"${workoutPreview.title}" נוסף לתוכנית שלך בכל יום ${dayLabel}.`);
+      }
       setPickDayFor(null);
       setWorkoutPreview(null);
     }
@@ -426,6 +436,44 @@ export default function ExploreTab({
             </button>
           ) : pickDayFor === String(workoutPreview.id) ? (
             <div className="flex flex-col gap-3">
+              <div className="flex bg-surface-alt p-1 rounded-xl border border-line">
+                {(["weekly", "date"] as const).map((mode) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    onClick={() => setScheduleMode(mode)}
+                    className={`flex-1 py-2 rounded-lg text-sm font-bold transition-colors ${scheduleMode === mode ? "bg-accent text-on-accent" : "text-muted hover:text-fg"}`}
+                  >
+                    {mode === "weekly" ? "כל שבוע" : "תאריך מסוים"}
+                  </button>
+                ))}
+              </div>
+              {scheduleMode === "date" ? (
+                <div className="flex flex-col gap-3">
+                  <label className="flex flex-col gap-1.5 text-start">
+                    <span className="text-sm font-bold text-fg">באיזה תאריך? האימון יופיע בלוח השנה ובמסך הבית רק ביום הזה.</span>
+                    <input
+                      type="date"
+                      min={todayKey}
+                      value={pickedDate}
+                      onChange={(e) => setPickedDate(e.target.value)}
+                      className="on-light w-full bg-surface border border-line-input rounded-xl px-3 py-2.5 text-sm font-bold text-fg outline-none focus:border-focus focus:ring-2 focus:ring-focus"
+                    />
+                  </label>
+                  <button
+                    onClick={() => {
+                      if (!pickedDate) return;
+                      const [y, m, d] = pickedDate.split("-").map(Number);
+                      handleAddWorkoutToDay(String(new Date(y, m - 1, d).getDay()), pickedDate);
+                    }}
+                    disabled={isBusy || !pickedDate || pickedDate < todayKey}
+                    className="w-full bg-btn-primary hover:bg-btn-primary-hover active:bg-btn-primary-active text-btn-primary-fg font-black text-sm py-3 rounded-2xl transition-colors disabled:bg-disabled disabled:text-disabled-fg"
+                  >
+                    הוסף ללו&quot;ז
+                  </button>
+                </div>
+              ) : (
+              <>
               <p className="text-sm font-bold text-fg text-start">באיזה יום בשבוע? האימון יחזור בכל שבוע בתוכנית שלך.</p>
               <div className="grid grid-cols-7 gap-1.5">
                 {DAYS_OF_WEEK.map((day) => (
@@ -440,6 +488,8 @@ export default function ExploreTab({
                   </button>
                 ))}
               </div>
+              </>
+              )}
               <button onClick={() => setPickDayFor(null)} className="text-sm font-bold text-muted hover:text-fg">
                 ביטול
               </button>
@@ -456,10 +506,14 @@ export default function ExploreTab({
                 <Play size={16} /> התחל עכשיו
               </button>
               <button
-                onClick={() => setPickDayFor(String(workoutPreview.id))}
+                onClick={() => {
+                  setScheduleMode("weekly");
+                  setPickedDate(todayKey);
+                  setPickDayFor(String(workoutPreview.id));
+                }}
                 className="w-full bg-transparent border-[1.5px] border-btn-secondary text-accent-fg hover:bg-btn-secondary-hover font-bold text-sm py-3 rounded-2xl transition-colors flex items-center justify-center gap-2"
               >
-                <CalendarPlus size={16} /> הוסף ליום בתוכנית שלי
+                <CalendarPlus size={16} /> הוסף ללו&quot;ז שלי
               </button>
             </div>
           )}

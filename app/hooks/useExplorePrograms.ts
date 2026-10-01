@@ -99,10 +99,11 @@ export function useExplorePrograms() {
     [loggedInPatient, likedWorkoutIds, fetchPatientState]
   );
 
-  // Pins a free published workout to one weekday of the patient's plan
-  // (every week). Server-side check in the RPC, same as templates.
-  const addWorkoutToDay = useCallback(async (workoutId: string, dayId: string): Promise<boolean> => {
-    const { error } = await supabase.rpc("add_published_workout_to_my_programs", { p_workout_id: workoutId, p_day: dayId });
+  // Adds a free published workout to the patient's plan: pinned to a weekday
+  // (every week), or — when `date` (YYYY-MM-DD) is given — once, on that
+  // date. Server-side check in the RPC, same as templates.
+  const addWorkoutToDay = useCallback(async (workoutId: string, dayId: string, date?: string): Promise<boolean> => {
+    const { error } = await supabase.rpc("add_published_workout_to_my_programs", { p_workout_id: workoutId, p_day: dayId, p_date: date ?? null });
     if (error) {
       alert(error.message.includes("premium") ? "זה אימון פרימיום — צור קשר כדי לפתוח אותו." : "לא הצלחנו להוסיף את האימון. נסה שוב.");
       return false;
