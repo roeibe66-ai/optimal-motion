@@ -2,6 +2,7 @@
 
 import { X } from "lucide-react";
 import type { ReactNode } from "react";
+import { createPortal } from "react-dom";
 
 interface ModalProps {
   onClose: () => void;
@@ -24,8 +25,14 @@ interface ModalProps {
 // split behavior; every other bottom sheet here (PatientCoachSheet,
 // PasskeyPrompt) stays bottom-anchored regardless of viewport width, so this
 // now matches them instead of being the odd one out.
+//
+// Rendered through a portal into <body>: the patient shell's scrolling
+// <main> is its own stacking context (relative z-0), so a modal opened from
+// a tab inside it could never rise above the fixed bottom nav (z-50) — the
+// nav covered the sheet's bottom buttons (e.g. Explore's "add to my
+// schedule"). Only ever opened by a user action, so `document` exists.
 export default function Modal({ onClose, title, icon, children }: ModalProps) {
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-[200] bg-backdrop backdrop-blur-sm flex items-end justify-center" onClick={onClose}>
       <div
         className="bg-elevated text-fg w-full overflow-hidden shadow-elevated relative flex flex-col max-h-[92vh] rounded-t-3xl m-0 pb-[env(safe-area-inset-bottom)] animate-in slide-in-from-bottom duration-300 ease-out"
@@ -45,6 +52,7 @@ export default function Modal({ onClose, title, icon, children }: ModalProps) {
         </div>
         <div className="on-light p-6 overflow-y-auto flex-1 bg-surface text-fg">{children}</div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

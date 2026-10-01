@@ -159,3 +159,15 @@ dark-on-dark and lost its size, with no build error.
 (`base`, `xs`…`9xl`, `sm`/`md`/`lg` for shadows, etc.). The app shell color is
 exposed as `bg-shell` for this reason. After adding theme keys, check the generated
 CSS for the affected class, not just that the page renders.
+
+## 2026-10 — Overlays opened inside the patient `<main>` hide under the bottom nav
+
+**What happened:** The Explore workout preview (shared `Modal`) opened as a `fixed z-[200]`
+bottom sheet, but its last button ("הוסף ללו"ז שלי") sat under the patient bottom nav, so
+patients never saw the option. Same trap PatientCoachSheet had hit earlier.
+**Why:** PatientShell's scrolling `<main>` is `relative z-0` — its own stacking context.
+Any fixed descendant, whatever its z-index, is painted inside that z-0 layer and loses to
+the nav (`fixed z-50`, a sibling of `<main>`).
+**Rule:** any full-screen overlay/sheet that can be opened from a patient tab must render
+through `createPortal(..., document.body)` (as `Modal` and `PatientCoachSheet` now do) —
+don't try to win with a higher z-index.

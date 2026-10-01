@@ -108,6 +108,24 @@ function coverGifFor(program: ExploreProgram, exerciseCatalog: Exercise[]) {
   return null;
 }
 
+// Small exercise media in the Explore previews: video for mp4/webm, image
+// otherwise, and a dumbbell placeholder when the exercise has no media.
+function ExerciseThumb({ exercise, alt }: { exercise: Exercise; alt: string }) {
+  const url = exercise.gif_url;
+  const box = "on-light w-11 h-11 rounded-xl bg-surface shrink-0 overflow-hidden";
+  if (!url) {
+    return (
+      <div className={`${box} flex items-center justify-center`}>
+        <Dumbbell size={16} className="text-muted" />
+      </div>
+    );
+  }
+  if (/\.(mp4|webm)(\?|$)/i.test(url)) {
+    return <video src={url} autoPlay muted playsInline loop className={`${box} object-cover`} />;
+  }
+  return <img src={url} alt={alt} className={`${box} object-contain p-0.5`} />;
+}
+
 function ProgramCard({
   program,
   coverUrl,
@@ -226,6 +244,8 @@ export default function ExploreTab({
   const [scheduleMode, setScheduleMode] = useState<"weekly" | "date">("weekly");
   const todayKey = toDateKey(new Date());
   const [pickedDate, setPickedDate] = useState(todayKey);
+  // Weekly mode: the weekdays ticked so far — nothing is added until "אישור".
+  const [pickedDays, setPickedDays] = useState<string[]>([]);
   const [isBusy, setIsBusy] = useState(false);
 
   const renderWorkoutCard = (workout: Workout) => (
@@ -252,8 +272,12 @@ export default function ExploreTab({
         const [y, m, d] = date.split("-").map(Number);
         alert(`"${workoutPreview.title}" נוסף ללו"ז שלך ב-${new Date(y, m - 1, d).toLocaleDateString("he-IL", { weekday: "long", day: "numeric", month: "numeric" })}.`);
       } else {
-        const dayLabel = DAYS_OF_WEEK.find((d) => d.id === dayId)?.label ?? "";
-        alert(`"${workoutPreview.title}" נוסף לתוכנית שלך בכל יום ${dayLabel}.`);
+        const dayLabels = dayId
+          .split(",")
+          .map((id) => DAYS_OF_WEEK.find((d) => d.id === id)?.label)
+          .filter(Boolean)
+          .join(", ");
+        alert(`"${workoutPreview.title}" נוסף לתוכנית שלך בכל שבוע בימים: ${dayLabels}.`);
       }
       setPickDayFor(null);
       setWorkoutPreview(null);
@@ -350,11 +374,7 @@ export default function ExploreTab({
                 <div className="flex flex-col gap-2">
                   {exercises.map((ex, idx) => (
                     <div key={`${ex.id}-${idx}`} className="on-light flex items-center gap-3 bg-surface-alt rounded-2xl p-3">
-                      {ex.gif_url ? (
-                        <img src={ex.gif_url} alt={getExerciseName(ex, lang)} className="on-light w-11 h-11 rounded-xl bg-surface object-contain p-0.5 shrink-0" />
-                      ) : (
-                        <div className="on-light w-11 h-11 rounded-xl bg-surface shrink-0" />
-                      )}
+                      <ExerciseThumb exercise={ex} alt={getExerciseName(ex, lang)} />
                       <span className="text-sm font-bold text-fg truncate">{getExerciseName(ex, lang)}</span>
                     </div>
                   ))}
@@ -413,11 +433,7 @@ export default function ExploreTab({
               if (!ex) return null;
               return (
                 <div key={`${item.exercise_id}-${idx}`} className="on-light flex items-center gap-3 bg-surface-alt rounded-2xl p-3">
-                  {ex.gif_url ? (
-                    <img src={ex.gif_url} alt={getExerciseName(ex, lang)} className="on-light w-11 h-11 rounded-xl bg-surface object-contain p-0.5 shrink-0" />
-                  ) : (
-                    <div className="on-light w-11 h-11 rounded-xl bg-surface shrink-0" />
-                  )}
+                  <ExerciseThumb exercise={ex} alt={getExerciseName(ex, lang)} />
                   <div className="min-w-0 flex-1">
                     <div className="text-sm font-bold text-fg truncate">{getExerciseName(ex, lang)}</div>
                     <div className="text-[11px] font-bold text-accent-fg tabular-nums">{workoutItemLabel(workoutPreview, item)}</div>
@@ -474,20 +490,33 @@ export default function ExploreTab({
                 </div>
               ) : (
               <>
-              <p className="text-sm font-bold text-fg text-start">באיזה יום בשבוע? האימון יחזור בכל שבוע בתוכנית שלך.</p>
+              <p className="text-sm font-bold text-fg text-start">באילו ימים בשבוע? אפשר לבחור כמה. האימון יחזור בכל שבוע בימים שבחרת.</p>
               <div className="grid grid-cols-7 gap-1.5">
-                {DAYS_OF_WEEK.map((day) => (
-                  <button
-                    key={day.id}
-                    onClick={() => handleAddWorkoutToDay(day.id)}
-                    disabled={isBusy}
-                    aria-label={`יום ${day.label}`}
-                    className="on-light py-3 rounded-xl bg-surface-alt border border-line text-fg font-black text-sm hover:bg-accent hover:text-on-accent transition-colors disabled:opacity-50"
-                  >
-                    {day.he_short}
-                  </button>
-                ))}
+                {DAYS_OF_WEEK.map((day) => {
+                  const isPicked = pickedDays.includes(day.id);
+                  return (
+                    <button
+                      key={day.id}
+                      type="button"
+                      onClick={() => setPickedDays((prev) => (isPicked ? prev.filter((d) => d !== day.id) : [...prev, day.id]))}
+                      aria-pressed={isPicked}
+                      aria-label={`יום ${day.label}`}
+                      className={`on-light py-3 rounded-xl border font-black text-sm transition-colors ${
+                        isPicked ? "bg-accent text-on-accent border-accent" : "bg-surface-alt text-fg border-line hover:bg-line"
+                      }`}
+                    >
+                      {day.he_short}
+                    </button>
+                  );
+                })}
               </div>
+              <button
+                onClick={() => handleAddWorkoutToDay([...pickedDays].sort().join(","))}
+                disabled={isBusy || pickedDays.length === 0}
+                className="w-full bg-btn-primary hover:bg-btn-primary-hover active:bg-btn-primary-active text-btn-primary-fg font-black text-sm py-3 rounded-2xl transition-colors disabled:bg-disabled disabled:text-disabled-fg"
+              >
+                {pickedDays.length === 0 ? "בחר לפחות יום אחד" : `אישור (${pickedDays.length} ${pickedDays.length === 1 ? "יום" : "ימים"})`}
+              </button>
               </>
               )}
               <button onClick={() => setPickDayFor(null)} className="text-sm font-bold text-muted hover:text-fg">
@@ -509,6 +538,7 @@ export default function ExploreTab({
                 onClick={() => {
                   setScheduleMode("weekly");
                   setPickedDate(todayKey);
+                  setPickedDays([]);
                   setPickDayFor(String(workoutPreview.id));
                 }}
                 className="w-full bg-transparent border-[1.5px] border-btn-secondary text-accent-fg hover:bg-btn-secondary-hover font-bold text-sm py-3 rounded-2xl transition-colors flex items-center justify-center gap-2"
