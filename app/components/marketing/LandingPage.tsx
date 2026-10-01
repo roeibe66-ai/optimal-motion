@@ -1,25 +1,22 @@
 "use client";
 
 import { useAuth } from "@/app/context/AuthContext";
+import { BrandLockup } from "@/app/components/brand/Brand";
 
 export default function LandingPage() {
   const { lang, setLang, t, setCurrentView } = useAuth();
 
   return (
     <div className="scheme-dark min-h-screen relative overflow-hidden bg-page text-fg" dir={lang === "he" ? "rtl" : "ltr"}>
-      {/* Full-bleed hero photo — real Unsplash hotlink (Alex Avila, Unsplash
-          License, unsplash.com/photos/VAPMuCqepWc), not a repo asset, same
-          hotlinking approach PlanTab.tsx's hero already uses. Replaces the
-          earlier CSS-gradient-sky + SVG-silhouette stand-in now that a real
-          photo is available. */}
-      <img
-        src="https://images.unsplash.com/photo-1764889743602-21cd1d4e4745?w=2000&q=80&fm=jpg&fit=crop&auto=format"
-        alt=""
-        className="absolute inset-0 w-full h-full object-cover"
-      />
+      {/* Full-bleed hero: a self-drawn vector (public/landing-hero.svg) — a
+          silhouette in a handstand on a mountain summit at sunset. Its own
+          preserveAspectRatio keeps the figure and sun centered through the
+          object-cover crop at any width. */}
+      <img src="/landing-hero.svg" alt="" className="absolute inset-0 w-full h-full object-cover" />
 
-      {/* Dark gradient overlay for text/button legibility over the photo */}
-      <div className="absolute inset-0 bg-gradient-to-b from-scrim/50 to-scrim/80"></div>
+      {/* Scrim only at the top (logo) and bottom (buttons) — the sunset in
+          the middle stays clear. */}
+      <div className="absolute inset-0 bg-gradient-to-b from-scrim/55 via-transparent to-scrim/80"></div>
 
       <button
         onClick={() => setLang(lang === "he" ? "en" : "he")}
@@ -28,10 +25,8 @@ export default function LandingPage() {
         {lang === "he" ? "EN" : "עב"}
       </button>
 
-      <div className="absolute top-10 md:top-14 inset-x-0 text-center z-10">
-        <span className="text-[19px] md:text-2xl font-black tracking-[0.1em] md:tracking-[0.14em] uppercase">
-          Optimal<span className="text-accent-fg">Motion</span>
-        </span>
+      <div className="absolute top-16 md:top-14 inset-x-0 flex justify-center z-10">
+        <BrandLockup size="lg" />
       </div>
 
       <div className="absolute inset-x-6 bottom-10 md:inset-x-0 md:bottom-14 z-10 flex flex-col md:flex-row md:justify-center gap-3 md:gap-3.5">

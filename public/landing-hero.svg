@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1350" preserveAspectRatio="xMidYMax slice">
+  <!-- Landing hero: a silhouette in a handstand on a mountain summit, against
+       the setting sun. Self-drawn vector (no photo licensing). The canvas is
+       tall (extra sky on top) and anchored bottom-center, so object-cover
+       shows a wide, low crop on desktop and a taller crop with a smaller
+       figure on a phone — the figure and sun stay centered either way. -->
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0F1022"/>
+      <stop offset="0.45" stop-color="#1F1833"/>
+      <stop offset="0.62" stop-color="#4A2545"/>
+      <stop offset="0.74" stop-color="#9C4141"/>
+      <stop offset="0.83" stop-color="#E5803A"/>
+      <stop offset="0.92" stop-color="#F7B955"/>
+    </linearGradient>
+    <radialGradient id="sun" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#FFF3C9"/>
+      <stop offset="0.55" stop-color="#FFD780"/>
+      <stop offset="1" stop-color="#FBA94C"/>
+    </radialGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#FFC970" stop-opacity="0.5"/>
+      <stop offset="1" stop-color="#FFC970" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="haze" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#F3A25A" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="#F3A25A" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1600" height="1350" fill="url(#sky)"/>
+
+  <g transform="translate(0 350)">
+    <!-- sun + glow, just behind the summit -->
+    <circle cx="800" cy="500" r="340" fill="url(#glow)"/>
+    <circle cx="800" cy="470" r="165" fill="url(#sun)"/>
+
+    <!-- far ranges -->
+    <path d="M0 640 L120 590 L230 620 L360 545 L470 600 L560 560 L650 610 L720 585 L800 630 L880 590 L980 615 L1080 540 L1200 600 L1300 565 L1420 615 L1520 575 L1600 600 L1600 1000 L0 1000 Z" fill="#8E3F4C" opacity="0.55"/>
+    <rect x="0" y="600" width="1600" height="120" fill="url(#haze)"/>
+    <path d="M0 700 L90 660 L210 690 L330 620 L440 675 L560 640 L660 690 L740 670 L860 700 L960 650 L1070 690 L1180 630 L1300 680 L1430 640 L1600 690 L1600 1000 L0 1000 Z" fill="#4B2238" opacity="0.85"/>
+
+    <!-- foreground mountain; the summit the figure stands on -->
+    <path d="M0 1000 L0 820 L140 760 L260 790 L400 700 L520 730 L640 640 L720 600 L770 572 L784 566 L816 566 L830 572 L880 606 L960 650 L1060 700 L1180 680 L1300 750 L1420 730 L1600 800 L1600 1000 Z" fill="#0E0A12"/>
+
+    <!-- handstand silhouette: hands on the summit, head between the arms,
+         legs up in a slight V with pointed toes -->
+    <g fill="#0E0A12" stroke="#0E0A12" stroke-linecap="round" stroke-linejoin="round">
+      <!-- hands -->
+      <rect x="770" y="561" width="22" height="7" rx="3.5" stroke="none"/>
+      <rect x="808" y="561" width="22" height="7" rx="3.5" stroke="none"/>
+      <!-- arms, slightly thicker at the shoulder -->
+      <path d="M776 564 L774 476 L792 476 L788 564 Z" stroke-width="4"/>
+      <path d="M824 564 L826 476 L808 476 L812 564 Z" stroke-width="4"/>
+      <!-- head + neck -->
+      <ellipse cx="800" cy="508" rx="13" ry="16" stroke="none"/>
+      <line x1="800" y1="494" x2="800" y2="478" stroke-width="10" fill="none"/>
+      <!-- torso: broad shoulders, narrow waist, hips -->
+      <path d="M771 480 L829 480 C823 444 815 422 812 404 C815 390 817 378 816 366 L784 366 C783 378 785 390 788 404 C785 422 777 444 771 480 Z" stroke-width="3"/>
+      <!-- legs: thigh, calf, foot -->
+      <line x1="791" y1="370" x2="786" y2="292" stroke-width="22" fill="none"/>
+      <line x1="786" y1="292" x2="779" y2="214" stroke-width="15" fill="none"/>
+      <line x1="779" y1="214" x2="775" y2="190" stroke-width="9" fill="none"/>
+      <line x1="809" y1="370" x2="815" y2="292" stroke-width="22" fill="none"/>
+      <line x1="815" y1="292" x2="823" y2="214" stroke-width="15" fill="none"/>
+      <line x1="823" y1="214" x2="828" y2="190" stroke-width="9" fill="none"/>
+    </g>
+  </g>
+</svg>

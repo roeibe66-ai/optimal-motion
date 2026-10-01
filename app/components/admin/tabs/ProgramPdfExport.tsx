@@ -71,7 +71,7 @@ export default function ProgramPdfExport({ pkg, packageExercises, exerciseCatalo
           <div className="flex items-start justify-between pb-6 border-b-2" style={{ borderColor: BRAND }}>
             <div>
               <div className="text-xs font-black tracking-[0.3em] uppercase" style={{ color: BRAND }}>
-                Optimal<span className="text-fg">Motion</span>
+                eccentric <span className="text-fg">· Optimal Motion</span>
               </div>
               <h1 className="text-3xl font-black text-fg mt-3">{pkg.title}</h1>
               {pkg.description && <p className="text-muted mt-1.5 max-w-lg">{pkg.description}</p>}
@@ -149,7 +149,7 @@ export default function ProgramPdfExport({ pkg, packageExercises, exerciseCatalo
           )}
 
           <div className="mt-12 pt-6 border-t border-line text-center text-[10px] text-muted tracking-wide">
-            נבנה באמצעות OptimalMotion · תוכנית אישית מבוססת ראיות
+            נבנה באמצעות Eccentric · תוכנית אישית מבוססת ראיות
           </div>
         </div>
       </div>

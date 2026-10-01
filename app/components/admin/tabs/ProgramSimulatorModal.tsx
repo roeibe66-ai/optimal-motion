@@ -74,7 +74,7 @@ export default function ProgramSimulatorModal({ pkg, packageExercises, exerciseC
       <div className="relative w-full h-full md:h-[92vh] md:max-w-md md:rounded-[2.5rem] overflow-hidden bg-page shadow-elevated">
         <button
           onClick={onClose}
-          className="absolute top-4 left-4 z-[400] w-10 h-10 rounded-full bg-scrim/80 text-surface flex items-center justify-center shadow-lg hover:bg-scrim"
+          className="absolute top-4 left-4 z-[100] w-10 h-10 rounded-full bg-scrim/80 text-surface flex items-center justify-center shadow-lg hover:bg-scrim"
           aria-label="סגור סימולציה"
         >
           <X size={20} />

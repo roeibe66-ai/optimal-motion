@@ -36,7 +36,7 @@ export async function generatePasskeyRegistrationOptions(
 ): Promise<PublicKeyCredentialCreationOptionsJSON> {
   const { rpID } = await getRpInfo();
   return generateRegistrationOptions({
-    rpName: "OptimalMotion",
+    rpName: "Eccentric",
     rpID,
     userID: new TextEncoder().encode(String(patientId)),
     userName: patientName,

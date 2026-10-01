@@ -138,6 +138,12 @@ export function useWorkoutSession({
   const [sessionPerformance, setSessionPerformance] = useState<SessionPerformanceEntry[]>([]);
   const [painBefore, setPainBefore] = useState<number | null>(null);
   const [rpeScore, setRpeScore] = useState<number | null>(null);
+  // "Back" during a workout: a snapshot of the active slot taken every time
+  // a set is marked done, so an accidental "next" can be undone — goBack()
+  // returns to that set's own screen and drops what it logged.
+  const [setHistory, setSetHistory] = useState<
+    { blockIdx: number; exInBlockIdx: number; blockSet: number; performanceLength: number }[]
+  >([]);
   const [selectedPainAreas, setSelectedPainAreas] = useState<string[]>([]);
 
   // Reps/RIR are now reported on the rest screen, after the set, rather than
@@ -259,6 +265,10 @@ export function useWorkoutSession({
 
   const handleFinishAction = () => {
     triggerHaptic("light");
+    setSetHistory((prev) => [
+      ...prev,
+      { blockIdx: activeBlockIdx, exInBlockIdx: activeExInBlockIdx, blockSet: currentBlockSet, performanceLength: sessionPerformance.length },
+    ]);
 
     if (activeAssign) {
       setSessionPerformance((prev) => [
@@ -322,6 +332,23 @@ export function useWorkoutSession({
     setActiveExInBlockIdx((prev) => prev + 1);
   };
 
+  // Undo the most recent "set done": back to that set's active screen (from
+  // the rest/superset-check screen, or from the next set it advanced to),
+  // with the performance entry it logged removed.
+  const goBack = () => {
+    const last = setHistory[setHistory.length - 1];
+    if (!last) return;
+    triggerHaptic("light");
+    setSetHistory((prev) => prev.slice(0, -1));
+    setActiveBlockIdx(last.blockIdx);
+    setActiveExInBlockIdx(last.exInBlockIdx);
+    setCurrentBlockSet(last.blockSet);
+    setIsResting(false);
+    setIsSupersetCheck(false);
+    setWorkoutFinished(false);
+    setSessionPerformance((prev) => prev.slice(0, last.performanceLength));
+  };
+
   // --- Effects ---
 
   // Reset the per-set inputs whenever the active slot changes: prefill
@@ -357,7 +384,7 @@ export function useWorkoutSession({
       navigator.mediaSession.metadata = new MediaMetadata({
         title: getExerciseName(displayedExercise, lang),
         artist: `סט ${currentBlockSet} מתוך ${maxSetsInBlock}`,
-        album: "OptimalMotion",
+        album: "Eccentric",
         artwork: [{ src: "/icon.png", sizes: "512x512", type: "image/png" }],
       });
 
@@ -419,6 +446,7 @@ export function useWorkoutSession({
 
   const handleStartClick = () => {
     triggerHaptic("heavy");
+    setSetHistory([]);
     if (loggedInPatient?.patient_type === "fitness") {
       setIsWorkoutMode(true);
       setActiveBlockIdx(0);
@@ -444,6 +472,7 @@ export function useWorkoutSession({
   // preserved exactly rather than unified, since DIY building is fitness-only
   // and never goes through the pre-workout pain-check branch anyway.
   const startDiyWorkoutNow = () => {
+    setSetHistory([]);
     setIsWorkoutMode(true);
     setActiveBlockIdx(0);
     setActiveExInBlockIdx(0);
@@ -454,6 +483,7 @@ export function useWorkoutSession({
   };
 
   const confirmPreWorkout = (pain: number) => {
+    setSetHistory([]);
     setPainBefore(pain);
     setShowPreWorkout(false);
     setIsWorkoutMode(true);
@@ -644,6 +674,7 @@ export function useWorkoutSession({
   };
 
   const closeWorkout = () => {
+    setSetHistory([]);
     setIsWorkoutMode(false);
     setWorkoutFinished(false);
     setPainBefore(null);
@@ -707,6 +738,8 @@ export function useWorkoutSession({
     handleFinishAction,
     handleEndRest,
     handleContinueSuperset,
+    goBack,
+    canGoBack: setHistory.length > 0,
     handleSwapExercise,
     makeHarder,
     makeEasier,

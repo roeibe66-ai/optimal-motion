@@ -7,13 +7,13 @@ import { LIGHT_SCHEME_QUERY, THEME_COLORS, themeInitScript } from "@/app/lib/the
 const rubik = Rubik({ subsets: ["hebrew", "latin"] });
 
 export const metadata: Metadata = {
-  title: "OptimalMotion",
-  description: "קליניקה לשיקום וכושר",
+  title: "Eccentric — Optimal Motion",
+  description: "Eccentric · Optimal Motion — קליניקה לשיקום וכושר",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "OptimalMotion",
+    title: "Eccentric",
   },
 };
 

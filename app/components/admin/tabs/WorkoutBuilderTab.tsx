@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ArrowDown, ArrowUp, CheckCircle2, Crown, Dumbbell, Edit3, Loader2, Plus, Search, Timer, Trash2, X } from "lucide-react";
+import { ArrowDown, ArrowUp, CheckCircle2, Crown, Dumbbell, Edit3, Loader2, Play, Plus, Search, Timer, Trash2, X } from "lucide-react";
 import { supabase } from "@/app/lib/supabase";
 import { getExerciseName } from "@/app/utils/format";
 import type { Exercise, Lang, Workout, WorkoutFormat, WorkoutItem } from "@/app/types";
+import WorkoutSimulatorModal from "@/app/components/admin/tabs/WorkoutSimulatorModal";
 
 interface WorkoutBuilderTabProps {
   exercises: Exercise[];
@@ -22,6 +23,23 @@ interface Draft {
 
 const EMPTY_DRAFT: Draft = { id: null, title: "", description: "", format: "standard", timeCapMinutes: "12", items: [] };
 
+// Keeps only the fields each format uses, with sane numeric bounds — shared
+// by save and by "Run/Test" on an unsaved draft.
+const normalizeItems = (items: WorkoutItem[], format: WorkoutFormat): WorkoutItem[] =>
+  items.map((it, idx) =>
+    format === "amrap"
+      ? { exercise_id: it.exercise_id, reps: Math.max(1, Number(it.reps) || 1), is_time: it.is_time }
+      : {
+          exercise_id: it.exercise_id,
+          block: (it.block || String.fromCharCode(65 + (idx % 26))).toUpperCase().slice(0, 1),
+          sets: Math.max(1, Number(it.sets) || 1),
+          reps: Math.max(1, Number(it.reps) || 1),
+          is_time: it.is_time,
+          rir: it.rir === null || it.rir === undefined || String(it.rir) === "" ? null : Number(it.rir),
+          rest_time_seconds: Math.max(0, Number(it.rest_time_seconds) || 0),
+        }
+  );
+
 const newItem = (exerciseId: string, index: number, format: WorkoutFormat): WorkoutItem =>
   format === "amrap"
     ? { exercise_id: exerciseId, reps: 10, is_time: false }
@@ -38,6 +56,7 @@ export default function WorkoutBuilderTab({ exercises, lang }: WorkoutBuilderTab
   const [isLoading, setIsLoading] = useState(true);
   const [draft, setDraft] = useState<Draft | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [simulating, setSimulating] = useState<Workout | null>(null);
 
   const fetchWorkouts = async () => {
     const { data } = await supabase.from("workouts").select("*").order("created_at", { ascending: false });
@@ -135,8 +154,15 @@ export default function WorkoutBuilderTab({ exercises, lang }: WorkoutBuilderTab
 
                 <div className="flex flex-wrap gap-2 mt-auto pt-2 border-t border-line">
                   <button
+                    onClick={() => setSimulating(workout)}
+                    disabled={workout.items.length === 0}
+                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-btn-primary text-btn-primary-fg text-xs font-extrabold hover:bg-btn-primary-hover active:bg-btn-primary-active transition-colors disabled:bg-disabled disabled:text-disabled-fg disabled:pointer-events-none"
+                  >
+                    <Play size={13} fill="currentColor" /> הרץ / בדוק
+                  </button>
+                  <button
                     onClick={() => openEditor(workout)}
-                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-btn-primary text-btn-primary-fg text-xs font-extrabold hover:bg-btn-primary-hover active:bg-btn-primary-active transition-colors"
+                    className="on-light flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-surface-alt text-fg text-xs font-bold hover:bg-line transition-colors"
                   >
                     <Edit3 size={13} /> ערוך
                   </button>
@@ -168,8 +194,11 @@ export default function WorkoutBuilderTab({ exercises, lang }: WorkoutBuilderTab
         </div>
       )}
 
+      {simulating && <WorkoutSimulatorModal workout={simulating} exerciseCatalog={exercises} onClose={() => setSimulating(null)} />}
+
       {draft && (
         <WorkoutEditor
+          onSimulate={setSimulating}
           draft={draft}
           setDraft={setDraft}
           exercises={exercises}
@@ -194,7 +223,9 @@ function WorkoutEditor({
   lang,
   onClose,
   onSaved,
+  onSimulate,
 }: {
+  onSimulate: (workout: Workout) => void;
   draft: Draft;
   setDraft: (d: Draft | null) => void;
   exercises: Exercise[];
@@ -230,19 +261,7 @@ function WorkoutEditor({
     if (isAmrap && (!Number.isFinite(minutes) || minutes < 1)) return alert("ל-AMRAP צריך משך של דקה לפחות");
 
     // Only the fields each format uses are stored.
-    const items: WorkoutItem[] = draft.items.map((it, idx) =>
-      isAmrap
-        ? { exercise_id: it.exercise_id, reps: Math.max(1, Number(it.reps) || 1), is_time: it.is_time }
-        : {
-            exercise_id: it.exercise_id,
-            block: (it.block || String.fromCharCode(65 + (idx % 26))).toUpperCase().slice(0, 1),
-            sets: Math.max(1, Number(it.sets) || 1),
-            reps: Math.max(1, Number(it.reps) || 1),
-            is_time: it.is_time,
-            rir: it.rir === null || it.rir === undefined || String(it.rir) === "" ? null : Number(it.rir),
-            rest_time_seconds: Math.max(0, Number(it.rest_time_seconds) || 0),
-          }
-    );
+    const items = normalizeItems(draft.items, draft.format);
     const row = {
       title,
       description: draft.description.trim() || null,
@@ -429,6 +448,30 @@ function WorkoutEditor({
               className="px-6 bg-transparent border-[1.5px] border-btn-secondary text-accent-fg py-3.5 rounded-2xl font-bold hover:bg-btn-secondary-hover transition-colors"
             >
               {draft.id ? "שמור בלי לשנות פרסום" : "שמור כטיוטה"}
+            </button>
+            <button
+              onClick={() => {
+                if (draft.items.length === 0) return alert("הוסף לפחות תרגיל אחד כדי להריץ");
+                const minutes = Number(draft.timeCapMinutes);
+                if (isAmrap && (!Number.isFinite(minutes) || minutes < 1)) return alert("ל-AMRAP צריך משך של דקה לפחות");
+                // Runs the draft as currently edited — nothing is saved.
+                const items = normalizeItems(draft.items, draft.format);
+                onSimulate({
+                  id: draft.id ?? "draft",
+                  title: draft.title.trim() || "אימון ללא שם",
+                  description: draft.description,
+                  format: draft.format,
+                  time_cap_seconds: isAmrap ? Math.round(minutes * 60) : null,
+                  status: "draft",
+                  is_free: true,
+                  items,
+                  exercise_ids: items.map((it) => it.exercise_id),
+                  created_at: new Date().toISOString(),
+                });
+              }}
+              className="px-6 bg-surface-alt text-fg py-3.5 rounded-2xl font-bold hover:bg-line transition-colors flex items-center gap-2"
+            >
+              <Play size={15} fill="currentColor" /> הרץ / בדוק
             </button>
             <button onClick={onClose} className="px-6 bg-surface-alt text-fg py-3.5 rounded-2xl font-bold hover:bg-line transition-colors">
               ביטול

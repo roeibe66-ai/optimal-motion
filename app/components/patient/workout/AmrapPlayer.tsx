@@ -7,6 +7,7 @@ import { useAuth } from "@/app/context/AuthContext";
 import RatingScale from "@/app/components/ui/RatingScale";
 import { getRPEColor } from "@/app/utils/scoring";
 import { getExerciseName } from "@/app/utils/format";
+import { SimulationBanner } from "@/app/components/patient/workout/WorkoutPlayer";
 import type { HapticType } from "@/app/hooks/useHaptics";
 import type { Exercise } from "@/app/types";
 
@@ -27,6 +28,8 @@ interface AmrapPlayerProps {
   triggerHaptic: (type: HapticType) => void;
   onClose: () => void;
   onLogged: () => void; // refetch the patient's logs after a successful save
+  // Admin Run/Test (workout builder): same screens, but nothing is written.
+  isSimulation?: boolean;
 }
 
 type Phase = "ready" | "running" | "paused" | "result" | "rpe" | "done";
@@ -46,7 +49,7 @@ const isVideoUrl = (url: string) => /\.(mp4|webm)(\?|$)/i.test(url);
 // round visible at once, instead of the one-exercise-at-a-time player.
 // When time runs out (or the patient finishes early) it asks for extra reps
 // into the unfinished round, then RPE, and logs the result to workout_logs.
-export default function AmrapPlayer({ config, triggerHaptic, onClose, onLogged }: AmrapPlayerProps) {
+export default function AmrapPlayer({ config, triggerHaptic, onClose, onLogged, isSimulation = false }: AmrapPlayerProps) {
   const { loggedInPatient, lang } = useAuth();
   const dir = lang === "he" ? "rtl" : "ltr";
   const totalMs = config.timeCapSeconds * 1000;
@@ -106,6 +109,11 @@ export default function AmrapPlayer({ config, triggerHaptic, onClose, onLogged }
   };
 
   const saveWithRpe = async (rpe: number) => {
+    if (isSimulation) {
+      triggerHaptic("success");
+      setPhase("done");
+      return;
+    }
     if (!loggedInPatient || isSaving) return;
     setIsSaving(true);
     const { error } = await supabase.from("workout_logs").insert([
@@ -173,7 +181,8 @@ export default function AmrapPlayer({ config, triggerHaptic, onClose, onLogged }
         <Trophy size={80} className="text-warm-fg mb-8 animate-bounce" />
         <h2 className="text-4xl font-black mb-4">כל הכבוד!</h2>
         <p className="text-xl text-muted mb-10">
-          {rounds} סבבים{extraReps > 0 ? ` + ${extraReps} חזרות` : ""} ב-{Math.round(config.timeCapSeconds / 60)} דקות — נשמר ביומן שלך.
+          {rounds} סבבים{extraReps > 0 ? ` + ${extraReps} חזרות` : ""} ב-{Math.round(config.timeCapSeconds / 60)} דקות —{" "}
+          {isSimulation ? "סימולציה, לא נשמר." : "נשמר ביומן שלך."}
         </p>
         <button
           onClick={onClose}
@@ -191,6 +200,7 @@ export default function AmrapPlayer({ config, triggerHaptic, onClose, onLogged }
 
   return (
     <div className={shell} dir={dir}>
+      {isSimulation && <SimulationBanner onExit={onClose} />}
       <div className="pt-[max(1rem,env(safe-area-inset-top))] px-5 pt-4 flex items-center justify-between gap-3">
         <button onClick={requestClose} aria-label="סגור" className="w-10 h-10 rounded-full bg-elevated border border-line flex items-center justify-center text-fg hover:bg-line transition-colors">
           <X size={18} />

@@ -1,5 +1,6 @@
 "use client";
 
+import { BrandLockup } from "@/app/components/brand/Brand";
 import { Activity, BookOpen, Image as ImageIcon, Library, LogOut, Menu, Settings, Timer, Users, Video, Wand2, X } from "lucide-react";
 
 interface AdminSidebarProps {
@@ -39,9 +40,7 @@ export default function AdminSidebar({ adminTab, setAdminTab, isSidebarOpen, set
   return (
     <>
       <div className="md:hidden bg-elevated text-fg p-4 flex justify-between items-center z-30 relative shadow-md border-b border-line">
-        <span className="text-xl font-black tracking-widest uppercase">
-          Optimal<span className="text-accent-fg">Motion</span>
-        </span>
+        <BrandLockup size="sm" />
         <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-2 bg-fg/10 rounded-lg hover:bg-fg/20 transition-colors">
           {isSidebarOpen ? <X size={24} /> : <Menu size={24} />}
         </button>
@@ -55,10 +54,8 @@ export default function AdminSidebar({ adminTab, setAdminTab, isSidebarOpen, set
         } md:right-0`}
       >
         <div className="p-7 hidden md:block">
-          <span className="text-lg font-black text-fg tracking-wider uppercase">
-            Optimal<span className="text-accent-fg">Motion</span>
-          </span>
-          <div className="text-[10px] font-extrabold text-muted tracking-widest uppercase mt-1">Practitioner Console</div>
+          <BrandLockup size="md" align="start" className="text-fg" />
+          <div className="text-[10px] font-extrabold text-muted tracking-widest uppercase mt-3">Practitioner Console</div>
         </div>
 
         <nav className="flex-1 overflow-y-auto p-4 space-y-1 font-medium mt-4 md:mt-0">

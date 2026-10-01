@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Dumbbell, FlaskConical, FlipHorizontal, Info, Minus, Pause, Play, Plus, SkipForward, Trophy, X } from "lucide-react";
+import { ArrowRight, Dumbbell, FlaskConical, FlipHorizontal, Info, Minus, Pause, Play, Plus, SkipForward, Trophy, X } from "lucide-react";
 import { useAuth } from "@/app/context/AuthContext";
 import ExerciseInfoModal from "@/app/components/patient/workout/ExerciseInfoModal";
 import PreWorkoutFlow from "@/app/components/patient/PreWorkoutFlow";
@@ -18,7 +18,7 @@ import type { useWorkoutSession } from "@/app/hooks/useWorkoutSession";
 // entirely. onExit reuses session.closeWorkout, the same action the real
 // close (X) button triggers, so "exit simulation" just backs out to the
 // simulator's config screen rather than needing a separate code path.
-function SimulationBanner({ onExit }: { onExit: () => void }) {
+export function SimulationBanner({ onExit }: { onExit: () => void }) {
   return (
     <div className="sticky top-0 inset-x-0 z-[200] pt-safe px-4 pt-3 print:hidden">
       <div className="flex items-center gap-2.5 bg-warm/15 border border-warm/40 text-warm-fg text-xs font-bold px-4 py-2.5 rounded-2xl shadow-[0_4px_20px_color-mix(in_srgb,var(--shadow-ink)_6%,transparent)]">
@@ -37,12 +37,13 @@ interface WorkoutPlayerProps {
   triggerHaptic: (type: HapticType) => void;
 }
 
-// The rest screen's square media hero: a rounded-rect progress border drawn
-// the same stroke-dasharray/dashoffset way the old circular ring was, just
-// traced around a <rect> instead of a <circle> — same technique, new shape.
+// The rest screen's round media hero ("next up"): a circular progress
+// border drawn with stroke-dasharray/dashoffset. It's still a <rect>, with
+// rx = half its side, so the perimeter formula below reduces to the
+// circle's circumference.
 const REST_SQUARE_SIZE = 200;
-const REST_SQUARE_RADIUS = 28;
 const REST_SQUARE_STROKE = 6;
+const REST_SQUARE_RADIUS = (REST_SQUARE_SIZE - REST_SQUARE_STROKE) / 2;
 const REST_SQUARE_PERIMETER = 4 * (REST_SQUARE_SIZE - REST_SQUARE_STROKE - 2 * REST_SQUARE_RADIUS) + 2 * Math.PI * REST_SQUARE_RADIUS;
 const RIR_OPTIONS = [0, 1, 2, 3, 4];
 
@@ -50,6 +51,20 @@ const RIR_OPTIONS = [0, 1, 2, 3, 4];
 // screen — dark glass (bg-elevated/90 backdrop-blur-md) with a soft
 // diffused shadow, on the --bg-page player background.
 const GLASS = "bg-elevated/90 backdrop-blur-md border border-line shadow-[0_4px_20px_color-mix(in_srgb,var(--shadow-ink)_4%,transparent)]";
+
+// Undo an accidental "next": back to the previous set's screen (only shown
+// once at least one set has been marked done).
+function BackButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      aria-label="חזור לסט הקודם"
+      className={`h-9 shrink-0 rounded-full px-3.5 flex items-center gap-1.5 text-fg text-xs font-bold hover:bg-line active:scale-95 transition-all duration-150 ease-out ${GLASS}`}
+    >
+      <ArrowRight size={15} /> חזור
+    </button>
+  );
+}
 
 // The whole active-workout experience: the pre-workout pain check-in, the
 // immersive full-screen player, and the post-workout feedback flow. Renders
@@ -159,6 +174,7 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
            help (exercise-info) control on the right and close on the left. */
         <div className="relative z-10 pt-safe px-5 md:px-8 pt-5 flex flex-col gap-5 w-full animate-in fade-in duration-500">
           <div className="flex items-center gap-3 w-full">
+            {session.canGoBack && <BackButton onClick={session.goBack} />}
             <button
               onClick={() => ex && session.setViewingExInfo(ex)}
               aria-label="פרטי תרגיל"
@@ -190,6 +206,7 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
            — unchanged from the previous pass; this redesign is scoped to
            the active-set screen only. */
         <div className="relative z-10 pt-safe px-5 md:px-8 pt-6 flex justify-between items-start w-full">
+          {session.canGoBack ? <BackButton onClick={session.goBack} /> : <span />}
           <button
             onClick={session.closeWorkout}
             aria-label="סגור אימון"
@@ -389,7 +406,7 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
                       />
                     )}
                   </svg>
-                  <div className="absolute rounded-[1.5rem] overflow-hidden bg-fg/10" style={{ inset: REST_SQUARE_STROKE + 5 }}>
+                  <div className="absolute rounded-full overflow-hidden bg-fg/10" style={{ inset: REST_SQUARE_STROKE + 5 }}>
                     {heroUrl ? (
                       isVideo ? (
                         <video src={heroUrl} autoPlay muted playsInline loop className="w-full h-full object-cover" />
