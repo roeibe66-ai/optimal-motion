@@ -7,6 +7,7 @@ import { ADMIN_CATEGORY_STYLES, ADMIN_TAGS, AVAILABLE_MUSCLES, DEFAULT_ADMIN_CAT
 import { formatCueLines, getExerciseName } from "@/app/utils/format";
 import type { Exercise, Lang } from "@/app/types";
 import ExerciseFormModal from "@/app/components/admin/ExerciseFormModal";
+import { ExerciseThumb } from "@/app/components/ExerciseMedia";
 
 interface ExerciseLibraryTabProps {
   exercises: Exercise[];
@@ -129,17 +130,15 @@ export default function ExerciseLibraryTab({ exercises, internalNotesByExerciseI
             <div key={ex.id} className="on-light bg-surface rounded-3xl border border-line overflow-hidden flex flex-col group relative">
               <div className="scheme-dark h-[150px] relative overflow-hidden" style={{ background: `linear-gradient(150deg, ${style.glow}, var(--bg-elevated) 75%)` }}>
                 <div className="absolute inset-0" style={{ background: `radial-gradient(circle at 70% 20%, ${style.radial}, transparent 55%)` }}></div>
-                {ex.gif_url ? (
-                  <div className="absolute inset-0 flex items-center justify-center p-6">
-                    {ex.gif_url.toLowerCase().includes(".mp4") || ex.gif_url.toLowerCase().includes(".webm") ? (
-                      <video src={ex.gif_url} autoPlay muted playsInline loop className="on-light max-w-full max-h-full rounded-xl bg-surface-alt object-contain p-1.5 shadow-lg group-hover:scale-105 transition-transform duration-500" />
-                    ) : (
-                      <img src={ex.gif_url} alt={getExerciseName(ex, lang)} className="on-light max-w-full max-h-full rounded-xl bg-surface-alt object-contain p-1.5 shadow-lg group-hover:scale-105 transition-transform duration-500" />
-                    )}
-                  </div>
-                ) : (
-                  <div className="absolute inset-0 flex items-center justify-center text-muted text-xs font-bold">אין מדיה</div>
-                )}
+                <div className="absolute inset-0 flex items-center justify-center p-6">
+                  <ExerciseThumb
+                    exercise={ex}
+                    alt={getExerciseName(ex, lang)}
+                    className="on-light max-w-full max-h-full rounded-xl shadow-lg group-hover:scale-105 transition-transform duration-500"
+                    legacyFit="bg-surface-alt object-contain p-1.5"
+                    fallback={<div className="absolute inset-0 flex items-center justify-center text-muted text-xs font-bold">אין מדיה</div>}
+                  />
+                </div>
                 <div className="on-light absolute top-3.5 right-3.5 bg-surface text-fg text-[11px] font-extrabold px-3 py-1.5 rounded-full">{(ex.categories || []).join(" / ")}</div>
               </div>
               <div className="p-5 flex-1 flex flex-col">

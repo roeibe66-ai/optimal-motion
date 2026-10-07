@@ -7,6 +7,7 @@ import { useAuth } from "@/app/context/AuthContext";
 import RatingScale from "@/app/components/ui/RatingScale";
 import { getRPEColor } from "@/app/utils/scoring";
 import { getExerciseName } from "@/app/utils/format";
+import { ExerciseMediaPlayer } from "@/app/components/ExerciseMedia";
 import { SimulationBanner } from "@/app/components/patient/workout/WorkoutPlayer";
 import type { HapticType } from "@/app/hooks/useHaptics";
 import type { Exercise } from "@/app/types";
@@ -40,8 +41,6 @@ const formatClock = (ms: number) => {
   const seconds = totalSeconds % 60;
   return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
 };
-
-const isVideoUrl = (url: string) => /\.(mp4|webm)(\?|$)/i.test(url);
 
 // AMRAP ("as many rounds as possible") player: one big countdown for the
 // whole time cap, a round counter the patient taps after each full round,
@@ -253,21 +252,19 @@ export default function AmrapPlayer({ config, triggerHaptic, onClose, onLogged, 
       <div className="flex-1 overflow-y-auto px-4 py-5">
         <div className={`grid gap-3 max-w-2xl mx-auto ${config.stations.length > 4 ? "grid-cols-3" : "grid-cols-2"}`}>
           {config.stations.map((station, idx) => {
-            const url = station.exercise.gif_url;
             return (
               <div key={`${station.exercise.id}-${idx}`} className="on-light rounded-2xl overflow-hidden bg-surface shadow-card">
                 <div className="on-light aspect-square bg-surface-alt relative">
-                  {url ? (
-                    isVideoUrl(url) ? (
-                      <video src={url} autoPlay muted playsInline loop className="w-full h-full object-cover" />
-                    ) : (
-                      <img src={url} alt={getExerciseName(station.exercise, lang)} className="w-full h-full object-cover" />
-                    )
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <Dumbbell size={24} className="text-muted" />
-                    </div>
-                  )}
+                  <ExerciseMediaPlayer
+                    exercise={station.exercise}
+                    label={getExerciseName(station.exercise, lang)}
+                    mode="fill"
+                    placeholder={
+                      <div className="w-full h-full flex items-center justify-center">
+                        <Dumbbell size={24} className="text-muted" />
+                      </div>
+                    }
+                  />
                   <span className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-scrim/70 text-surface text-[11px] font-black flex items-center justify-center">{idx + 1}</span>
                 </div>
                 <div className="p-2">

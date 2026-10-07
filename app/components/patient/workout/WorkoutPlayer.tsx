@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowRight, Dumbbell, FlaskConical, FlipHorizontal, Info, Minus, Pause, Play, Plus, SkipForward, Trophy, X } from "lucide-react";
+import { ArrowRight, Dumbbell, FlaskConical, Info, Minus, Pause, Play, Plus, SkipForward, Trophy, X } from "lucide-react";
 import { useAuth } from "@/app/context/AuthContext";
 import ExerciseInfoModal from "@/app/components/patient/workout/ExerciseInfoModal";
+import { ExerciseMediaPlayer } from "@/app/components/ExerciseMedia";
 import PreWorkoutFlow from "@/app/components/patient/PreWorkoutFlow";
 import WorkoutFinishFlow from "@/app/components/patient/workout/WorkoutFinishFlow";
 import Toast from "@/app/components/ui/Toast";
@@ -98,19 +99,6 @@ function BackButton({ onClick }: { onClick: () => void }) {
 export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerProps) {
   const { lang } = useAuth();
   const dir = lang === "he" ? "rtl" : "ltr";
-
-  // Which of the two media URLs the active-exercise box is showing (0 =
-  // gif_url, 1 = secondary_gif_url). Reset via the render-time "adjusting
-  // state when a prop changes" pattern (React's own recommended approach —
-  // see "You Might Not Need an Effect") rather than a useEffect, so there's
-  // no synchronous setState-in-effect and no extra render pass. Declared
-  // before the early returns below since Hooks can't be called conditionally.
-  const [activeMediaIndex, setActiveMediaIndex] = useState(0);
-  const [lastMediaExerciseId, setLastMediaExerciseId] = useState(session.displayedExercise?.id);
-  if (session.displayedExercise?.id !== lastMediaExerciseId) {
-    setLastMediaExerciseId(session.displayedExercise?.id);
-    setActiveMediaIndex(0);
-  }
 
   if (session.showPreWorkout) {
     return (
@@ -281,44 +269,21 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
             )}
 
             {/* Contained media player — a clean, distinct box, no text
-                overlaid on it (aside from the angle-toggle button). Media
-                is optional now (exercises can be text/metadata-only), and
-                an exercise with a secondary_gif_url gets a toggle to flip
-                between the two angles. */}
-            {(() => {
-              const currentUrl = activeMediaIndex === 0 ? ex?.gif_url : ex?.secondary_gif_url ?? ex?.gif_url;
-              const isVideo = currentUrl ? currentUrl.toLowerCase().includes(".mp4") || currentUrl.toLowerCase().includes(".webm") : false;
-              const hasSecondAngle = Boolean(ex?.secondary_gif_url);
-
-              return (
-                <div className="relative w-full max-w-[280px] aspect-square rounded-[2rem] overflow-hidden border border-line bg-fg/10 shadow-card">
-                  {currentUrl ? (
-                    isVideo ? (
-                      <video src={currentUrl} autoPlay muted playsInline loop className="w-full h-full object-cover" />
-                    ) : (
-                      <img src={currentUrl} alt={ex ? getExerciseName(ex, lang) : "Exercise media"} className="w-full h-full object-cover" />
-                    )
-                  ) : (
-                    // Muted-icon-plus-caption placeholder on a dark
-                    // elevated gradient, matching the player's dark shell.
-                    <div className="w-full h-full bg-gradient-to-br from-elevated to-line flex flex-col items-center justify-center gap-2">
-                      <Dumbbell size={40} className="text-muted" />
-                      <span className="text-muted text-sm font-bold">אין מדיה זמינה</span>
-                    </div>
-                  )}
-
-                  {hasSecondAngle && (
-                    <button
-                      onClick={() => setActiveMediaIndex((i) => (i === 0 ? 1 : 0))}
-                      className={`absolute bottom-3 left-3 flex items-center gap-1.5 px-3 py-2 rounded-full text-fg text-xs font-bold active:scale-90 transition-all duration-150 ease-out ${GLASS}`}
-                    >
-                      <FlipHorizontal size={14} />
-                      החלף זווית
-                    </button>
-                  )}
+                overlaid on it (aside from the angle toggle). Media is
+                optional (exercises can be text/metadata-only); the box takes
+                the clip's own aspect (4:5 / 16:9), legacy gif_url stays square. */}
+            <ExerciseMediaPlayer
+              exercise={ex}
+              label={ex ? getExerciseName(ex, lang) : "Exercise media"}
+              placeholder={
+                // Muted-icon-plus-caption placeholder on a dark elevated
+                // gradient, matching the player's dark shell.
+                <div className="w-full max-w-[280px] aspect-square rounded-[2rem] overflow-hidden border border-line shadow-card bg-gradient-to-br from-elevated to-line flex flex-col items-center justify-center gap-2">
+                  <Dumbbell size={40} className="text-muted" />
+                  <span className="text-muted text-sm font-bold">אין מדיה זמינה</span>
                 </div>
-              );
-            })()}
+              }
+            />
 
             {/* Minimal controls, seamless below the player — no drawer/card. */}
             {session.activeAssign?.is_time ? (
@@ -382,8 +347,6 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
                 no timer running then — plain border instead. */}
             {(() => {
               const heroExercise = isSameExerciseNext ? ex : next?.exercise;
-              const heroUrl = heroExercise?.gif_url;
-              const isVideo = heroUrl ? heroUrl.toLowerCase().includes(".mp4") || heroUrl.toLowerCase().includes(".webm") : false;
               const showProgress = !session.isSupersetCheck;
               if (!heroExercise) return null;
 
@@ -431,20 +394,19 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
                     )}
                   </svg>
                   <div className="absolute rounded-full overflow-hidden bg-fg/10" style={{ inset: REST_SQUARE_STROKE + 5 }}>
-                    {heroUrl ? (
-                      isVideo ? (
-                        <video src={heroUrl} autoPlay muted playsInline loop className="w-full h-full object-cover" />
-                      ) : (
-                        <img src={heroUrl} alt="" className="w-full h-full object-cover" />
-                      )
-                    ) : (
-                      // Passive glance at what's next — no toggle button here,
-                      // just the same fallback placeholder as the active box.
-                      <div className="w-full h-full bg-gradient-to-br from-elevated to-line flex flex-col items-center justify-center gap-1.5">
-                        <Dumbbell size={28} className="text-muted" />
-                        <span className="text-muted text-[11px] font-bold">אין מדיה זמינה</span>
-                      </div>
-                    )}
+                    {/* Passive glance at what's next — primary angle only, no
+                        toggle, same fallback placeholder as the active box. */}
+                    <ExerciseMediaPlayer
+                      exercise={heroExercise}
+                      label={getExerciseName(heroExercise, lang)}
+                      mode="fill"
+                      placeholder={
+                        <div className="w-full h-full bg-gradient-to-br from-elevated to-line flex flex-col items-center justify-center gap-1.5">
+                          <Dumbbell size={28} className="text-muted" />
+                          <span className="text-muted text-[11px] font-bold">אין מדיה זמינה</span>
+                        </div>
+                      }
+                    />
                   </div>
                 </div>
               );

@@ -35,7 +35,9 @@ export function usePatientData() {
 
     const [assigns, exs, logs, programs] = await Promise.all([
       supabase.from("patient_exercises").select("*").eq("patient_id", loggedInPatient.id),
-      supabase.from("exercises").select("*"),
+      // Approved demo media rides along (RLS hides unapproved rows), so every
+      // exercise in the plan/catalog carries it — see getExerciseMediaItems.
+      supabase.from("exercises").select("*, media:exercise_media(*)"),
       supabase.from("workout_logs").select("*").eq("patient_id", loggedInPatient.id).order("created_at", { ascending: false }),
       supabase.from("patient_programs").select("id, name, format, time_cap_seconds").eq("patient_id", loggedInPatient.id),
     ]);

@@ -171,3 +171,16 @@ the nav (`fixed z-50`, a sibling of `<main>`).
 **Rule:** any full-screen overlay/sheet that can be opened from a patient tab must render
 through `createPortal(..., document.body)` (as `Modal` and `PatientCoachSheet` now do) —
 don't try to win with a higher z-index.
+
+## 2026-10 — Reading localStorage in a useState initializer caused a hydration mismatch
+
+**What happened:** `ExerciseMediaPlayer` read the remembered camera angle with
+`useState(() => localStorage...)`. Server HTML rendered angle 1, the client's first
+render picked angle 2, React logged a hydration mismatch and kept the server
+attributes — so the remembered angle was never shown after a reload.
+**Why:** a `useState` initializer runs during hydration with browser-only data the
+server never had.
+**Rule:** browser-only state (localStorage, matchMedia) in a client component goes
+through `useSyncExternalStore` with a server snapshot (or is set after mount) — never
+a `useState` initializer. Keep an in-memory fallback so the UI still works when
+localStorage throws (private mode).

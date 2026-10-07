@@ -5,6 +5,7 @@ import { CalendarDays, CheckCircle2, ChevronLeft, ChevronRight } from "lucide-re
 import { isInWeek, planWeeksOf, programNameOf, type HydratedPatientExercise } from "@/app/hooks/useWorkoutSession";
 import type { WorkoutLog } from "@/app/types";
 import { PROGRAM_TAG_STYLE } from "@/app/constants/catalog";
+import { getExerciseThumbUrl } from "@/app/utils/media";
 
 interface CalendarTabProps {
   patientExercises: HydratedPatientExercise[];
@@ -244,7 +245,7 @@ export default function CalendarTab({ patientExercises, workoutLogs, patientId, 
             {selectedDayCategories.map((cat) => {
               const style = PROGRAM_TAG_STYLE;
               const catExercises = selectedDayExercises.filter((pe) => programNameOf(pe) === cat);
-              const thumbUrl = catExercises.find((pe) => pe.exercise.gif_url && !/\.(mp4|webm)$/i.test(pe.exercise.gif_url))?.exercise.gif_url;
+              const thumbUrl = catExercises.map((pe) => getExerciseThumbUrl(pe.exercise)).find(Boolean);
 
               return (
                 <button

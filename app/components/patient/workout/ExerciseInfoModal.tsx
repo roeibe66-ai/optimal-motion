@@ -16,6 +16,7 @@ import type { Exercise } from "@/app/types";
 import Modal from "@/app/components/ui/Modal";
 import ExerciseMuscleMap from "@/app/components/patient/ExerciseMuscleMap";
 import AnatomyHeatmap from "@/app/components/AnatomyHeatmap";
+import { ExerciseMediaPlayer } from "@/app/components/ExerciseMedia";
 import { formatCueLines, getExerciseName, pickLangText, type CueLine } from "@/app/utils/format";
 import { EQUIPMENT_LIST } from "@/app/constants/catalog";
 import { useExerciseHistory } from "@/app/hooks/useExerciseHistory";
@@ -112,6 +113,10 @@ export default function ExerciseInfoModal({ exercise, historyData, onClose }: Ex
   return (
     <Modal onClose={onClose} title="מידע לתרגיל" icon={<Info size={20} className="text-accent-fg" />}>
       <h4 className="text-start font-black text-xl tracking-tight mb-4 text-fg">{getExerciseName(exercise, lang)}</h4>
+
+      {/* Demo clip/still right under the name. Renders nothing for an
+          exercise with no media at all, so text-only exercises are unchanged. */}
+      <ExerciseMediaPlayer exercise={exercise} label={getExerciseName(exercise, lang)} className="mx-auto mb-5" />
 
       {exercise.equipment && exercise.equipment.length > 0 && (
         <div className="flex flex-wrap gap-2 mb-5">

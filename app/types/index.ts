@@ -70,6 +70,33 @@ export interface Exercise {
   // muscleMapping.ts, which resolves each id to real SVG path ids.
   prime_movers?: string[];
   synergists?: string[];
+  // Embedded from exercise_media (select("*, media:exercise_media(*)")) —
+  // RLS returns only approved rows to patients. Read through
+  // getExerciseMediaItems (app/utils/media.ts), which falls back to
+  // gif_url/secondary_gif_url when this is empty.
+  media?: ExerciseMediaRow[];
+}
+
+export type ExerciseMediaView = "diag" | "front" | "rear" | "front34";
+
+// One processed clip/still in the public `exercise-media` bucket
+// (scripts/media/ pipeline, 20261007090000_create_exercise_media.sql).
+export interface ExerciseMediaRow {
+  id: string;
+  exercise_id: string;
+  exercise_slug: string;
+  view: ExerciseMediaView;
+  kind: "video" | "image";
+  position: number; // 0 = primary
+  path: string; // object path inside the bucket
+  poster_path: string | null; // WebP first frame, videos only
+  aspect: "4:5" | "16:9";
+  width: number | null;
+  height: number | null;
+  duration_s: number | null;
+  bytes: number | null;
+  loop_mode: "none" | "pingpong";
+  approved: boolean;
 }
 
 export type PackageStatus = "draft" | "published";

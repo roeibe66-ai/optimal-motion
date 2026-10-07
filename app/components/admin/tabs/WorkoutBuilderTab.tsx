@@ -6,6 +6,7 @@ import { supabase } from "@/app/lib/supabase";
 import { getExerciseName } from "@/app/utils/format";
 import type { Exercise, Lang, Workout, WorkoutFormat, WorkoutItem } from "@/app/types";
 import WorkoutSimulatorModal from "@/app/components/admin/tabs/WorkoutSimulatorModal";
+import { ExerciseThumb } from "@/app/components/ExerciseMedia";
 
 interface WorkoutBuilderTabProps {
   exercises: Exercise[];
@@ -419,13 +420,17 @@ function WorkoutEditor({
                     }}
                     className="flex items-center gap-3 rounded-xl p-2 hover:bg-line text-start transition-colors"
                   >
-                    {ex.gif_url ? (
-                      <img src={ex.gif_url} alt="" className="on-light w-9 h-9 rounded-lg bg-surface object-contain shrink-0" />
-                    ) : (
-                      <span className="on-light w-9 h-9 rounded-lg bg-surface flex items-center justify-center shrink-0">
-                        <Dumbbell size={14} className="text-muted" />
-                      </span>
-                    )}
+                    <ExerciseThumb
+                      exercise={ex}
+                      alt=""
+                      className="on-light w-9 h-9 rounded-lg bg-surface shrink-0"
+                      legacyFit="object-contain"
+                      fallback={
+                        <span className="on-light w-9 h-9 rounded-lg bg-surface flex items-center justify-center shrink-0">
+                          <Dumbbell size={14} className="text-muted" />
+                        </span>
+                      }
+                    />
                     <span className="text-sm font-bold text-fg flex-1 truncate">{getExerciseName(ex, lang)}</span>
                     <Plus size={16} className="text-accent-fg shrink-0" />
                   </button>

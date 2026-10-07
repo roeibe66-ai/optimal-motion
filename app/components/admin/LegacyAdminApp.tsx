@@ -245,7 +245,7 @@ export default function LegacyAdminApp() {
   const fetchAdminData = async () => {
     const [pats, exs, pkgs, logs, notes, facts] = await Promise.all([
       supabase.from("patients").select("*"),
-      supabase.from("exercises").select("*"),
+      supabase.from("exercises").select("*, media:exercise_media(*)"),
       supabase.from("packages").select("*"),
       supabase.from("workout_logs").select("*").order("created_at", { ascending: false }).limit(500),
       supabase.from("exercise_internal_notes").select("*"),

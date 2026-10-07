@@ -21,6 +21,7 @@ import type { AIAssistantContext, CuratedFact, Exercise, ExploreProgram, Workout
 import { programNameOf, type HydratedPatientExercise, type SessionExercise } from "@/app/hooks/useWorkoutSession";
 import PatientCoachSheet from "@/app/components/patient/PatientCoachSheet";
 import AnatomyHeatmap from "@/app/components/AnatomyHeatmap";
+import { ExerciseThumb } from "@/app/components/ExerciseMedia";
 
 interface PlanTabProps {
   workoutLogs: WorkoutLog[];
@@ -532,15 +533,12 @@ export default function PlanTab({
                         onClick={() => onViewExerciseInfo(assignment.exercise)}
                       >
                         <div className="on-light w-16 h-16 rounded-2xl overflow-hidden bg-surface-alt shrink-0">
-                          {assignment.exercise.gif_url ? (
-                            assignment.exercise.gif_url.toLowerCase().includes(".mp4") || assignment.exercise.gif_url.toLowerCase().includes(".webm") ? (
-                              <video src={assignment.exercise.gif_url} className="w-full h-full object-cover" />
-                            ) : (
-                              <img src={assignment.exercise.gif_url} alt={getExerciseName(assignment.exercise, lang)} className="w-full h-full object-cover" />
-                            )
-                          ) : (
-                            <div className="on-light w-full h-full bg-surface-alt"></div>
-                          )}
+                          <ExerciseThumb
+                            exercise={assignment.exercise}
+                            alt={getExerciseName(assignment.exercise, lang)}
+                            className="w-full h-full"
+                            fallback={<div className="on-light w-full h-full bg-surface-alt"></div>}
+                          />
                         </div>
                         <div className="flex-1 overflow-hidden py-1">
                           <div className="text-muted text-xs font-bold mb-1 flex items-center gap-1">

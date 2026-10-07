@@ -17,6 +17,7 @@ import {
 } from "@/app/constants/catalog";
 import { useAuth } from "@/app/context/AuthContext";
 import { getExerciseName } from "@/app/utils/format";
+import { ExerciseThumb } from "@/app/components/ExerciseMedia";
 import type { Exercise } from "@/app/types";
 
 interface DiyBuilderTabProps {
@@ -271,15 +272,13 @@ export default function DiyBuilderTab({
                       <X size={8} strokeWidth={3} />
                     </span>
                   </button>
-                  {ex.gif_url ? (
-                    ex.gif_url.toLowerCase().includes(".mp4") || ex.gif_url.toLowerCase().includes(".webm") ? (
-                      <video src={ex.gif_url} className="on-light w-9 h-9 rounded-[10px] bg-surface-alt object-contain" />
-                    ) : (
-                      <img src={ex.gif_url} alt={getExerciseName(ex, lang)} className="on-light w-9 h-9 rounded-[10px] bg-surface-alt object-contain p-0.5" />
-                    )
-                  ) : (
-                    <div className="on-light w-9 h-9 rounded-[10px] bg-surface-alt" />
-                  )}
+                  <ExerciseThumb
+                    exercise={ex}
+                    alt={getExerciseName(ex, lang)}
+                    className="on-light w-9 h-9 rounded-[10px] bg-surface-alt"
+                    legacyFit="object-contain p-0.5"
+                    fallback={<div className="on-light w-9 h-9 rounded-[10px] bg-surface-alt" />}
+                  />
                   <span className="text-[11px] font-bold text-fg truncate w-full">{getExerciseName(ex, lang)}</span>
                 </div>
               ))}
@@ -403,19 +402,13 @@ export default function DiyBuilderTab({
                                   className="on-light bg-surface rounded-[1.25rem] p-3 border border-line shadow-sm flex items-center justify-between gap-3 hover:border-line-input transition-colors"
                                 >
                                   <div className="flex items-center gap-3 w-full overflow-hidden">
-                                    {ex.gif_url ? (
-                                      ex.gif_url.toLowerCase().includes(".mp4") || ex.gif_url.toLowerCase().includes(".webm") ? (
-                                        <video src={ex.gif_url} className="on-light w-[52px] h-[52px] rounded-2xl bg-surface-alt object-contain shrink-0" />
-                                      ) : (
-                                        <img
-                                          src={ex.gif_url}
-                                          alt={getExerciseName(ex, lang)}
-                                          className="on-light w-[52px] h-[52px] rounded-2xl bg-surface-alt object-contain shrink-0 p-1"
-                                        />
-                                      )
-                                    ) : (
-                                      <div className="on-light w-[52px] h-[52px] rounded-2xl bg-surface-alt shrink-0" />
-                                    )}
+                                    <ExerciseThumb
+                                      exercise={ex}
+                                      alt={getExerciseName(ex, lang)}
+                                      className="on-light w-[52px] h-[52px] rounded-2xl bg-surface-alt shrink-0"
+                                      legacyFit="object-contain p-1"
+                                      fallback={<div className="on-light w-[52px] h-[52px] rounded-2xl bg-surface-alt shrink-0" />}
+                                    />
 
                                     <div className="overflow-hidden">
                                       <h4 className="font-extrabold text-fg text-[13px] truncate">{getExerciseName(ex, lang)}</h4>

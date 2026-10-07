@@ -5,6 +5,8 @@ import { CalendarPlus, Check, Compass, Crown, Dumbbell, Flame, Heart, Lock, Play
 import Modal from "@/app/components/ui/Modal";
 import { DAYS_OF_WEEK } from "@/app/constants/catalog";
 import { getExerciseName } from "@/app/utils/format";
+import { getExerciseThumbUrl } from "@/app/utils/media";
+import { ExerciseThumb as SharedExerciseThumb } from "@/app/components/ExerciseMedia";
 import { toDateKey } from "@/app/hooks/useWorkoutSession";
 import { useAuth } from "@/app/context/AuthContext";
 import type { Exercise, ExploreProgram, Workout } from "@/app/types";
@@ -37,8 +39,8 @@ const workoutItemLabel = (w: Workout, item: Workout["items"][number]) => {
 function coverGifForWorkout(workout: Workout, exerciseCatalog: Exercise[]) {
   if (workout.cover_image_url) return workout.cover_image_url;
   for (const item of workout.items) {
-    const url = exerciseCatalog.find((ex) => ex.id === item.exercise_id)?.gif_url;
-    if (url && !/\.(mp4|webm)$/i.test(url)) return url;
+    const url = getExerciseThumbUrl(exerciseCatalog.find((ex) => ex.id === item.exercise_id));
+    if (url) return url;
   }
   return null;
 }
@@ -102,28 +104,16 @@ function programShape(program: ExploreProgram) {
 
 function coverGifFor(program: ExploreProgram, exerciseCatalog: Exercise[]) {
   for (const row of program.exercises) {
-    const url = exerciseCatalog.find((ex) => ex.id === row.exercise_id)?.gif_url;
-    if (url && !/\.(mp4|webm)$/i.test(url)) return url;
+    const url = getExerciseThumbUrl(exerciseCatalog.find((ex) => ex.id === row.exercise_id));
+    if (url) return url;
   }
   return null;
 }
 
-// Small exercise media in the Explore previews: video for mp4/webm, image
-// otherwise, and a dumbbell placeholder when the exercise has no media.
+// Small exercise media in the Explore previews: a still (new-media poster
+// or legacy image), a paused legacy video, or a dumbbell placeholder.
 function ExerciseThumb({ exercise, alt }: { exercise: Exercise; alt: string }) {
-  const url = exercise.gif_url;
-  const box = "on-light w-11 h-11 rounded-xl bg-surface shrink-0 overflow-hidden";
-  if (!url) {
-    return (
-      <div className={`${box} flex items-center justify-center`}>
-        <Dumbbell size={16} className="text-muted" />
-      </div>
-    );
-  }
-  if (/\.(mp4|webm)(\?|$)/i.test(url)) {
-    return <video src={url} autoPlay muted playsInline loop className={`${box} object-cover`} />;
-  }
-  return <img src={url} alt={alt} className={`${box} object-contain p-0.5`} />;
+  return <SharedExerciseThumb exercise={exercise} alt={alt} className="on-light w-11 h-11 rounded-xl bg-surface shrink-0 overflow-hidden" legacyFit="object-contain p-0.5" />;
 }
 
 function ProgramCard({
