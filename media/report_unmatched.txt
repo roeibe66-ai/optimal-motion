@@ -1,0 +1,6 @@
+Files that need a decision. Resolve by adding a row to media/match_overrides.csv
+(file_base = filename without view suffix/extension).
+
+SKIPPED    assisted-deep-squat-hold_front.png (no such exercise in the app yet - skipped (2026-10-07))
+SKIPPED    assisted-deep-squat-hold_side.png (no such exercise in the app yet - skipped (2026-10-07))
+MULTIPLE   push-up: push_up_side.mp4 (pos 0, diag), push-up_front.mp4.mp4 (pos 1, front)

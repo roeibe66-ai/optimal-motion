@@ -1,0 +1,28 @@
+exercise_slug,exercise_name_en,exercise_id,view,kind,raw_path,aspect,crop_x_offset,loop_mode,position,approved,notes
+abdominals-crunches,Abdominals Crunches,ab2872a1-79a6-4e12-a4ed-0ad5be9c9fd5,diag,video,media/raw/videos/abdominals-crunches_side.mp4.mp4,16:9,,none,0,true,double extension in filename; family: ח. מכון (חוברת); endframe_diff=4.1
+advanced-tucked-back-lever,Advanced Tucked Back Lever,58eb9000-cbb2-4345-861c-39fb78cdde41,diag,image,media/raw/images/advanced-tucked-back-lever_side.png,16:9,,none,0,true,family: B. מנופים ו-Skin The Cat (מבט אלכסוני)
+advanced-tucked-front-lever,Advanced Tucked Front Lever,30933075-d994-4afd-9122-2003db347757,diag,image,media/raw/images/advanced-tucked-front-lever_side.png,16:9,,none,0,true,family: B. מנופים ו-Skin The Cat (מבט אלכסוני)
+butterfly-sit,Butterfly Sit,af6c8556-621a-4b6b-926b-2e406c3b38f3,front,image,media/raw/images/butterfly-sit_front.png,16:9,,none,0,true,family: מ. ניידות ירך וישיבה
+center-knee-ring-rollout,Center Knee Ring Rollout,6dd23a3c-045c-49e7-b47e-fcfe46c40218,diag,video,media/raw/videos/Center Knee Ring Rollout.mp4,16:9,,none,0,true,family: E. טבעות (מבט אלכסוני); endframe_diff=6.0
+dip,Dip,54aa7692-6a65-4560-b2f8-7dcab43fa2a6,diag,video,media/raw/videos/dip.mp4,4:5,,none,0,true,family: F. מקבילים ותמיכה (מבט אלכסוני); endframe_diff=2.3
+dumbbell-lateral-raise,Dumbbell Lateral Raise,4ed0c8d3-e64c-4811-9cf5-4c5f7e1086e4,diag,video,media/raw/videos/Dumbbell Lateral Raise.mp4,4:5,,none,0,true,family: ח. מכון (חוברת); endframe_diff=0.8
+dynamic-deep-squat,Dynamic Deep Squat,7a835725-3e04-4d1e-af1a-d744fd4839cb,diag,image,media/raw/images/deep_squat.png,4:5,,none,0,true,match: override; family: ל. גוף תחתון וניידות עמידה
+flat-dumbbell-flys,Flat Dumbbell Flys,02378447-586d-4ca3-81d8-48cbc0371840,diag,video,media/raw/videos/flat dumbbel flys.mp4,16:9,,none,0,true,family: ח. מכון (חוברת); endframe_diff=1.3
+full-front-lever-raise,Full Front Lever Raise,9c0ac016-08d7-4bfe-b05c-3da87d9adbe5,diag,video,media/raw/videos/front_lever_raise.mp4,16:9,,none,0,true,match: override; family: B. מנופים ו-Skin The Cat (מבט אלכסוני); endframe_diff=0.8
+full-planche,Full Planche,ef9ac12d-a394-47ab-ba9a-d50264d30721,diag,image,media/raw/images/full-planche_side.png,16:9,,none,0,true,family: ט. פלאנש ופייק
+incline-dumbbell-curls,Incline Dumbbell curls,6a8151cc-6e08-4b2f-8f44-7eaa1a86c9d3,diag,video,media/raw/videos/Incline Dumbbell curls.mp4,16:9,,none,0,true,family: ח. מכון (חוברת); endframe_diff=0.5
+kettlebell-goblet-squat,Dumbbell Squat,2bd6e216-e97c-484d-8b5c-b5f5eb07c085,diag,video,media/raw/videos/goblet_squat.mp4,4:5,,none,0,true,match: override; family: ח. מכון (חוברת); endframe_diff=0.6
+one-leg-release-handstand,One Leg Release Handstand,cc292115-4118-4b42-b8aa-fd0e7f722d68,diag,video,media/raw/videos/One Leg Release Handstand.mp4,4:5,,none,0,true,family: ט. פלאנש ופייק; endframe_diff=0.5
+pancake,Pancake,34d6cb07-e00a-4c66-ba28-58a76f74c298,front,image,media/raw/images/pancake_front.png,16:9,,none,0,true,family: מ. ניידות ירך וישיבה
+passive-hang,Passive Hang,27d5fae7-bb30-4748-906d-bf5c0b9c1a69,diag,image,media/raw/images/passive_hang.png,4:5,,none,0,true,family: A. תליות ומתחים (מבט אחורי)
+pull-up,Pull Up,b0b8c690-3d9c-4b91-bf19-0ce684d61da7,front,video,media/raw/videos/pull_up_front.mp4,4:5,,none,0,true,family: A. תליות ומתחים (מבט אחורי); endframe_diff=7.4
+push-up,Push Up,b5927951-d721-4d3d-a0cf-e8a73c88dcfd,diag,video,media/raw/videos/push_up_side.mp4,16:9,,none,0,true,"family: ז. שכיבות סמיכה, בטן ורצפה; endframe_diff=0.6"
+push-up,Push Up,b5927951-d721-4d3d-a0cf-e8a73c88dcfd,front,video,media/raw/videos/push-up_front.mp4.mp4,16:9,,none,1,true,"double extension in filename; family: ז. שכיבות סמיכה, בטן ורצפה; endframe_diff=13.1"
+seated-dumbbell-shoulder-press,Seated Dumbbell Shoulder Press,1a0077c6-0a9e-4b51-94a2-bb1725e279ed,diag,video,media/raw/videos/Seated Dumbbell Shoulder Press.mp4,4:5,,none,0,true,family: ח. מכון (חוברת); endframe_diff=0.6
+seated-knee-extension,Seated Knee Extension,cfb51c45-70ff-44fc-a5d7-d65327637458,diag,video,media/raw/videos/seated_knee_extension.mp4,16:9,,none,0,true,family: ח. מכון (חוברת); endframe_diff=0.5
+seated-pulley-row,Seated Pulley Row,847ff700-a71b-4e53-af63-d1ce8da768f9,diag,video,media/raw/videos/seated pulley row.mp4,16:9,,none,0,true,family: ח. מכון (חוברת); endframe_diff=1.2
+skin-the-cat,Skin The Cat,b54cccd4-1b24-4bdd-a087-fc413cbed087,diag,video,media/raw/videos/skin_the_cat.mp4,4:5,,none,0,true,family: B. מנופים ו-Skin The Cat (מבט אלכסוני); endframe_diff=5.2
+standing-leg-side-raise,Standing Leg Side Raise,57b2a41c-9476-429a-b3df-ca2e799380e0,front,video,media/raw/videos/standing-leg-side-raise_front.png.mp4,4:5,,none,0,true,double extension in filename; family: ס. ניידות עמוד שדרה וזרימות; endframe_diff=5.9
+straddle-sit,Straddle Sit,e4d5c1d1-118f-4c87-8651-9f0ca6bad819,front,image,media/raw/images/straddle-sit_front.png,16:9,,none,0,true,family: מ. ניידות ירך וישיבה
+triceps-push-down,Triceps Push-Down,621df7ad-6db1-45e7-a89e-92d18035a661,diag,video,media/raw/videos/Triceps Push-Down.mp4,4:5,,none,0,true,family: ח. מכון (חוברת); endframe_diff=2.2
+wide-grip-lat-pulldown,Wide Grip Lat Pulldown,cebf0fce-1169-4ab2-b228-5e731df9aa2e,diag,video,media/raw/videos/wide_grip_lat_pulldown.mp4,4:5,,none,0,true,family: ח. מכון (חוברת); endframe_diff=4.7
