@@ -5,6 +5,7 @@ import { supabase } from "@/app/lib/supabase";
 import { useAuth } from "@/app/context/AuthContext";
 import type { HapticType } from "@/app/hooks/useHaptics";
 import { getExerciseName, parseWeightInput } from "@/app/utils/format";
+import { getLastUsedWeights, parsePerformance } from "@/app/utils/history";
 import type { Exercise, PatientExercise, SessionPerformanceEntry, WorkoutFormat, WorkoutLog } from "@/app/types";
 
 // A PatientExercise as it's actually consumed here: already joined with its
@@ -77,6 +78,7 @@ export interface ExerciseHistoryPoint {
   date: string;
   reps: number;
   rir: number | null; // null if this log predates RIR capture (Tier 0.5) — chart leaves a gap rather than plotting 0
+  weight: number | null; // heaviest weight reported that session; null = none logged (gap, not 0)
 }
 
 interface UseWorkoutSessionParams {
@@ -259,33 +261,38 @@ export function useWorkoutSession({
           ? blocksMap[blocksKeys[activeBlockIdx + 1]][0]
           : undefined;
 
+  // Per-exercise progress for the info sheet's Charts tab: one point per
+  // session that logged this exercise — best set's reps (and the RIR reported
+  // on that same set), plus the heaviest weight used, if any. Every patient
+  // type, oldest first.
   let exHistoryData: ExerciseHistoryPoint[] = [];
-  if (viewingExInfo && loggedInPatient?.patient_type === "fitness") {
-    const relevantLogs = workoutLogs.filter((log) => log.patient_id === loggedInPatient.id && log.performance_data);
-    exHistoryData = relevantLogs
+  if (viewingExInfo && loggedInPatient) {
+    exHistoryData = workoutLogs
+      .filter((log) => log.patient_id === loggedInPatient.id)
       .map((log) => {
-        try {
-          const parsed: SessionPerformanceEntry[] = JSON.parse(log.performance_data as string);
-          const sets = parsed.filter((p) => p.exercise_id === viewingExInfo.id);
-          if (sets.length > 0) {
-            // The specific set that produced the day's best reps, not an
-            // independent max() — so the RIR shown alongside is the RIR
-            // actually reported on that same set, not an unrelated aggregate.
-            const bestSet = sets.reduce((best, s) => ((s.reps || 0) > (best.reps || 0) ? s : best));
-            return {
-              date: new Date(log.created_at).toLocaleDateString("he-IL", { day: "2-digit", month: "2-digit" }),
-              reps: bestSet.reps || 0,
-              rir: bestSet.rir ?? null,
-            };
-          }
-        } catch {
-          // malformed performance_data for this log — skip it
-        }
-        return null;
+        const sets = parsePerformance(log).filter((p) => p.exercise_id === viewingExInfo.id);
+        if (sets.length === 0) return null;
+        const bestSet = sets.reduce((best, s) => ((s.reps || 0) > (best.reps || 0) ? s : best));
+        const maxWeight = Math.max(0, ...sets.map((s) => Number(s.weight_kg) || 0));
+        return {
+          createdAt: log.created_at,
+          point: {
+            date: new Date(log.created_at).toLocaleDateString("he-IL", { day: "2-digit", month: "2-digit" }),
+            reps: bestSet.reps || 0,
+            rir: bestSet.rir ?? null,
+            weight: maxWeight > 0 ? maxWeight : null,
+          },
+        };
       })
-      .filter((point): point is ExerciseHistoryPoint => point !== null)
-      .reverse();
+      .filter((x): x is { createdAt: string; point: ExerciseHistoryPoint } => x !== null)
+      .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+      .map((x) => x.point);
   }
+
+  // What the patient lifted for each exercise last time (from past logs),
+  // shown during the set and used to prefill the rest screen's weight field.
+  const lastUsedWeights = getLastUsedWeights(workoutLogs);
+  const previousWeight = activeAssign ? (lastUsedWeights[activeAssign.exercise.id] ?? null) : null;
 
   // --- Actions used by effects below, declared first so nothing forward-references them ---
 
@@ -400,7 +407,9 @@ export function useWorkoutSession({
       setActualRepsLogged((effectiveTargetReps ?? activeAssign.reps).toString());
       setPendingSetRir(effectiveTargetRir);
       const prescribedWeight = Number(activeAssign.weight_kg);
-      setPendingSetWeight(lastWeightByAssign[activeAssign.id] ?? (prescribedWeight > 0 ? String(prescribedWeight) : ""));
+      setPendingSetWeight(
+        lastWeightByAssign[activeAssign.id] ?? (previousWeight !== null ? String(previousWeight) : prescribedWeight > 0 ? String(prescribedWeight) : "")
+      );
       setExTimer(null);
       setIsExTimerRunning(false);
     }
@@ -757,6 +766,7 @@ export function useWorkoutSession({
     activeAssign,
     effectiveTargetReps,
     effectiveTargetRir,
+    previousWeight,
     nextExercise,
     isResting,
     isSupersetCheck,

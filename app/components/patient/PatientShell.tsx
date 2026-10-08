@@ -20,6 +20,7 @@ import DiyBuilderTab from "@/app/components/patient/tabs/DiyBuilderTab";
 import MyWorkoutsScreen from "@/app/components/patient/tabs/MyWorkoutsScreen";
 import ExploreTab from "@/app/components/patient/tabs/ExploreTab";
 import PremiumStoreTab from "@/app/components/patient/tabs/PremiumStoreTab";
+import { FEATURES } from "@/app/constants/features";
 import ProfileTab from "@/app/components/patient/tabs/ProfileTab";
 import type { Exercise, SavedProgram, Workout } from "@/app/types";
 import type { SessionExercise } from "@/app/hooks/useWorkoutSession";
@@ -284,7 +285,7 @@ export default function PatientShell() {
               </button>
             )}
 
-            {loggedInPatient.patient_type === "fitness" && (
+            {FEATURES.premiumTab && loggedInPatient.patient_type === "fitness" && (
               <button onClick={() => switchTab("premium")} className={`flex flex-col items-center justify-center w-16 h-full gap-1 transition-colors ${patientTab === "premium" ? "text-accent-fg" : "text-muted hover:text-fg"}`}>
                 <Crown size={22} className={patientTab === "premium" ? "fill-accent/15" : ""} />
                 <span className="text-[10px] font-bold">תוכניות</span>
@@ -413,7 +414,7 @@ export default function PatientShell() {
             />
           )}
 
-          {patientTab === "premium" && <PremiumStoreTab onGoToPlan={() => setPatientTab("plan")} />}
+          {FEATURES.premiumTab && patientTab === "premium" && <PremiumStoreTab onGoToPlan={() => setPatientTab("plan")} />}
 
           {patientTab === "plan" && (
             <PlanTab

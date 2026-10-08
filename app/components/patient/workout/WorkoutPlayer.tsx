@@ -209,11 +209,28 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
             <p className="text-muted text-sm font-bold mt-1 tabular-nums">
               סט {session.currentBlockSet} / {session.maxSetsInBlock}
             </p>
-            {formatWeightKg(session.activeAssign?.weight_kg) && (
-              <span className="inline-flex items-center gap-1.5 mt-2 bg-accent/15 text-accent-fg text-xs font-extrabold px-3 py-1 rounded-full">
-                <Dumbbell size={12} /> {formatWeightKg(session.activeAssign?.weight_kg)}
-              </span>
-            )}
+            {/* Weight: what the patient used last time for this exercise
+                (from past logs) leads; the therapist's target, if set and
+                different, sits next to it. Neither set = nothing shown. */}
+            {(() => {
+              const previous = formatWeightKg(session.previousWeight);
+              const target = formatWeightKg(session.activeAssign?.weight_kg);
+              if (!previous && !target) return null;
+              return (
+                <div className="flex flex-wrap items-center justify-center gap-2 mt-2">
+                  {previous && (
+                    <span className="inline-flex items-center gap-1.5 bg-accent/15 text-accent-fg text-xs font-extrabold px-3 py-1 rounded-full">
+                      <Dumbbell size={12} /> פעם קודמת: {previous}
+                    </span>
+                  )}
+                  {target && target !== previous && (
+                    <span className="inline-flex items-center gap-1.5 bg-fg/10 text-muted text-xs font-bold px-3 py-1 rounded-full">
+                      {previous ? `יעד: ${target}` : <><Dumbbell size={12} /> {target}</>}
+                    </span>
+                  )}
+                </div>
+              );
+            })()}
           </div>
         </div>
       ) : (

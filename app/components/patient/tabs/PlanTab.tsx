@@ -15,15 +15,18 @@ import {
   User,
   Wind,
 } from "lucide-react";
+import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip as RechartsTooltip, XAxis, YAxis } from "recharts";
 import { useAuth } from "@/app/context/AuthContext";
 import { formatWeightKg, getExerciseName, getWorkoutMuscleAggregation, type WorkoutMuscleAggregation } from "@/app/utils/format";
 import { AVAILABLE_MUSCLES, DEFAULT_TRACK_GLOW, EQUIPMENT_LIST, TRACK_GLOW_TINTS } from "@/app/constants/catalog";
 import type { AIAssistantContext, CuratedFact, Exercise, ExploreProgram, WorkoutLog } from "@/app/types";
 import { programNameOf, type HydratedPatientExercise, type SessionExercise } from "@/app/hooks/useWorkoutSession";
 import PatientCoachSheet from "@/app/components/patient/PatientCoachSheet";
+import { FEATURES } from "@/app/constants/features";
 import AnatomyHeatmap from "@/app/components/AnatomyHeatmap";
 import { ExerciseThumb } from "@/app/components/ExerciseMedia";
 import QuickLogSheet from "@/app/components/patient/workout/QuickLogSheet";
+import { getLastUsedWeights } from "@/app/utils/history";
 
 interface PlanTabProps {
   workoutLogs: WorkoutLog[];
@@ -195,22 +198,24 @@ export default function PlanTab({
       todayMuscleAggregation = getWorkoutMuscleAggregation(todayBlocksMap);
     }
 
-    // Recent-trend sparkline: last 6 logs' RPE, plus their average.
-    const recentLogs = [...workoutLogs].slice(0, 6).reverse();
-    const avgRpe = recentLogs.length > 0 ? recentLogs.reduce((acc, l) => acc + l.rpe, 0) / recentLogs.length : 0;
-    const sparklinePoints = recentLogs.map((log, i) => {
-      const x = recentLogs.length > 1 ? (i / (recentLogs.length - 1)) * 320 : 160;
-      const y = 58 - (Math.max(0, Math.min(10, log.rpe)) / 10) * 52;
-      return `${x},${y}`;
-    });
-    const sparklinePath = sparklinePoints.join(" ");
-    const sparklineAreaPath = sparklinePoints.length > 0 ? `0,64 ${sparklinePath} 320,64` : "";
+    // RPE trend: the last 20 logged workouts that have an RPE (rpe is
+    // nullable), oldest first, plus their average.
+    const recentLogs = workoutLogs
+      .filter((l) => l.rpe != null)
+      .slice(0, 20)
+      .reverse();
+    const avgRpe = recentLogs.length > 0 ? recentLogs.reduce((acc, l) => acc + Number(l.rpe), 0) / recentLogs.length : 0;
+    const rpeChartData = recentLogs.map((log) => ({
+      date: new Date(log.created_at).toLocaleDateString("he-IL", { day: "2-digit", month: "2-digit" }),
+      rpe: Number(log.rpe),
+      workout: log.category,
+    }));
 
     const firstName = loggedInPatient?.full_name?.split(" ")[0] ?? "";
 
     return (
       <div className="animate-in fade-in duration-700 print:hidden">
-        <PatientCoachSheet contextData={patientCoachContext} />
+        {FEATURES.patientAiCoach && <PatientCoachSheet contextData={patientCoachContext} />}
 
         {/* Premium hero greeting — dominates the top of the dashboard on its
             own, deliberately not folded into the compact sticky header
@@ -413,7 +418,7 @@ export default function PlanTab({
         {/* Recent trend */}
         <div>
           <div className="text-[11px] font-extrabold tracking-widest text-muted uppercase mb-3.5">מגמה אחרונה</div>
-          {workoutLogs.length === 0 ? (
+          {recentLogs.length === 0 ? (
             <div className="on-light bg-surface p-10 rounded-[2rem] shadow-card text-center">
               <p className="text-muted text-sm">הנתונים יופיעו כאן ברגע שתסיים את האימון הראשון.</p>
             </div>
@@ -426,20 +431,26 @@ export default function PlanTab({
                   <div className="text-[10px] text-muted font-semibold">ממוצע</div>
                 </div>
               </div>
-              <svg width="100%" height="64" viewBox="0 0 320 64" preserveAspectRatio="none">
-                {sparklinePoints.length > 1 && (
-                  <>
-                    <polyline points={sparklineAreaPath} fill="url(#rpeGradient)" stroke="none" opacity="0.5" />
-                    <polyline points={sparklinePath} fill="none" stroke="var(--warm-fg)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-                  </>
-                )}
-                <defs>
-                  <linearGradient id="rpeGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="var(--warm)" stopOpacity="0.35" />
-                    <stop offset="100%" stopColor="var(--warm)" stopOpacity="0" />
-                  </linearGradient>
-                </defs>
-              </svg>
+              <div className="h-44 w-full" dir="ltr">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={rpeChartData} margin={{ top: 6, right: 6, left: -18, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="rpeGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="var(--warm)" stopOpacity={0.35} />
+                        <stop offset="100%" stopColor="var(--warm)" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" />
+                    <XAxis dataKey="date" tick={{ fontSize: 10, fill: "var(--text-muted)" }} />
+                    <YAxis domain={[0, 10]} ticks={[0, 2, 4, 6, 8, 10]} tick={{ fontSize: 10, fill: "var(--text-muted)" }} />
+                    <RechartsTooltip
+                      contentStyle={{ backgroundColor: "var(--surface)", borderColor: "var(--border)", color: "var(--text-fg)", direction: "rtl" }}
+                      labelFormatter={(label, payload) => `${label}${payload?.[0]?.payload?.workout ? ` · ${payload[0].payload.workout}` : ""}`}
+                    />
+                    <Area type="monotone" dataKey="rpe" name="RPE" stroke="var(--warm-fg)" strokeWidth={2.5} fill="url(#rpeGradient)" dot={{ r: 3 }} />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
             </div>
           )}
         </div>
@@ -452,7 +463,7 @@ export default function PlanTab({
   // consistency with the overview above, structure otherwise unchanged.
   return (
     <div className="animate-in slide-in-from-left duration-500 print:hidden max-w-lg mx-auto">
-      <PatientCoachSheet contextData={patientCoachContext} />
+      {FEATURES.patientAiCoach && <PatientCoachSheet contextData={patientCoachContext} />}
 
       <div className="mb-6 flex items-center justify-between">
         <button
@@ -594,6 +605,7 @@ export default function PlanTab({
                   blocksMap={blocksMap}
                   blocksKeys={blocksKeys}
                   isAmrap={displayedExercises[0]?.program_format === "amrap"}
+                  previousWeights={getLastUsedWeights(workoutLogs)}
                   onClose={() => setIsQuickLogOpen(false)}
                   onLogged={onWorkoutLogged}
                 />

@@ -15,6 +15,7 @@ interface QuickLogSheetProps {
   blocksMap: Record<string, SessionExercise[]>;
   blocksKeys: string[];
   isAmrap: boolean;
+  previousWeights: Record<string, number>; // exercise id -> weight used last time (getLastUsedWeights)
   onClose: () => void;
   onLogged: () => void; // refetch logs so Home/Calendar update right away
 }
@@ -35,7 +36,7 @@ interface ExerciseDraft {
 // player. Writes the same workout_logs row shape the player does
 // (performance_data = SessionPerformanceEntry[]), flagged is_quick_log, so
 // history charts and the therapist's view read it the same way.
-export default function QuickLogSheet({ title, blocksMap, blocksKeys, isAmrap, onClose, onLogged }: QuickLogSheetProps) {
+export default function QuickLogSheet({ title, blocksMap, blocksKeys, isAmrap, previousWeights, onClose, onLogged }: QuickLogSheetProps) {
   const { loggedInPatient, lang } = useAuth();
   const isClinical = loggedInPatient?.patient_type !== "fitness";
   const exercises = blocksKeys.flatMap((k) => blocksMap[k] ?? []);
@@ -43,7 +44,8 @@ export default function QuickLogSheet({ title, blocksMap, blocksKeys, isAmrap, o
   const [drafts, setDrafts] = useState<Record<string, ExerciseDraft>>(() =>
     Object.fromEntries(
       exercises.map((se) => {
-        const prescribedWeight = Number(se.weight_kg);
+        // Prefill: last time's weight, else the therapist's target, else empty.
+        const prescribedWeight = previousWeights[se.exercise.id] ?? Number(se.weight_kg);
         const setCount = isAmrap ? 1 : Math.max(1, Number(se.sets) || 1);
         return [
           se.id,
@@ -174,6 +176,7 @@ export default function QuickLogSheet({ title, blocksMap, blocksKeys, isAmrap, o
           const draft = drafts[se.id];
           if (!draft) return null;
           const prescribedWeight = formatWeightKg(se.weight_kg);
+          const previousWeight = formatWeightKg(previousWeights[se.exercise.id]);
           const unit = se.is_time ? "שניות" : "חזרות";
           return (
             <div key={se.id} className={`on-light rounded-2xl border p-4 transition-colors ${draft.done ? "bg-surface border-line" : "bg-surface-alt border-line opacity-60"}`}>
@@ -194,6 +197,7 @@ export default function QuickLogSheet({ title, blocksMap, blocksKeys, isAmrap, o
                     {isAmrap ? "בכל סבב: " : `יעד: ${se.sets} × `}
                     {se.reps} {unit}
                     {prescribedWeight && ` · ${prescribedWeight}`}
+                    {previousWeight && ` · פעם קודמת: ${previousWeight}`}
                   </div>
                 </div>
               </div>

@@ -17,15 +17,11 @@ import Modal from "@/app/components/ui/Modal";
 import ExerciseMuscleMap from "@/app/components/patient/ExerciseMuscleMap";
 import AnatomyHeatmap from "@/app/components/AnatomyHeatmap";
 import { ExerciseMediaPlayer } from "@/app/components/ExerciseMedia";
-import { formatCueLines, getExerciseName, pickLangText, type CueLine } from "@/app/utils/format";
+import { formatCueLines, formatWeightKg, getExerciseName, pickLangText, type CueLine } from "@/app/utils/format";
 import { EQUIPMENT_LIST } from "@/app/constants/catalog";
 import { useExerciseHistory } from "@/app/hooks/useExerciseHistory";
 
-interface ExerciseHistoryPoint {
-  date: string;
-  reps: number;
-  rir: number | null; // null if this log predates RIR capture — leaves a gap on the RIR line rather than plotting 0
-}
+import type { ExerciseHistoryPoint } from "@/app/hooks/useWorkoutSession";
 
 interface ExerciseInfoModalProps {
   exercise: Exercise;
@@ -94,6 +90,7 @@ export default function ExerciseInfoModal({ exercise, historyData, onClose }: Ex
   const instructionLines = [...formatCueLines(patientCues, "✅"), ...formatCueLines(commonMistake, "❌")];
   const hasDescription = !!description && description.trim() !== "" && description.trim() !== ".";
   const hasHistory = historyData.length > 0;
+  const hasWeightHistory = historyData.some((p) => p.weight !== null);
 
   // prime_movers/synergists (the new heatmap tagging) take priority when an
   // exercise has been tagged with them; exercises only tagged the old way
@@ -210,6 +207,9 @@ export default function ExerciseInfoModal({ exercise, historyData, onClose }: Ex
                         <span className="text-muted font-medium">סט {set.set_number}</span>
                         <div className="flex items-center gap-2">
                           <span className="font-bold text-fg">{set.reps} חזרות</span>
+                          {formatWeightKg(set.weight_kg) && (
+                            <span className="on-light bg-surface text-fg text-[10px] font-extrabold px-2 py-0.5 rounded-full border border-line">{formatWeightKg(set.weight_kg)}</span>
+                          )}
                           {set.rir != null && (
                             <span className="on-light bg-surface text-accent-fg text-[10px] font-extrabold px-2 py-0.5 rounded-full border border-line">
                               RIR {set.rir}
@@ -229,23 +229,20 @@ export default function ExerciseInfoModal({ exercise, historyData, onClose }: Ex
       {activeTab === "charts" && (
         <>
           {hasHistory ? (
-            <div>
-              <h4 className="font-bold text-sm mb-4 flex items-center gap-2 text-fg">
-                <TrendingUp size={16} className="text-accent-fg" /> היסטוריית ביצועים (מקסימום לאימון)
-              </h4>
-              <div className="h-56 w-full" dir="ltr">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={historyData}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" />
-                    <XAxis dataKey="date" tick={{ fontSize: 10, fill: "var(--text-muted)" }} />
-                    <YAxis yAxisId="left" tick={{ fontSize: 10, fill: "var(--text-muted)" }} width={30} />
-                    <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10, fill: "var(--text-muted)" }} width={24} allowDecimals={false} />
-                    <RechartsTooltip contentStyle={{ backgroundColor: "var(--surface)", borderColor: "var(--border)", color: "var(--text-fg)" }} />
-                    <Line yAxisId="left" type="monotone" dataKey="reps" name="חזרות" stroke="var(--accent-fg)" strokeWidth={3} dot={{ r: 4 }} />
-                    <Line yAxisId="right" type="monotone" dataKey="rir" name="RIR" stroke="var(--warm-fg)" strokeWidth={2} dot={{ r: 3 }} connectNulls={false} />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
+            <div className="flex flex-col gap-8">
+              <HistoryChart
+                title="חזרות (הסט הטוב ביותר בכל אימון)"
+                data={historyData}
+                dataKey="reps"
+                name="חזרות"
+                color="var(--accent-fg)"
+                secondary={{ dataKey: "rir", name: "RIR", color: "var(--warm-fg)" }}
+              />
+              {hasWeightHistory ? (
+                <HistoryChart title="משקל (ק״ג, המקסימום בכל אימון)" data={historyData} dataKey="weight" name="משקל (ק״ג)" color="var(--warm-fg)" />
+              ) : (
+                <p className="text-xs text-muted text-center">גרף משקל יופיע ברגע שתרשום משקל בתרגיל הזה.</p>
+              )}
             </div>
           ) : (
             <PlaceholderTabBody icon={<TrendingUp size={32} className="text-muted" />} text="אין עדיין מספיק נתונים כדי להציג גרף התקדמות לתרגיל זה." />
@@ -253,5 +250,47 @@ export default function ExerciseInfoModal({ exercise, historyData, onClose }: Ex
         </>
       )}
     </Modal>
+  );
+}
+
+// One per-exercise progress line chart (reps or weight), one point per
+// session. Null values (e.g. a session without a weight) leave a gap rather
+// than dropping the line to 0.
+function HistoryChart({
+  title,
+  data,
+  dataKey,
+  name,
+  color,
+  secondary,
+}: {
+  title: string;
+  data: ExerciseHistoryPoint[];
+  dataKey: "reps" | "weight";
+  name: string;
+  color: string;
+  secondary?: { dataKey: "rir"; name: string; color: string };
+}) {
+  return (
+    <div>
+      <h4 className="font-bold text-sm mb-4 flex items-center gap-2 text-fg">
+        <TrendingUp size={16} className="text-accent-fg" /> {title}
+      </h4>
+      <div className="h-52 w-full" dir="ltr">
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart data={data}>
+            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" />
+            <XAxis dataKey="date" tick={{ fontSize: 10, fill: "var(--text-muted)" }} />
+            <YAxis yAxisId="left" tick={{ fontSize: 10, fill: "var(--text-muted)" }} width={34} domain={["auto", "auto"]} />
+            {secondary && <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10, fill: "var(--text-muted)" }} width={24} allowDecimals={false} />}
+            <RechartsTooltip contentStyle={{ backgroundColor: "var(--surface)", borderColor: "var(--border)", color: "var(--text-fg)" }} />
+            <Line yAxisId="left" type="monotone" dataKey={dataKey} name={name} stroke={color} strokeWidth={3} dot={{ r: 4 }} connectNulls />
+            {secondary && (
+              <Line yAxisId="right" type="monotone" dataKey={secondary.dataKey} name={secondary.name} stroke={secondary.color} strokeWidth={2} dot={{ r: 3 }} connectNulls={false} />
+            )}
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
   );
 }
