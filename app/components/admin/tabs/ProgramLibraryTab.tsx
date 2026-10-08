@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { CheckCircle2, Crown, Dumbbell, FileDown, Loader2, Play, Send, Trash2, X } from "lucide-react";
+import { CheckCircle2, Crown, Dumbbell, FileDown, Loader2, Play, Send, Trash2 } from "lucide-react";
 import { supabase } from "@/app/lib/supabase";
 import type { Exercise, Package, PackageExercise, Patient } from "@/app/types";
 import ProgramSimulatorModal from "@/app/components/admin/tabs/ProgramSimulatorModal";
 import ProgramPdfExport from "@/app/components/admin/tabs/ProgramPdfExport";
+import AssignToPatientsModal, { type AssignResult } from "@/app/components/admin/AssignToPatientsModal";
 
 interface ProgramLibraryTabProps {
   packages: Package[];
@@ -75,39 +76,49 @@ export default function ProgramLibraryTab({ packages, exercises, patients, onRef
     }
   };
 
-  const handleAssign = async (pkg: Package, patientId: string, programName: string) => {
+  // One named program per selected patient — a failure for one patient
+  // (rolled back) doesn't stop the others.
+  const handleAssign = async (pkg: Package, patientIds: string[], programName: string): Promise<AssignResult> => {
     const rows = rowsForPackage(pkg.id);
-    if (rows.length === 0) return alert("לתבנית הזו אין תרגילים לשיוך.");
-    // Every assignment is a named program — the name is what the patient sees.
-    const { data: program, error: programErr } = await supabase
-      .from("patient_programs")
-      .insert([{ patient_id: patientId, name: programName, source_package_id: pkg.id }])
-      .select()
-      .single();
-    if (programErr) return alert("שגיאה ביצירת התוכנית: " + programErr.message);
-    const inserts = rows.map((pe) => ({
-      patient_id: patientId,
-      program_id: program.id,
-      exercise_id: pe.exercise_id,
-      block: pe.block || "A",
-      sets: Number(pe.sets) || 0,
-      reps: Number(pe.reps) || 0,
-      rir: pe.rir,
-      is_time: pe.is_time,
-      notes: "",
-      scheduled_days: pe.scheduled_days,
-      week: pe.week || 1,
-      rest_time_seconds: pe.rest_time_seconds ?? 60,
-    }));
-    const { error } = await supabase.from("patient_exercises").insert(inserts);
-    if (error) {
-      await supabase.from("patient_programs").delete().eq("id", program.id);
-      alert("שגיאה בשיוך התבנית: " + error.message);
-    } else {
-      alert("התבנית שויכה בהצלחה למטופל!");
-      setAssigningPackage(null);
+    const failed: AssignResult["failed"] = [];
+    if (rows.length === 0) {
+      return { failed: patientIds.map((id) => ({ patientName: patientNameOf(id), message: "לתבנית אין תרגילים" })) };
     }
+    for (const patientId of patientIds) {
+      const { data: program, error: programErr } = await supabase
+        .from("patient_programs")
+        .insert([{ patient_id: patientId, name: programName, source_package_id: pkg.id }])
+        .select()
+        .single();
+      if (programErr) {
+        failed.push({ patientName: patientNameOf(patientId), message: programErr.message });
+        continue;
+      }
+      const inserts = rows.map((pe) => ({
+        patient_id: patientId,
+        program_id: program.id,
+        exercise_id: pe.exercise_id,
+        block: pe.block || "A",
+        sets: Number(pe.sets) || 0,
+        reps: Number(pe.reps) || 0,
+        rir: pe.rir,
+        is_time: pe.is_time,
+        notes: "",
+        scheduled_days: pe.scheduled_days,
+        week: pe.week || 1,
+        rest_time_seconds: pe.rest_time_seconds ?? 60,
+        weight_kg: pe.weight_kg ?? null,
+      }));
+      const { error } = await supabase.from("patient_exercises").insert(inserts);
+      if (error) {
+        await supabase.from("patient_programs").delete().eq("id", program.id);
+        failed.push({ patientName: patientNameOf(patientId), message: error.message });
+      }
+    }
+    return { failed };
   };
+
+  const patientNameOf = (id: string) => patients.find((p) => String(p.id) === id)?.full_name ?? id;
 
   return (
     <div className="max-w-6xl mx-auto animate-in fade-in">
@@ -175,7 +186,7 @@ export default function ProgramLibraryTab({ packages, exercises, patients, onRef
                     disabled={exerciseCount === 0}
                     className="on-light flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-surface-alt text-fg text-xs font-bold hover:bg-line transition-colors disabled:opacity-30 disabled:pointer-events-none"
                   >
-                    <Send size={13} /> שיוך למטופל
+                    <Send size={13} /> שיוך למטופלים
                   </button>
                   <button
                     onClick={() => handleTogglePublish(pkg)}
@@ -213,7 +224,15 @@ export default function ProgramLibraryTab({ packages, exercises, patients, onRef
       )}
 
       {assigningPackage && (
-        <AssignModal patients={patients} pkg={assigningPackage} onClose={() => setAssigningPackage(null)} onAssign={handleAssign} />
+        <AssignToPatientsModal
+          heading="שיוך תבנית למטופלים"
+          subtitle={assigningPackage.title}
+          defaultProgramName={assigningPackage.title}
+          patients={patients}
+          askSchedule={false}
+          onClose={() => setAssigningPackage(null)}
+          onAssign={(ids, name) => handleAssign(assigningPackage, ids, name)}
+        />
       )}
 
       {simulatingPackage && (
@@ -233,75 +252,6 @@ export default function ProgramLibraryTab({ packages, exercises, patients, onRef
           onClose={() => setExportingPackage(null)}
         />
       )}
-    </div>
-  );
-}
-
-interface AssignModalProps {
-  patients: Patient[];
-  pkg: Package;
-  onClose: () => void;
-  onAssign: (pkg: Package, patientId: string, programName: string) => Promise<void>;
-}
-
-function AssignModal({ patients, pkg, onClose, onAssign }: AssignModalProps) {
-  const [patientId, setPatientId] = useState("");
-  const [programName, setProgramName] = useState(pkg.title);
-  const [isSaving, setIsSaving] = useState(false);
-
-  const submit = async () => {
-    if (!patientId || !programName.trim()) return;
-    setIsSaving(true);
-    await onAssign(pkg, patientId, programName.trim());
-    setIsSaving(false);
-  };
-
-  return (
-    <div className="fixed inset-0 z-[250] bg-scrim/70 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-elevated border border-line rounded-[1.75rem] p-7 w-full max-w-sm">
-        <div className="flex items-start justify-between mb-5">
-          <div>
-            <h3 className="text-lg font-black text-fg">שיוך תבנית למטופל</h3>
-            <p className="text-sm text-muted mt-1">{pkg.title}</p>
-          </div>
-          <button onClick={onClose} className="text-muted hover:text-fg">
-            <X size={20} />
-          </button>
-        </div>
-
-        <label className="block text-[10px] font-extrabold text-muted mb-2 uppercase tracking-wider">בחר מטופל</label>
-        <select
-          value={patientId}
-          onChange={(e) => setPatientId(e.target.value)}
-          className="on-light w-full border-b-2 border-line p-2 outline-none font-bold text-fg bg-surface mb-6 focus:border-focus focus:ring-2 focus:ring-focus"
-        >
-          <option value="" className="on-light bg-surface">
-            -- בחר מטופל --
-          </option>
-          {patients.map((p) => (
-            <option key={p.id} value={p.id} className="on-light bg-surface">
-              {p.full_name}
-            </option>
-          ))}
-        </select>
-
-        <label className="block text-[10px] font-extrabold text-muted mb-2 uppercase tracking-wider">שם התוכנית (מה שהמטופל יראה)</label>
-        <input
-          type="text"
-          value={programName}
-          onChange={(e) => setProgramName(e.target.value)}
-          className="on-light w-full border-b-2 border-line p-2 outline-none font-bold text-fg bg-surface mb-6 focus:border-focus focus:ring-2 focus:ring-focus"
-        />
-
-        <button
-          onClick={submit}
-          disabled={!patientId || !programName.trim() || isSaving}
-          className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-btn-primary text-btn-primary-fg hover:bg-btn-primary-hover active:bg-btn-primary-active font-extrabold disabled:bg-disabled disabled:text-disabled-fg disabled:hover:bg-disabled"
-        >
-          {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
-          שגר תוכנית
-        </button>
-      </div>
     </div>
   );
 }

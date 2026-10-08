@@ -4,7 +4,7 @@ import { useState, type ReactNode } from "react";
 import { CalendarPlus, Check, Compass, Crown, Dumbbell, Flame, Heart, Lock, Play, Plus, Timer } from "lucide-react";
 import Modal from "@/app/components/ui/Modal";
 import { DAYS_OF_WEEK } from "@/app/constants/catalog";
-import { getExerciseName } from "@/app/utils/format";
+import { formatWeightKg, getExerciseName } from "@/app/utils/format";
 import { getExerciseThumbUrl } from "@/app/utils/media";
 import { ExerciseThumb as SharedExerciseThumb } from "@/app/components/ExerciseMedia";
 import { toDateKey } from "@/app/hooks/useWorkoutSession";
@@ -33,7 +33,9 @@ const workoutFormatLabel = (w: Workout) => (w.format === "amrap" ? `AMRAP · ${M
 
 const workoutItemLabel = (w: Workout, item: Workout["items"][number]) => {
   const amount = `${item.reps} ${item.is_time ? "שנ׳" : "חזרות"}`;
-  return w.format === "amrap" ? `${amount} בכל סבב` : `${item.sets ?? 3} × ${amount}`;
+  const weight = formatWeightKg(item.weight_kg);
+  const base = w.format === "amrap" ? `${amount} בכל סבב` : `${item.sets ?? 3} × ${amount}`;
+  return weight ? `${base} · ${weight}` : base;
 };
 
 function coverGifForWorkout(workout: Workout, exerciseCatalog: Exercise[]) {

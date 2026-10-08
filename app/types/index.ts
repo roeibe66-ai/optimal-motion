@@ -113,6 +113,7 @@ export interface WorkoutItem {
   is_time: boolean;
   rir?: number | null;
   rest_time_seconds?: number;
+  weight_kg?: number | null; // optional prescribed weight; omitted/null = none shown
 }
 
 // A single workout built in the admin "workout builder" tab and published
@@ -163,6 +164,7 @@ export interface PackageExercise {
   week: number;
   scheduled_days: string; // single DAYS_OF_WEEK id
   rest_time_seconds: number;
+  weight_kg?: number | null; // optional prescribed weight (numeric column — coerce with Number())
   // Live since 20260901084753_patient_and_package_exercises_tempo, but no
   // builder UI sets them yet — read-only fields so the PDF export can
   // display tempo when a row happens to have it, without claiming the
@@ -202,6 +204,7 @@ export interface PatientExercise {
   scheduled_days?: string | null; // comma-separated DAYS_OF_WEEK ids, or null for "every day"
   scheduled_date?: string | null; // YYYY-MM-DD: shown only on this date (a one-time workout from Explore)
   rest_time_seconds: number;
+  weight_kg?: number | null; // optional prescribed weight; null = nothing shown to the patient
 }
 
 export interface SessionPerformanceEntry {
@@ -209,6 +212,7 @@ export interface SessionPerformanceEntry {
   set_number: number;
   reps: number;
   rir?: number; // patient-reported reps-in-reserve for this specific set, captured on the rest screen
+  weight_kg?: number; // weight the patient reported using for this set, if any
 }
 
 export interface WorkoutLog {
@@ -222,6 +226,7 @@ export interface WorkoutLog {
   performance_data?: string | null; // JSON-stringified SessionPerformanceEntry[]
   result_rounds?: number | null; // AMRAP: completed rounds
   result_extra_reps?: number | null; // AMRAP: reps into the unfinished round
+  is_quick_log?: boolean; // logged afterwards from the plan screen, not run in the player
   created_at: string;
 }
 
@@ -235,6 +240,7 @@ export interface BuilderExercise extends Exercise {
   is_time: boolean;
   block: string;
   rest_time_seconds: number;
+  weight_kg?: number | null;
 }
 
 export type BuilderDayPlan = Record<string, BuilderExercise[]>; // keyed by DAYS_OF_WEEK id

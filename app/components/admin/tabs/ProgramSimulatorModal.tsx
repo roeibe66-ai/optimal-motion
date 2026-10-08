@@ -63,6 +63,7 @@ export default function ProgramSimulatorModal({ pkg, packageExercises, exerciseC
         week: pe.week || 1,
         scheduled_days: pe.scheduled_days,
         rest_time_seconds: pe.rest_time_seconds ?? 60,
+        weight_kg: pe.weight_kg != null ? Number(pe.weight_kg) : null,
         // Assigned as-is, a template becomes one program named after it.
         program_name: pkg.title,
       } as HydratedPatientExercise;

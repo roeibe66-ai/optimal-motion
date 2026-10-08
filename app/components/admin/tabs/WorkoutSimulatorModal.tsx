@@ -72,7 +72,7 @@ function SimulatorBody({ workout, exerciseCatalog }: { workout: Workout; exercis
 
   // Same mapping PatientShell uses when a patient hits "start now" in Explore.
   const sessionExercises: SessionExercise[] = workout.items
-    .map((item, idx) => {
+    .map((item, idx): SessionExercise | null => {
       const exercise = exerciseById(item.exercise_id);
       if (!exercise) return null;
       return {
@@ -84,6 +84,7 @@ function SimulatorBody({ workout, exerciseCatalog }: { workout: Workout; exercis
         is_time: item.is_time,
         block: item.block || String.fromCharCode(65 + idx),
         rest_time_seconds: item.rest_time_seconds ?? 60,
+        weight_kg: item.weight_kg ?? null,
       };
     })
     .filter((se): se is SessionExercise => se !== null);

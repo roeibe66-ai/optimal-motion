@@ -190,7 +190,7 @@ export default function PatientShell() {
       return;
     }
     const exercises: SessionExercise[] = workout.items
-      .map((item, idx) => {
+      .map((item, idx): SessionExercise | null => {
         const exercise = exerciseById(item.exercise_id);
         if (!exercise) return null;
         return {
@@ -202,6 +202,7 @@ export default function PatientShell() {
           is_time: item.is_time,
           block: item.block || String.fromCharCode(65 + idx),
           rest_time_seconds: item.rest_time_seconds ?? 60,
+          weight_kg: item.weight_kg ?? null,
         };
       })
       .filter((se): se is SessionExercise => se !== null);
@@ -431,6 +432,7 @@ export default function PatientShell() {
               blocksKeys={session.blocksKeys}
               onViewExerciseInfo={(exercise) => session.setViewingExInfo(exercise)}
               onStartWorkout={handleStartPlanWorkout}
+              onWorkoutLogged={patientData.refetch}
               curatedFacts={curatedFacts}
               hasAnyAssignedExercises={patientData.patientExercises.length > 0}
               starterPrograms={explore.freePrograms.slice(0, 3)}

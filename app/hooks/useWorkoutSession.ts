@@ -4,7 +4,7 @@ import { useEffect, useState, type TouchEvent } from "react";
 import { supabase } from "@/app/lib/supabase";
 import { useAuth } from "@/app/context/AuthContext";
 import type { HapticType } from "@/app/hooks/useHaptics";
-import { getExerciseName } from "@/app/utils/format";
+import { getExerciseName, parseWeightInput } from "@/app/utils/format";
 import type { Exercise, PatientExercise, SessionPerformanceEntry, WorkoutFormat, WorkoutLog } from "@/app/types";
 
 // A PatientExercise as it's actually consumed here: already joined with its
@@ -64,6 +64,7 @@ export interface SessionExercise {
   is_time: boolean;
   block: string;
   rest_time_seconds: number;
+  weight_kg?: number | null; // optional prescribed weight, shown only when set
 }
 
 // The pre-workout pain check-in (clinical patients only) and the
@@ -174,6 +175,12 @@ export function useWorkoutSession({
   // different exercise; it never touches the underlying patient_exercises row.
   const [pendingSetRir, setPendingSetRir] = useState<number | null>(null);
   const [repAdjustments, setRepAdjustments] = useState<Record<string, { reps: number; rir: number | null }>>({});
+  // Optional weight used, as typed on the rest screen ("" = not reported).
+  // Seeded per slot from the last weight reported for that same assignment,
+  // else the prescribed weight_kg, else empty — so a patient who never types
+  // a weight logs none, and one who does doesn't retype it every set.
+  const [pendingSetWeight, setPendingSetWeight] = useState("");
+  const [lastWeightByAssign, setLastWeightByAssign] = useState<Record<string, string>>({});
 
   // Admin Run/Test feedback: a brief confirmation whenever a write would
   // normally happen but got skipped because isSimulation is true — so the
@@ -297,6 +304,7 @@ export function useWorkoutSession({
           set_number: currentBlockSet,
           reps: actualRepsLogged ? parseInt(actualRepsLogged) : Number(effectiveTargetReps ?? activeAssign.reps) || 0,
           rir: pendingSetRir ?? undefined,
+          weight_kg: parseWeightInput(pendingSetWeight) ?? undefined,
         },
       ]);
       if (isSimulation) setSimulationToast("סימולציה: הסט נרשם בהצלחה");
@@ -391,6 +399,8 @@ export function useWorkoutSession({
       // eslint-disable-next-line react-hooks/set-state-in-effect -- resetting editable/per-set fields' defaults when their subject (the active set) changes, not deriving external state
       setActualRepsLogged((effectiveTargetReps ?? activeAssign.reps).toString());
       setPendingSetRir(effectiveTargetRir);
+      const prescribedWeight = Number(activeAssign.weight_kg);
+      setPendingSetWeight(lastWeightByAssign[activeAssign.id] ?? (prescribedWeight > 0 ? String(prescribedWeight) : ""));
       setExTimer(null);
       setIsExTimerRunning(false);
     }
@@ -613,6 +623,12 @@ export function useWorkoutSession({
     updateLastPerformanceEntry({ rir: value });
   };
 
+  const setRestWeight = (value: string) => {
+    setPendingSetWeight(value);
+    if (activeAssign) setLastWeightByAssign((prev) => ({ ...prev, [activeAssign.id]: value }));
+    updateLastPerformanceEntry({ weight_kg: parseWeightInput(value) ?? undefined });
+  };
+
   const submitFinalFeedback = async (postPain: number | null = null) => {
     if (!loggedInPatient) return;
 
@@ -701,6 +717,8 @@ export function useWorkoutSession({
     setSwappedExercises({});
     setRepAdjustments({});
     setPendingSetRir(null);
+    setPendingSetWeight("");
+    setLastWeightByAssign({});
     setViewingExInfo(null);
     setIsExTimerRunning(false);
     setSelectedPainAreas([]);
@@ -752,6 +770,8 @@ export function useWorkoutSession({
     actualRepsLogged,
     setActualRepsLogged,
     pendingSetRir,
+    pendingSetWeight,
+    setRestWeight,
     adjustRestReps,
     selectRestRir,
     handleFinishAction,

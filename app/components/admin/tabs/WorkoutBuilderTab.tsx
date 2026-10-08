@@ -1,15 +1,17 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ArrowDown, ArrowUp, CheckCircle2, Crown, Dumbbell, Edit3, Loader2, Play, Plus, Search, Timer, Trash2, X } from "lucide-react";
+import { ArrowDown, ArrowUp, CheckCircle2, Crown, Dumbbell, Edit3, Loader2, Play, Plus, Search, Send, Timer, Trash2, X } from "lucide-react";
 import { supabase } from "@/app/lib/supabase";
-import { getExerciseName } from "@/app/utils/format";
-import type { Exercise, Lang, Workout, WorkoutFormat, WorkoutItem } from "@/app/types";
+import { getExerciseName, parseWeightInput } from "@/app/utils/format";
+import type { Exercise, Lang, Patient, Workout, WorkoutFormat, WorkoutItem } from "@/app/types";
 import WorkoutSimulatorModal from "@/app/components/admin/tabs/WorkoutSimulatorModal";
+import AssignToPatientsModal, { type AssignResult, type AssignSchedule } from "@/app/components/admin/AssignToPatientsModal";
 import { ExerciseThumb } from "@/app/components/ExerciseMedia";
 
 interface WorkoutBuilderTabProps {
   exercises: Exercise[];
+  patients: Patient[];
   lang: Lang;
 }
 
@@ -29,7 +31,7 @@ const EMPTY_DRAFT: Draft = { id: null, title: "", description: "", format: "stan
 const normalizeItems = (items: WorkoutItem[], format: WorkoutFormat): WorkoutItem[] =>
   items.map((it, idx) =>
     format === "amrap"
-      ? { exercise_id: it.exercise_id, reps: Math.max(1, Number(it.reps) || 1), is_time: it.is_time }
+      ? { exercise_id: it.exercise_id, reps: Math.max(1, Number(it.reps) || 1), is_time: it.is_time, ...weightOf(it) }
       : {
           exercise_id: it.exercise_id,
           block: (it.block || String.fromCharCode(65 + (idx % 26))).toUpperCase().slice(0, 1),
@@ -38,8 +40,16 @@ const normalizeItems = (items: WorkoutItem[], format: WorkoutFormat): WorkoutIte
           is_time: it.is_time,
           rir: it.rir === null || it.rir === undefined || String(it.rir) === "" ? null : Number(it.rir),
           rest_time_seconds: Math.max(0, Number(it.rest_time_seconds) || 0),
+          ...weightOf(it),
         }
   );
+
+// weight_kg is stored only when set (and never for timed exercises), so items
+// without one stay exactly as they were.
+function weightOf(it: WorkoutItem): { weight_kg?: number } {
+  const w = Number(it.weight_kg);
+  return !it.is_time && Number.isFinite(w) && w > 0 ? { weight_kg: w } : {};
+}
 
 const newItem = (exerciseId: string, index: number, format: WorkoutFormat): WorkoutItem =>
   format === "amrap"
@@ -51,13 +61,15 @@ const newItem = (exerciseId: string, index: number, format: WorkoutFormat): Work
 // (the `workouts` table). Separate from the smart builder's multi-week
 // program templates (packages), which publish to Explore from the program
 // library. Patients can start a published workout right away or pin it to a
-// weekday in their plan.
-export default function WorkoutBuilderTab({ exercises, lang }: WorkoutBuilderTabProps) {
+// weekday in their plan. Alternatively ("שיוך למטופלים") the admin assigns a
+// copy straight to specific patients, without publishing it to everyone.
+export default function WorkoutBuilderTab({ exercises, patients, lang }: WorkoutBuilderTabProps) {
   const [workouts, setWorkouts] = useState<Workout[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [draft, setDraft] = useState<Draft | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [simulating, setSimulating] = useState<Workout | null>(null);
+  const [assigning, setAssigning] = useState<Workout | null>(null);
 
   const fetchWorkouts = async () => {
     const { data } = await supabase.from("workouts").select("*").order("created_at", { ascending: false });
@@ -89,6 +101,62 @@ export default function WorkoutBuilderTab({ exercises, lang }: WorkoutBuilderTab
     else fetchWorkouts();
   };
 
+  const patientNameOf = (id: string) => patients.find((p) => String(p.id) === id)?.full_name ?? id;
+
+  // Mirrors add_published_workout_to_my_programs (the patient's own "add to
+  // my plan" RPC), but admin-side and for any workout, published or not:
+  // week null = recurs every week on the chosen weekdays; a one-time date
+  // pins it to that date's weekday.
+  const handleAssign = async (workout: Workout, patientIds: string[], programName: string, schedule: AssignSchedule | null): Promise<AssignResult> => {
+    const failed: AssignResult["failed"] = [];
+    const isAmrap = workout.format === "amrap";
+    const scheduledDate = schedule?.kind === "date" ? schedule.date : null;
+    const scheduledDays =
+      schedule?.kind === "date" ? String(new Date(`${schedule.date}T00:00:00`).getDay()) : schedule?.kind === "weekdays" ? schedule.days.join(",") : String(new Date().getDay());
+
+    for (const patientId of patientIds) {
+      const { data: program, error: programErr } = await supabase
+        .from("patient_programs")
+        .insert([
+          {
+            patient_id: patientId,
+            name: programName,
+            source_workout_id: workout.id,
+            format: workout.format,
+            time_cap_seconds: workout.time_cap_seconds ?? null,
+          },
+        ])
+        .select()
+        .single();
+      if (programErr) {
+        failed.push({ patientName: patientNameOf(patientId), message: programErr.message });
+        continue;
+      }
+      const inserts = workout.items.map((item, idx) => ({
+        patient_id: patientId,
+        program_id: program.id,
+        exercise_id: item.exercise_id,
+        block: isAmrap ? "A" : item.block || String.fromCharCode(65 + (idx % 26)),
+        sets: isAmrap ? 1 : (item.sets ?? 3),
+        reps: item.reps,
+        rir: item.rir ?? null,
+        is_time: item.is_time,
+        notes: "",
+        scheduled_days: scheduledDays,
+        scheduled_date: scheduledDate,
+        week: null,
+        rest_time_seconds: item.rest_time_seconds ?? 60,
+        weight_kg: item.weight_kg ?? null,
+      }));
+      const { error } = await supabase.from("patient_exercises").insert(inserts);
+      if (error) {
+        await supabase.from("patient_programs").delete().eq("id", program.id);
+        failed.push({ patientName: patientNameOf(patientId), message: error.message });
+      }
+    }
+    return { failed };
+  };
+
   const openEditor = (workout?: Workout) => {
     setDraft(
       workout
@@ -109,7 +177,7 @@ export default function WorkoutBuilderTab({ exercises, lang }: WorkoutBuilderTab
       <header className="mb-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl md:text-4xl font-black text-fg tracking-tight">יצירת אימונים</h1>
-          <p className="text-[13px] text-muted mt-1.5">אימונים בודדים — רגילים או AMRAP — שמתפרסמים בטאב &quot;גלה&quot; של המטופלים.</p>
+          <p className="text-[13px] text-muted mt-1.5">אימונים בודדים — רגילים או AMRAP — לפרסום בטאב &quot;גלה&quot; לכולם, או לשיוך למטופלים ספציפיים.</p>
         </div>
         <button
           onClick={() => openEditor()}
@@ -162,6 +230,13 @@ export default function WorkoutBuilderTab({ exercises, lang }: WorkoutBuilderTab
                     <Play size={13} fill="currentColor" /> הרץ / בדוק
                   </button>
                   <button
+                    onClick={() => setAssigning(workout)}
+                    disabled={workout.items.length === 0}
+                    className="on-light flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-surface-alt text-fg text-xs font-bold hover:bg-line transition-colors disabled:opacity-30 disabled:pointer-events-none"
+                  >
+                    <Send size={13} /> שיוך למטופלים
+                  </button>
+                  <button
                     onClick={() => openEditor(workout)}
                     className="on-light flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-surface-alt text-fg text-xs font-bold hover:bg-line transition-colors"
                   >
@@ -193,6 +268,18 @@ export default function WorkoutBuilderTab({ exercises, lang }: WorkoutBuilderTab
             );
           })}
         </div>
+      )}
+
+      {assigning && (
+        <AssignToPatientsModal
+          heading="שיוך אימון למטופלים"
+          subtitle={assigning.title}
+          defaultProgramName={assigning.title}
+          patients={patients}
+          askSchedule
+          onClose={() => setAssigning(null)}
+          onAssign={(ids, name, schedule) => handleAssign(assigning, ids, name, schedule)}
+        />
       )}
 
       {simulating && <WorkoutSimulatorModal workout={simulating} exerciseCatalog={exercises} onClose={() => setSimulating(null)} />}
@@ -380,6 +467,21 @@ function WorkoutEditor({
                       מנוחה
                       <input type="number" min={0} value={item.rest_time_seconds ?? 60} onChange={(e) => setItem(idx, { rest_time_seconds: Number(e.target.value) })} className={numClass} />
                       שנ׳
+                    </label>
+                  )}
+                  {!item.is_time && (
+                    <label className="flex items-center gap-1.5 text-xs font-bold text-muted" title="לא חובה — אם ריק, לא יוצג למטופל">
+                      משקל
+                      <input
+                        type="number"
+                        min={0}
+                        step="0.5"
+                        value={item.weight_kg ?? ""}
+                        placeholder="-"
+                        onChange={(e) => setItem(idx, { weight_kg: parseWeightInput(e.target.value) })}
+                        className={`${numClass} w-14`}
+                      />
+                      ק״ג
                     </label>
                   )}
 

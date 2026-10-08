@@ -4,6 +4,7 @@ import { useState } from "react";
 import {
   ChevronDown,
   ChevronLeft,
+  ClipboardCheck,
   Dumbbell,
   Info,
   MoreHorizontal,
@@ -15,13 +16,14 @@ import {
   Wind,
 } from "lucide-react";
 import { useAuth } from "@/app/context/AuthContext";
-import { getExerciseName, getWorkoutMuscleAggregation, type WorkoutMuscleAggregation } from "@/app/utils/format";
+import { formatWeightKg, getExerciseName, getWorkoutMuscleAggregation, type WorkoutMuscleAggregation } from "@/app/utils/format";
 import { AVAILABLE_MUSCLES, DEFAULT_TRACK_GLOW, EQUIPMENT_LIST, TRACK_GLOW_TINTS } from "@/app/constants/catalog";
 import type { AIAssistantContext, CuratedFact, Exercise, ExploreProgram, WorkoutLog } from "@/app/types";
 import { programNameOf, type HydratedPatientExercise, type SessionExercise } from "@/app/hooks/useWorkoutSession";
 import PatientCoachSheet from "@/app/components/patient/PatientCoachSheet";
 import AnatomyHeatmap from "@/app/components/AnatomyHeatmap";
 import { ExerciseThumb } from "@/app/components/ExerciseMedia";
+import QuickLogSheet from "@/app/components/patient/workout/QuickLogSheet";
 
 interface PlanTabProps {
   workoutLogs: WorkoutLog[];
@@ -39,6 +41,7 @@ interface PlanTabProps {
   blocksKeys: string[];
   onViewExerciseInfo: (exercise: Exercise) => void;
   onStartWorkout: () => void;
+  onWorkoutLogged: () => void; // refetch after a quick log
   curatedFacts: CuratedFact[];
   hasAnyAssignedExercises: boolean;
   starterPrograms: ExploreProgram[];
@@ -118,12 +121,14 @@ export default function PlanTab({
   blocksKeys,
   onViewExerciseInfo,
   onStartWorkout,
+  onWorkoutLogged,
   curatedFacts,
   hasAnyAssignedExercises,
   starterPrograms,
   onAddStarterProgram,
 }: PlanTabProps) {
   const { loggedInPatient, lang } = useAuth();
+  const [isQuickLogOpen, setIsQuickLogOpen] = useState(false);
 
   // Grounds the patient coach chat in this patient's real plan and recent
   // sessions — the same week's assigned exercises shown below, plus their
@@ -521,7 +526,7 @@ export default function PlanTab({
                 </div>
               </div>
 
-              <div className="space-y-4 pb-32">
+              <div className="space-y-4 pb-44">
                 {blocksKeys.map((blockKey) => (
                   <div key={blockKey} className="space-y-4">
                     {blocksMap[blockKey].length > 1 && <div className="text-xs font-bold text-accent-fg uppercase tracking-widest mt-6 mb-2">בלוק {blockKey} (סופר-סט)</div>}
@@ -544,6 +549,9 @@ export default function PlanTab({
                           <div className="text-muted text-xs font-bold mb-1 flex items-center gap-1">
                             {"program_format" in assignment && assignment.program_format === "amrap" ? "בכל סבב: " : `${assignment.sets} סטים x `}{assignment.is_time ? `${assignment.reps}"` : `${assignment.reps} חזרות`}
                             {assignment.rir && <span className="on-light bg-surface-alt text-muted px-1.5 py-0.5 rounded text-[8px] ml-1">RIR {assignment.rir}</span>}
+                            {formatWeightKg(assignment.weight_kg) && (
+                              <span className="bg-accent/15 text-accent-fg px-1.5 py-0.5 rounded text-[9px] ml-1">{formatWeightKg(assignment.weight_kg)}</span>
+                            )}
                           </div>
                           <h4 className="text-fg font-bold truncate">{getExerciseName(assignment.exercise, lang)}</h4>
                         </div>
@@ -561,13 +569,34 @@ export default function PlanTab({
                 // its text. Sits just above the app's own fixed bottom nav
                 // (bottom-[4.5rem] matches its h-16 + gap).
                 <div className="fixed bottom-[4.5rem] left-0 right-0 z-40 bg-elevated/90 backdrop-blur-md border-t border-line px-5 py-4">
+                  <div className="w-full max-w-lg mx-auto flex flex-col gap-2">
                   <button
                     onClick={onStartWorkout}
-                    className="w-full max-w-lg mx-auto flex items-center justify-center bg-btn-primary hover:bg-btn-primary-hover active:bg-btn-primary-active text-btn-primary-fg active:scale-[0.98] transition-all duration-150 ease-out font-black text-lg py-4 rounded-full tracking-widest shadow-[0_8px_24px_-4px_color-mix(in_srgb,var(--accent)_45%,transparent)]"
+                    className="w-full flex items-center justify-center bg-btn-primary hover:bg-btn-primary-hover active:bg-btn-primary-active text-btn-primary-fg active:scale-[0.98] transition-all duration-150 ease-out font-black text-lg py-4 rounded-full tracking-widest shadow-[0_8px_24px_-4px_color-mix(in_srgb,var(--accent)_45%,transparent)]"
                   >
                     התחל אימון
                   </button>
+                  {/* For a patient who trained without running the player —
+                      log reps (and optional weights) straight to tracking. */}
+                  <button
+                    onClick={() => setIsQuickLogOpen(true)}
+                    className="w-full flex items-center justify-center gap-2 text-fg font-bold text-sm py-2 rounded-full hover:bg-line active:scale-[0.98] transition-all duration-150 ease-out"
+                  >
+                    <ClipboardCheck size={16} /> כבר התאמנתי — תיעוד מהיר
+                  </button>
+                  </div>
                 </div>
+              )}
+
+              {isQuickLogOpen && (
+                <QuickLogSheet
+                  title={isDiyMode ? diyProgramName : (selectedCategory ?? "")}
+                  blocksMap={blocksMap}
+                  blocksKeys={blocksKeys}
+                  isAmrap={displayedExercises[0]?.program_format === "amrap"}
+                  onClose={() => setIsQuickLogOpen(false)}
+                  onLogged={onWorkoutLogged}
+                />
               )}
             </>
           );

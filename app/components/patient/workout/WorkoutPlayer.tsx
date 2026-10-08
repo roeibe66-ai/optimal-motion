@@ -8,7 +8,7 @@ import { ExerciseMediaPlayer } from "@/app/components/ExerciseMedia";
 import PreWorkoutFlow from "@/app/components/patient/PreWorkoutFlow";
 import WorkoutFinishFlow from "@/app/components/patient/workout/WorkoutFinishFlow";
 import Toast from "@/app/components/ui/Toast";
-import { formatTime, getExerciseName } from "@/app/utils/format";
+import { formatTime, formatWeightKg, getExerciseName } from "@/app/utils/format";
 import type { HapticType } from "@/app/hooks/useHaptics";
 import type { useWorkoutSession } from "@/app/hooks/useWorkoutSession";
 
@@ -209,6 +209,11 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
             <p className="text-muted text-sm font-bold mt-1 tabular-nums">
               סט {session.currentBlockSet} / {session.maxSetsInBlock}
             </p>
+            {formatWeightKg(session.activeAssign?.weight_kg) && (
+              <span className="inline-flex items-center gap-1.5 mt-2 bg-accent/15 text-accent-fg text-xs font-extrabold px-3 py-1 rounded-full">
+                <Dumbbell size={12} /> {formatWeightKg(session.activeAssign?.weight_kg)}
+              </span>
+            )}
           </div>
         </div>
       ) : (
@@ -489,6 +494,24 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
                   );
                 })}
               </div>
+
+              {/* Optional weight used — left empty, nothing is logged. */}
+              {!session.activeAssign?.is_time && (
+                <label className="flex items-center gap-2">
+                  <span className="text-[11px] font-bold text-muted uppercase tracking-wide">משקל</span>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    value={session.pendingSetWeight}
+                    onChange={(e) => session.setRestWeight(e.target.value)}
+                    placeholder="—"
+                    aria-label="משקל בקילוגרמים (לא חובה)"
+                    className="w-16 bg-fg/10 border border-line rounded-full px-2 py-1 text-center text-sm font-bold text-fg tabular-nums outline-none focus:border-focus focus:ring-2 focus:ring-focus placeholder:text-muted"
+                    dir="ltr"
+                  />
+                  <span className="text-[11px] font-bold text-muted">ק״ג</span>
+                </label>
+              )}
             </div>
 
             {/* Bottom controls — minimal media-control feel: a ghost

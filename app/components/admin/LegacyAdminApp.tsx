@@ -46,7 +46,7 @@ import AdminCoPilotDrawer from "@/app/components/admin/AdminCoPilotDrawer";
 import WorkoutBuilderTab from "@/app/components/admin/tabs/WorkoutBuilderTab";
 import ProgramLibraryTab from "@/app/components/admin/tabs/ProgramLibraryTab";
 import ExerciseLibraryTab from "@/app/components/admin/tabs/ExerciseLibraryTab";
-import { formatAdminDate, getExerciseName } from "@/app/utils/format";
+import { formatAdminDate, formatWeightKg, getExerciseName, parseWeightInput } from "@/app/utils/format";
 import { getAIInsight } from "@/app/utils/scoring";
 import { generateResearchFacts, type ResearchInterpretation } from "@/app/actions/researchAgent";
 import type { AIAssistantContext, CuratedFact, PatientProgram, ResearchFinding } from "@/app/types";
@@ -159,6 +159,7 @@ export default function LegacyAdminApp() {
     scheduled_days: [] as string[],
     is_time: false,
     week: 1,
+    weight_kg: "",
   });
 
 
@@ -395,6 +396,7 @@ export default function LegacyAdminApp() {
       scheduled_days: assign.scheduled_days ? String(assign.scheduled_days).split(",") : [],
       is_time: Boolean(assign.is_time),
       week: Number(assign.week || 1),
+      weight_kg: Number(assign.weight_kg) > 0 ? String(Number(assign.weight_kg)) : "",
     });
   };
 
@@ -410,6 +412,7 @@ export default function LegacyAdminApp() {
         scheduled_days: editAssignForm.scheduled_days.length > 0 ? editAssignForm.scheduled_days.join(",") : null,
         is_time: editAssignForm.is_time,
         week: editAssignForm.week,
+        weight_kg: parseWeightInput(editAssignForm.weight_kg),
       })
       .eq("id", assignId);
     if (error) alert("שגיאה בעדכון: " + error.message);
@@ -533,7 +536,7 @@ export default function LegacyAdminApp() {
             // still a text column — if this loaded protocol later gets assigned
             // directly to a patient, saveBuilderPlan writes these straight into
             // patient_exercises, now an integer column.
-            newPlan[w][day].push({ ...ex, temp_id: Math.random().toString(), sets: Number(pe.sets) || 0, reps: Number(pe.reps) || 0, rir: pe.rir, is_time: pe.is_time, block: pe.block || "A", rest_time_seconds: pe.rest_time_seconds ?? 60 });
+            newPlan[w][day].push({ ...ex, temp_id: Math.random().toString(), sets: Number(pe.sets) || 0, reps: Number(pe.reps) || 0, rir: pe.rir, is_time: pe.is_time, block: pe.block || "A", rest_time_seconds: pe.rest_time_seconds ?? 60, weight_kg: pe.weight_kg != null ? Number(pe.weight_kg) : null });
           }
         });
         return newPlan;
@@ -591,7 +594,7 @@ export default function LegacyAdminApp() {
       Object.keys(builderPlan).forEach((w) => {
         Object.keys(builderPlan[w as any]).forEach((dayId) => {
           builderPlan[w as any][dayId].forEach((ex) => {
-            inserts.push({ package_id: pkg.id, exercise_id: ex.id, block: ex.block || "A", sets: ex.sets, reps: ex.reps, rir: ex.rir, is_time: ex.is_time, week: parseInt(w), scheduled_days: dayId, rest_time_seconds: ex.rest_time_seconds || 60 });
+            inserts.push({ package_id: pkg.id, exercise_id: ex.id, block: ex.block || "A", sets: ex.sets, reps: ex.reps, rir: ex.rir, is_time: ex.is_time, week: parseInt(w), scheduled_days: dayId, rest_time_seconds: ex.rest_time_seconds || 60, weight_kg: ex.weight_kg ?? null });
           });
         });
       });
@@ -634,6 +637,7 @@ export default function LegacyAdminApp() {
             scheduled_days: dayId,
             week: parseInt(w),
             rest_time_seconds: ex.rest_time_seconds || 60,
+            weight_kg: ex.weight_kg ?? null,
           });
         });
       });
@@ -1336,6 +1340,20 @@ export default function LegacyAdminApp() {
                                     </button>
                                   </span>
                                 </div>
+                                {!ex.is_time && (
+                                  <div className="on-light flex items-center gap-1 bg-surface-alt p-1.5 rounded-xl border border-line" title="משקל יעד (לא חובה) — אם ריק, לא יוצג למטופל">
+                                    <input
+                                      type="number"
+                                      min={0}
+                                      step="0.5"
+                                      value={ex.weight_kg ?? ""}
+                                      onChange={(e) => updateBuilderExercise(day.id, ex.temp_id, "weight_kg", parseWeightInput(e.target.value))}
+                                      placeholder="-"
+                                      className="w-10 text-center bg-transparent outline-none font-bold text-sm text-fg placeholder:text-muted"
+                                    />
+                                    <span className="text-muted text-xs font-bold">ק״ג</span>
+                                  </div>
+                                )}
                                 <div className="on-light flex items-center gap-1 bg-surface-alt p-1.5 rounded-xl border border-line">
                                   <Clock size={12} className="text-muted shrink-0" />
                                   {REST_TIME_PRESETS.map((secs) => (
@@ -1384,7 +1402,7 @@ export default function LegacyAdminApp() {
           </div>
         )}
 
-        {adminTab === "workout_builder" && <WorkoutBuilderTab exercises={exercises} lang={lang} />}
+        {adminTab === "workout_builder" && <WorkoutBuilderTab exercises={exercises} patients={patients} lang={lang} />}
 
         {adminTab === "program_library" && <ProgramLibraryTab packages={packages} exercises={exercises} patients={patients} onRefresh={fetchAdminData} />}
 
@@ -1500,6 +1518,17 @@ export default function LegacyAdminApp() {
                                       className="w-16 border-b border-line-input bg-transparent text-fg placeholder:text-muted p-1 text-center"
                                     />
                                   </div>
+                                  <div>
+                                    <label className="block text-xs font-bold text-muted uppercase">משקל (ק״ג)</label>
+                                    <input
+                                      type="text"
+                                      inputMode="decimal"
+                                      value={editAssignForm.weight_kg}
+                                      onChange={(e) => setEditAssignForm({ ...editAssignForm, weight_kg: e.target.value })}
+                                      placeholder="-"
+                                      className="w-16 border-b border-line-input bg-transparent text-fg placeholder:text-muted p-1 text-center"
+                                    />
+                                  </div>
                                   <div className="flex-1 min-w-[150px]">
                                     <label className="block text-xs font-bold text-muted uppercase">הערה</label>
                                     <input
@@ -1547,6 +1576,11 @@ export default function LegacyAdminApp() {
                                   {assign.rir && (
                                     <span className="on-light bg-surface-alt px-3 py-1 rounded-lg border border-line">
                                       RIR: <strong className="text-fg">{assign.rir}</strong>
+                                    </span>
+                                  )}
+                                  {formatWeightKg(assign.weight_kg) && (
+                                    <span className="on-light bg-surface-alt px-3 py-1 rounded-lg border border-line">
+                                      משקל: <strong className="text-fg">{formatWeightKg(assign.weight_kg)}</strong>
                                     </span>
                                   )}
                                   {assign.notes && <span className="on-light bg-surface-alt px-3 py-1 rounded-lg border border-line max-w-[200px] truncate">הערה: {assign.notes}</span>}

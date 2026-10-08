@@ -99,3 +99,21 @@ export const formatTime = (seconds: number) => {
 
 export const formatAdminDate = (dateString: string) =>
   new Date(dateString).toLocaleDateString("he-IL", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+
+// Optional exercise weight (patient_exercises/package_exercises.weight_kg, a
+// numeric column, or workouts.items[].weight_kg). Returns null when unset so
+// callers render nothing at all — weight is opt-in, never a "0 ק״ג" pill.
+export const formatWeightKg = (value: number | string | null | undefined): string | null => {
+  if (value === null || value === undefined || value === "") return null;
+  const n = Number(value);
+  if (!Number.isFinite(n) || n <= 0) return null;
+  return `${Number.isInteger(n) ? n : n.toFixed(1).replace(/\.0$/, "")} ק״ג`;
+};
+
+// Parses an optional weight text input: empty/invalid -> null.
+export const parseWeightInput = (value: string): number | null => {
+  const trimmed = value.trim().replace(",", ".");
+  if (!trimmed) return null;
+  const n = Number(trimmed);
+  return Number.isFinite(n) && n >= 0 ? Math.round(n * 100) / 100 : null;
+};
