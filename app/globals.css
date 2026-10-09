@@ -256,3 +256,21 @@ html {
   outline: 2px solid var(--focus-ring);
   outline-offset: 2px;
 }
+
+/* Landing page entrance (LandingPage.tsx): logo drops in, buttons rise in
+   just after, over the hero video. */
+@theme {
+  --animate-landing-drop: landing-drop 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-landing-rise: landing-rise 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.35s both;
+
+  @keyframes landing-drop {
+    from { opacity: 0; transform: translateY(-16px); }
+  }
+  @keyframes landing-rise {
+    from { opacity: 0; transform: translateY(28px); }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-landing-drop, .animate-landing-rise { animation: none; }
+}

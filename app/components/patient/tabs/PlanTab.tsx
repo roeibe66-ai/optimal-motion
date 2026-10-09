@@ -20,6 +20,7 @@ import { useAuth } from "@/app/context/AuthContext";
 import { formatWeightKg, getExerciseName, getWorkoutMuscleAggregation, type WorkoutMuscleAggregation } from "@/app/utils/format";
 import { AVAILABLE_MUSCLES, DEFAULT_TRACK_GLOW, EQUIPMENT_LIST, TRACK_GLOW_TINTS } from "@/app/constants/catalog";
 import type { AIAssistantContext, CuratedFact, Exercise, ExploreProgram, WorkoutLog } from "@/app/types";
+import { dailyWorkoutImage, dominantWorkoutCategory } from "@/app/utils/workoutImages";
 import { programNameOf, type HydratedPatientExercise, type SessionExercise } from "@/app/hooks/useWorkoutSession";
 import PatientCoachSheet from "@/app/components/patient/PatientCoachSheet";
 import { FEATURES } from "@/app/constants/features";
@@ -173,6 +174,7 @@ export default function PlanTab({
     // workout, fed to the hero's heatmap overlay below — not decorative,
     // drawn from the same filtered list as the counts above.
     let todayMuscleAggregation: WorkoutMuscleAggregation = { primeMovers: [], synergists: [] };
+    let todayHeroImage = dailyWorkoutImage(null);
     if (todayCat) {
       const todayCategoryExercises = weekFilteredExercises.filter((pe) => {
         if (programNameOf(pe) !== todayCat) return false;
@@ -196,6 +198,7 @@ export default function PlanTab({
         todayBlocksMap[b].push(pe);
       });
       todayMuscleAggregation = getWorkoutMuscleAggregation(todayBlocksMap);
+      todayHeroImage = dailyWorkoutImage(dominantWorkoutCategory(todayCategoryExercises.map((pe) => pe.exercise?.categories ?? [])));
     }
 
     // RPE trend: the last 20 logged workouts that have an RPE (rpe is
@@ -242,16 +245,12 @@ export default function PlanTab({
           // instead of sitting inside the page's normal content gutter —
           // "wide, full-width hero card" only reads as such edge-to-edge.
           <div className="scheme-dark relative h-[480px] -mx-4 md:-mx-8 rounded-[2rem] overflow-hidden shadow-card mb-10">
-            {/* Placeholder hero photo — a live Unsplash hotlink (Edoardo
-                Cuoghi, Unsplash License, unsplash.com/photos/5uzsDVRov2w),
-                not a repo asset. Swap for a real owned asset before this
-                ships; kept as a remote <img> rather than downloaded since it
-                was requested explicitly as a placeholder. The dark gradient
-                scrim over the photo stays even in light mode — that's photo
-                legibility (white text needs a dark ground under it), not a
-                dark-theme leftover; nothing outside the photo itself is dark. */}
+            {/* Ecco artwork for the workout's dominant category, a different
+                one each day (app/utils/workoutImages.ts). The dark gradient
+                scrim over it stays even in light mode — that's legibility
+                for the white text, not a dark-theme leftover. */}
             <img
-              src="https://images.unsplash.com/photo-1634225251578-d5f6ffced78a?w=1200&q=80&fm=jpg&fit=crop&auto=format"
+              src={todayHeroImage}
               alt=""
               className="absolute inset-0 w-full h-full object-cover"
             />
