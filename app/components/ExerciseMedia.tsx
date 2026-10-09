@@ -135,7 +135,10 @@ function InViewVideo({ item, label, reducedMotion, fit }: { item: ExerciseMediaI
       />
       {!autoplay && (
         <button
-          onClick={() => setUserStarted(true)}
+          onClick={(e) => {
+            e.stopPropagation(); // the clip may sit inside a clickable row
+            setUserStarted(true);
+          }}
           aria-label={`הפעל סרטון: ${label}`}
           className="absolute inset-0 flex items-center justify-center"
         >
@@ -161,11 +164,14 @@ interface ExerciseMediaPlayerProps {
   // "box": own aspect-ratio box + angle toggle. "fill": fills the parent
   // (a fixed-size square/circle), primary item only, cropped to cover.
   mode?: "box" | "fill";
+  // "fill" only: "contain" keeps new media's whole frame (studio bg pads
+  // it) — for tiles whose shape doesn't match the clip's aspect.
+  fillFit?: Fit;
   className?: string;
   placeholder?: ReactNode; // shown when the exercise has no media at all
 }
 
-export function ExerciseMediaPlayer({ exercise, label, mode = "box", className = "", placeholder }: ExerciseMediaPlayerProps) {
+export function ExerciseMediaPlayer({ exercise, label, mode = "box", fillFit = "cover", className = "", placeholder }: ExerciseMediaPlayerProps) {
   const items = getExerciseMediaItems(exercise);
   const reducedMotion = usePrefersReducedMotion();
   const exerciseId = exercise?.id ?? "";
@@ -177,7 +183,7 @@ export function ExerciseMediaPlayer({ exercise, label, mode = "box", className =
     const item = items[0];
     return (
       <div className={`relative w-full h-full ${className}`} style={item.legacy ? undefined : { background: MEDIA_STUDIO_BG }}>
-        <MediaItemView item={item} label={label} reducedMotion={reducedMotion} fit="cover" />
+        <MediaItemView item={item} label={label} reducedMotion={reducedMotion} fit={item.legacy ? "cover" : fillFit} />
       </div>
     );
   }

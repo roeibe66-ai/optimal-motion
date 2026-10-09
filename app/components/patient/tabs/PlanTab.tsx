@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import {
+  ArrowDown,
   ChevronDown,
   ChevronLeft,
   ClipboardCheck,
@@ -17,7 +18,7 @@ import {
 } from "lucide-react";
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip as RechartsTooltip, XAxis, YAxis } from "recharts";
 import { useAuth } from "@/app/context/AuthContext";
-import { formatWeightKg, getExerciseName, getWorkoutMuscleAggregation, type WorkoutMuscleAggregation } from "@/app/utils/format";
+import { formatTime, formatWeightKg, getExerciseName, getWorkoutMuscleAggregation, type WorkoutMuscleAggregation } from "@/app/utils/format";
 import { AVAILABLE_MUSCLES, DEFAULT_TRACK_GLOW, EQUIPMENT_LIST, TRACK_GLOW_TINTS } from "@/app/constants/catalog";
 import type { AIAssistantContext, CuratedFact, Exercise, ExploreProgram, WorkoutLog } from "@/app/types";
 import { dailyWorkoutImage, dominantWorkoutCategory } from "@/app/utils/workoutImages";
@@ -25,7 +26,7 @@ import { programNameOf, type HydratedPatientExercise, type SessionExercise } fro
 import PatientCoachSheet from "@/app/components/patient/PatientCoachSheet";
 import { FEATURES } from "@/app/constants/features";
 import AnatomyHeatmap from "@/app/components/AnatomyHeatmap";
-import { ExerciseThumb } from "@/app/components/ExerciseMedia";
+import { ExerciseMediaPlayer } from "@/app/components/ExerciseMedia";
 import QuickLogSheet from "@/app/components/patient/workout/QuickLogSheet";
 import { getLastUsedWeights } from "@/app/utils/history";
 
@@ -249,10 +250,20 @@ export default function PlanTab({
                 one each day (app/utils/workoutImages.ts). The dark gradient
                 scrim over it stays even in light mode — that's legibility
                 for the white text, not a dark-theme leftover. */}
+            {/* The artwork is portrait (~4:5): shown whole (contain) over a
+                blurred, cover-cropped copy of itself, so the wide desktop
+                card doesn't slice a band out of the character's middle. On
+                phones the card is ~4:5 too and the two layers coincide. */}
             <img
               src={todayHeroImage}
               alt=""
-              className="absolute inset-0 w-full h-full object-cover"
+              aria-hidden="true"
+              className="absolute inset-0 w-full h-full object-cover scale-110 blur-2xl"
+            />
+            <img
+              src={todayHeroImage}
+              alt=""
+              className="absolute inset-0 w-full h-full object-contain"
             />
             {/* Warm color-grade tying the photo to this hero's established
                 amber palette, plus the bottom scrim for text legibility. */}
@@ -536,40 +547,89 @@ export default function PlanTab({
                 </div>
               </div>
 
+              {/* Follow-along list: for patients who'd rather read the plan
+                  than run the player. Each card loops its demo clip (only
+                  while on screen — InViewVideo) and spells out sets, reps
+                  and rest. Rest mirrors useWorkoutSession: a single
+                  exercise rests between its own sets; a superset runs its
+                  exercises back to back and rests once per round, for the
+                  last exercise's rest_time_seconds. */}
               <div className="space-y-4 pb-44">
-                {blocksKeys.map((blockKey) => (
-                  <div key={blockKey} className="space-y-4">
-                    {blocksMap[blockKey].length > 1 && <div className="text-xs font-bold text-accent-fg uppercase tracking-widest mt-6 mb-2">בלוק {blockKey} (סופר-סט)</div>}
+                {blocksKeys.map((blockKey) => {
+                  const block = blocksMap[blockKey];
+                  const isSuperset = block.length > 1;
+                  const isAmrap = block[0] && "program_format" in block[0] && block[0].program_format === "amrap";
+                  const blockRounds = Math.max(...block.map((a) => Number(a.sets) || 0));
+                  const blockRest = Number(block[block.length - 1]?.rest_time_seconds) || 0;
+                  return (
+                  <div key={blockKey} className="space-y-3">
+                    {isSuperset && <div className="text-xs font-bold text-accent-fg uppercase tracking-widest mt-6 mb-1">בלוק {blockKey} (סופר-סט)</div>}
 
-                    {blocksMap[blockKey].map((assignment) => (
-                      <div
-                        key={assignment.id}
-                        className="on-light flex items-center gap-4 group cursor-pointer bg-surface hover:bg-surface-alt active:scale-[0.98] p-4 rounded-2xl shadow-sm border border-line transition-all duration-150 ease-out"
-                        onClick={() => onViewExerciseInfo(assignment.exercise)}
-                      >
-                        <div className="on-light w-16 h-16 rounded-2xl overflow-hidden bg-surface-alt shrink-0">
-                          <ExerciseThumb
-                            exercise={assignment.exercise}
-                            alt={getExerciseName(assignment.exercise, lang)}
-                            className="w-full h-full"
-                            fallback={<div className="on-light w-full h-full bg-surface-alt"></div>}
-                          />
-                        </div>
-                        <div className="flex-1 overflow-hidden py-1">
-                          <div className="text-muted text-xs font-bold mb-1 flex items-center gap-1">
-                            {"program_format" in assignment && assignment.program_format === "amrap" ? "בכל סבב: " : `${assignment.sets} סטים x `}{assignment.is_time ? `${assignment.reps}"` : `${assignment.reps} חזרות`}
-                            {assignment.rir && <span className="on-light bg-surface-alt text-muted px-1.5 py-0.5 rounded text-[8px] ml-1">RIR {assignment.rir}</span>}
-                            {formatWeightKg(assignment.weight_kg) && (
-                              <span className="bg-accent/15 text-accent-fg px-1.5 py-0.5 rounded text-[9px] ml-1">{formatWeightKg(assignment.weight_kg)}</span>
+                    {block.map((assignment, idx) => {
+                      const name = getExerciseName(assignment.exercise, lang);
+                      const weight = formatWeightKg(assignment.weight_kg);
+                      const rest = Number(assignment.rest_time_seconds) || 0;
+                      const stats: { label: string; value: string }[] = isAmrap
+                        ? [{ label: "בכל סבב", value: assignment.is_time ? `${assignment.reps}"` : String(assignment.reps) }]
+                        : [
+                            { label: "סטים", value: String(assignment.sets) },
+                            { label: assignment.is_time ? "שניות" : "חזרות", value: String(assignment.reps) },
+                            ...(!isSuperset && rest > 0 ? [{ label: "מנוחה", value: formatTime(rest) }] : []),
+                          ];
+                      return (
+                      <div key={assignment.id}>
+                        <div
+                          className="on-light flex items-stretch gap-4 group cursor-pointer bg-surface hover:bg-surface-alt active:scale-[0.98] p-3 rounded-2xl shadow-sm border border-line transition-all duration-150 ease-out"
+                          onClick={() => onViewExerciseInfo(assignment.exercise)}
+                        >
+                          <div className="on-light w-28 h-32 rounded-xl overflow-hidden bg-surface-alt shrink-0">
+                            <ExerciseMediaPlayer
+                              exercise={assignment.exercise}
+                              label={name}
+                              mode="fill"
+                              fillFit="contain"
+                              placeholder={<div className="on-light w-full h-full bg-surface-alt flex items-center justify-center"><Dumbbell size={22} className="text-muted" /></div>}
+                            />
+                          </div>
+                          <div className="flex-1 min-w-0 flex flex-col justify-between py-1">
+                            <div className="flex items-start gap-2">
+                              <h4 dir="auto" className="flex-1 text-fg font-bold leading-snug line-clamp-2 text-start">{name}</h4>
+                              <ChevronLeft size={16} className="text-muted group-hover:text-fg transition-colors rotate-180 mt-1 shrink-0" />
+                            </div>
+                            <div className="flex gap-1.5 mt-2">
+                              {stats.map((st) => (
+                                <div key={st.label} className="on-light flex-1 bg-surface-alt rounded-lg py-1.5 text-center">
+                                  <div className="text-fg font-black text-base leading-none tabular-nums">{st.value}</div>
+                                  <div className="text-muted text-[10px] font-bold mt-1">{st.label}</div>
+                                </div>
+                              ))}
+                            </div>
+                            {(assignment.rir != null || weight) && (
+                              <div className="flex gap-1.5 mt-2 text-[10px] font-bold">
+                                {assignment.rir != null && <span className="on-light bg-surface-alt text-muted px-1.5 py-0.5 rounded">RIR {assignment.rir}</span>}
+                                {weight && <span className="bg-accent/15 text-accent-fg px-1.5 py-0.5 rounded">{weight}</span>}
+                              </div>
                             )}
                           </div>
-                          <h4 className="text-fg font-bold truncate">{getExerciseName(assignment.exercise, lang)}</h4>
                         </div>
-                        <ChevronLeft size={16} className="text-muted group-hover:text-fg transition-colors rotate-180" />
+                        {isSuperset && !isAmrap && idx < block.length - 1 && (
+                          <div className="flex items-center justify-center gap-1.5 text-[11px] font-bold text-muted pt-2">
+                            <ArrowDown size={12} /> ישר לתרגיל הבא, בלי מנוחה
+                          </div>
+                        )}
                       </div>
-                    ))}
+                      );
+                    })}
+
+                    {isSuperset && !isAmrap && (
+                      <div className="flex items-center justify-center gap-2 text-xs font-bold text-accent-fg bg-accent/10 rounded-full py-2">
+                        <Timer size={14} />
+                        {blockRounds} סבבים{blockRest > 0 ? ` · מנוחה ${formatTime(blockRest)} אחרי כל סבב` : ""}
+                      </div>
+                    )}
                   </div>
-                ))}
+                  );
+                })}
               </div>
 
               {displayedExercises.length > 0 && (
