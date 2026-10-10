@@ -25,6 +25,7 @@ import ProfileTab from "@/app/components/patient/tabs/ProfileTab";
 import type { Exercise, SavedProgram, Workout } from "@/app/types";
 import type { SessionExercise } from "@/app/hooks/useWorkoutSession";
 import AmrapPlayer, { type AmrapSessionConfig, type AmrapStation } from "@/app/components/patient/workout/AmrapPlayer";
+import { notify } from "@/app/components/ui/feedback";
 
 type PatientTab = "plan" | "calendar" | "diy" | "explore" | "premium" | "profile";
 
@@ -135,7 +136,9 @@ export default function PatientShell() {
   const handleStartSavedProgram = (program: SavedProgram, dayNumber: number) => {
     const day = program.days.find((d) => d.day_number === dayNumber) ?? program.days[0];
     if (!day) return;
-    planSelection.setDiyExercisesByDay({ [day.day_number]: hydrateExerciseIds(day.exercise_ids) });
+    const dayExercises = hydrateExerciseIds(day.exercise_ids);
+    if (dayExercises.length === 0) return notify("אין תרגילים זמינים ביום הזה — ייתכן שהם הוסרו מהמאגר.", "info");
+    planSelection.setDiyExercisesByDay({ [day.day_number]: dayExercises });
     planSelection.setDiyActiveDay(day.day_number);
     planSelection.setDiyProgramName(program.name);
     setShowMyWorkouts(false);
@@ -190,7 +193,7 @@ export default function PatientShell() {
           return exercise ? { exercise, reps: item.reps, reps_max: item.reps_max, is_time: item.is_time } : null;
         })
         .filter((st): st is AmrapStation => st !== null);
-      if (stations.length === 0 || !workout.time_cap_seconds) return;
+      if (stations.length === 0 || !workout.time_cap_seconds) return notify("אין תרגילים זמינים באימון הזה כרגע.", "info");
       setAmrapConfig({ title: workout.title, timeCapSeconds: workout.time_cap_seconds, stations });
       return;
     }
@@ -212,7 +215,8 @@ export default function PatientShell() {
         };
       })
       .filter((se): se is SessionExercise => se !== null);
-    if (exercises.length === 0) return;
+    // Used to return silently: "start" did nothing at all.
+    if (exercises.length === 0) return notify("אין תרגילים זמינים באימון הזה כרגע.", "info");
     setAdHocSession({ title: workout.title, exercises });
     planSelection.setIsDiyMode(true);
     session.startDiyWorkoutNow();

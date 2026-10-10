@@ -270,3 +270,16 @@ loading a page showed it. Caught before commit.
 dates. A navigation handoff passes everything that identifies the target (here the program
 name), not just enough to land nearby. Hydrating saved ids against the catalog must surface
 what didn't resolve.
+
+## 2026-10-10 — Workout player's primary buttons fell off short screens
+
+**What happened:** the player is `fixed inset-0 overflow-hidden` with its content vertically
+centered and no scroll. At 375×667 the rest screen's "דלג"/"+15" ended at 748px with plain
+demo data (804px with a long name), and "סיום סט" was cut off on the active screen with a
+70-char exercise name — unreachable. Mobile Safari's toolbars make the real height smaller
+still, so this hit common iPhones, not just small ones. Real 4:5 media (350px tall at
+280px wide) is taller than the placeholder the measurement used, so it was worse in practice.
+**Why:** a fixed, non-scrolling full-screen layout sized against one tall test device.
+**Rule:** full-screen flows need a scrolling middle (`flex-1 min-h-0 overflow-y-auto`) with
+the primary action `sticky bottom-0`, and media/rings sized by `dvh` as well as width.
+Check every full-screen screen at 375×667 and 320×568 (`/dev/player`).

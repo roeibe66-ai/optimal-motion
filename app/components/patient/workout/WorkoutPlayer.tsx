@@ -21,7 +21,7 @@ import type { useWorkoutSession } from "@/app/hooks/useWorkoutSession";
 // simulator's config screen rather than needing a separate code path.
 export function SimulationBanner({ onExit }: { onExit: () => void }) {
   return (
-    <div className="sticky top-0 inset-x-0 z-[200] pt-safe px-4 pt-3 print:hidden">
+    <div data-simulation-banner className="sticky top-0 inset-x-0 z-[200] pt-safe px-4 pt-3 print:hidden">
       <div className="flex items-center gap-2.5 bg-warm/15 border border-warm/40 text-warm-fg text-xs font-bold px-4 py-2.5 rounded-2xl shadow-[0_4px_20px_color-mix(in_srgb,var(--shadow-ink)_6%,transparent)]">
         <FlaskConical size={16} className="text-warm-fg shrink-0" />
         <span className="flex-1">מצב סימולציה פעיל — הנתונים לא נשמרים</span>
@@ -133,6 +133,22 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
 
   const ex = session.displayedExercise;
   const next = session.nextExercise;
+
+  // A session with nothing to show (e.g. every exercise of a workout was
+  // deleted from the catalog): say so, instead of a phantom "סט 1 / 1 · 0
+  // חזרות" set whose "סיום סט" would log a set of nothing.
+  if (!ex && !session.isResting && !session.isSupersetCheck) {
+    return (
+      <div className="fixed inset-0 z-[150] bg-page text-fg flex flex-col items-center justify-center gap-4 p-8 text-center" dir={dir}>
+        <Dumbbell size={40} className="text-muted" />
+        <p className="text-lg font-black">אין תרגילים זמינים באימון הזה</p>
+        <p className="text-sm text-muted max-w-xs">ייתכן שהתרגילים הוסרו מהמאגר. אפשר לבחור אימון אחר או לבנות אחד חדש.</p>
+        <button onClick={session.closeWorkout} className="mt-2 bg-btn-primary text-btn-primary-fg font-black px-8 py-3.5 rounded-full active:scale-[0.97] transition-ui duration-150 ease-out">
+          חזרה
+        </button>
+      </div>
+    );
+  }
   const isSameExerciseNext = next && ex && next.exercise.id === ex.id;
   const restProgress = session.restTimerTotal > 0 ? Math.min(1, Math.max(0, session.restTimer / session.restTimerTotal)) : 0;
   // Covers both a real rest and the lightweight mid-superset check — both
@@ -211,7 +227,9 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
           </div>
 
           <div className="text-center">
-            <h2 className="text-2xl md:text-3xl font-black text-fg tracking-tight">{ex && getExerciseName(ex, lang)}</h2>
+            {/* Two lines max — the full name is one tap away (ⓘ); three lines of
+                this size pushed the controls off short screens. */}
+            <h2 className="text-2xl md:text-3xl font-black text-fg tracking-tight leading-tight line-clamp-2 [overflow-wrap:anywhere]">{ex && getExerciseName(ex, lang)}</h2>
             <p className="text-muted text-sm font-bold mt-1 tabular-nums">
               סט {session.currentBlockSet} / {session.maxSetsInBlock}
             </p>
@@ -267,10 +285,14 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
         </div>
       )}
 
-      {/* Main Stage — vertically centered for both states now: the hero
-          metric, contained media player, and controls for the active
-          screen; the rest screen's own content below its timer above. */}
-      <div className="relative z-10 flex-1 flex flex-col justify-center items-center pb-safe pb-6 px-5 md:px-8 w-full max-w-md mx-auto">
+      {/* Main Stage — vertically centered when it fits, scrollable when it
+          doesn't (short phones, mobile Safari's toolbars, long names, tall
+          4:5 media): the player is fixed/overflow-hidden, so before this
+          the primary buttons simply fell off the bottom of a 667px screen.
+          The primary controls are sticky to the bottom of this scroller, so
+          they stay on screen either way. */}
+      <div className="relative z-10 flex-1 min-h-0 w-full overflow-y-auto overscroll-contain">
+      <div className="min-h-full flex flex-col justify-center items-center pb-[max(1.5rem,env(safe-area-inset-bottom))] px-5 md:px-8 w-full max-w-md mx-auto">
         {!isPostSet ? (
           <div className="w-full flex flex-col items-center gap-7">
             {/* Dynamic hero metric — a massive countdown for a timed set, or
@@ -306,20 +328,26 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
                 overlaid on it (aside from the angle toggle). Media is
                 optional (exercises can be text/metadata-only); the box takes
                 the clip's own aspect (4:5 / 16:9), legacy gif_url stays square. */}
+            {/* Width capped by viewport height too, so a 4:5 clip (350px tall at
+                280px wide) shrinks on short screens instead of pushing the
+                controls down. */}
             <ExerciseMediaPlayer
               exercise={ex}
               label={ex ? getExerciseName(ex, lang) : "Exercise media"}
+              className="max-w-[min(100%,34dvh)]"
               placeholder={
                 // Muted-icon-plus-caption placeholder on a dark elevated
                 // gradient, matching the player's dark shell.
-                <div className="w-full max-w-[280px] aspect-square rounded-[2rem] overflow-hidden border border-line shadow-card bg-gradient-to-br from-elevated to-line flex flex-col items-center justify-center gap-2">
+                <div className="w-full max-w-[min(280px,34dvh)] aspect-square rounded-[2rem] overflow-hidden border border-line shadow-card bg-gradient-to-br from-elevated to-line flex flex-col items-center justify-center gap-2">
                   <Dumbbell size={40} className="text-muted" />
                   <span className="text-muted text-sm font-bold">אין מדיה זמינה</span>
                 </div>
               }
             />
 
-            {/* Minimal controls, seamless below the player — no drawer/card. */}
+            {/* Minimal controls, seamless below the player — no drawer/card.
+                Sticky to the bottom of the scrolling stage. */}
+            <div className="sticky bottom-0 z-10 w-full flex justify-center bg-page pt-3 pb-1">
             {session.activeAssign?.is_time ? (
               session.exTimer === 0 ? (
                 <button
@@ -371,6 +399,7 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
                 </button>
               </div>
             )}
+            </div>
           </div>
         ) : (
           <div className="flex flex-col items-center text-center w-full gap-8">
@@ -385,12 +414,11 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
               if (!heroExercise) return null;
 
               return (
-                <div className="relative" style={{ width: REST_SQUARE_SIZE, height: REST_SQUARE_SIZE }}>
+                // Up to 200px, smaller on short screens (the SVG scales via its viewBox).
+                <div className="relative aspect-square" style={{ width: `min(${REST_SQUARE_SIZE}px, 26dvh)` }}>
                   <svg
-                    width={REST_SQUARE_SIZE}
-                    height={REST_SQUARE_SIZE}
                     viewBox={`0 0 ${REST_SQUARE_SIZE} ${REST_SQUARE_SIZE}`}
-                    className="absolute inset-0 -rotate-90"
+                    className="absolute inset-0 w-full h-full -rotate-90"
                   >
                     <defs>
                       {/* Accent gradient (hover -> active teal) for the rest
@@ -560,7 +588,8 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
                 buttons only read as a pop of contrast against black — on
                 this cream background they'd be nearly invisible, so both
                 convert to the solid brand-terracotta accent instead. */}
-            <div className="flex items-center justify-center gap-8">
+            {/* Sticky to the bottom of the scrolling stage, like the active screen's controls. */}
+            <div className="sticky bottom-0 z-10 w-full flex items-center justify-center gap-8 bg-page pt-3 pb-1">
               {session.isSupersetCheck ? (
                 <button
                   onClick={session.handleContinueSuperset}
@@ -588,6 +617,7 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
             </div>
           </div>
         )}
+      </div>
       </div>
     </div>
   );
