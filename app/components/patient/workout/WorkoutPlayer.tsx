@@ -66,7 +66,8 @@ function RirInfoButton() {
       {isOpen && (
         <>
           <span className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
-          <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 z-50 w-64 bg-elevated text-fg rounded-2xl shadow-elevated border border-line p-4 text-start font-normal block">
+          {/* Grows up out of the ⓘ it's anchored to (origin-bottom). */}
+          <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 z-50 w-64 bg-elevated text-fg rounded-2xl shadow-elevated border border-line p-4 text-start font-normal block origin-bottom transition-[opacity,scale] duration-150 ease-out-strong starting:opacity-0 starting:scale-95">
             <span className="block font-black text-fg text-[13px] mb-1.5">מהו RIR?</span>
             <span className="block text-xs leading-relaxed">
               Reps In Reserve — כמה חזרות נוספות היית יכול לבצע בטכניקה תקינה. לדוגמה, RIR 2 אומר שצריך לעצור את הסט כשאתה מרגיש שנשארו לך עוד 2 חזרות בלבד עד הכשל.
@@ -85,7 +86,7 @@ function BackButton({ onClick }: { onClick: () => void }) {
     <button
       onClick={onClick}
       aria-label="חזור לסט הקודם"
-      className={`h-9 shrink-0 rounded-full px-3.5 flex items-center gap-1.5 text-fg text-xs font-bold hover:bg-line active:scale-95 transition-all duration-150 ease-out ${GLASS}`}
+      className={`h-9 shrink-0 rounded-full px-3.5 flex items-center gap-1.5 text-fg text-xs font-bold hover:bg-line active:scale-95 transition-[scale,background-color,color,border-color] duration-150 ease-out ${GLASS}`}
     >
       <ArrowRight size={15} /> חזור
     </button>
@@ -188,24 +189,29 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
             <button
               onClick={() => ex && session.setViewingExInfo(ex)}
               aria-label="פרטי תרגיל"
-              className="w-7 h-7 shrink-0 rounded-full border border-line text-muted hover:text-fg hover:border-muted active:scale-90 transition-all duration-150 ease-out flex items-center justify-center"
+              className="w-7 h-7 shrink-0 rounded-full border border-line text-muted hover:text-fg hover:border-muted active:scale-90 transition-[scale,background-color,color,border-color] duration-150 ease-out flex items-center justify-center"
             >
               <Info size={13} />
             </button>
             <div className="flex-1 h-[3px] rounded-full bg-fg/10 overflow-hidden">
-              <div className="h-full bg-accent rounded-full transition-all duration-500 ease-out" style={{ width: `${overallProgress * 100}%` }}></div>
+              {/* scaleX, not width (a layout property); fills from the
+                  start edge — the right in Hebrew. */}
+              <div
+                className="h-full w-full bg-accent rounded-full origin-right ltr:origin-left transition-transform duration-300 ease-out-strong"
+                style={{ transform: `scaleX(${overallProgress})` }}
+              ></div>
             </div>
             <button
               onClick={session.closeWorkout}
               aria-label="סגור אימון"
-              className="w-7 h-7 shrink-0 flex items-center justify-center text-muted hover:text-fg active:scale-90 transition-all duration-150 ease-out"
+              className="w-7 h-7 shrink-0 flex items-center justify-center text-muted hover:text-fg active:scale-90 transition-[scale,background-color,color,border-color] duration-150 ease-out"
             >
               <X size={18} />
             </button>
           </div>
 
           <div className="text-center">
-            <h2 className="text-2xl md:text-3xl font-black italic text-fg tracking-tight">{ex && getExerciseName(ex, lang)}</h2>
+            <h2 className="text-2xl md:text-3xl font-black text-fg tracking-tight">{ex && getExerciseName(ex, lang)}</h2>
             <p className="text-muted text-sm font-bold mt-1 tabular-nums">
               סט {session.currentBlockSet} / {session.maxSetsInBlock}
             </p>
@@ -242,7 +248,7 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
           <button
             onClick={session.closeWorkout}
             aria-label="סגור אימון"
-            className={`w-11 h-11 rounded-full flex items-center justify-center text-fg hover:bg-line active:scale-90 active:bg-fg/10 transition-all duration-200 ease-out ${GLASS}`}
+            className={`w-11 h-11 rounded-full flex items-center justify-center text-fg hover:bg-line active:scale-90 active:bg-fg/10 transition-[scale,background-color] duration-150 ease-out ${GLASS}`}
           >
             <X size={20} />
           </button>
@@ -318,7 +324,7 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
               session.exTimer === 0 ? (
                 <button
                   onClick={session.handleFinishAction}
-                  className="w-full max-w-[220px] bg-btn-primary hover:bg-btn-primary-hover active:bg-btn-primary-active text-btn-primary-fg py-4 rounded-full font-black text-base transition-all duration-200 ease-out hover:scale-[1.02] active:scale-[0.97] shadow-[0_12px_32px_-8px_color-mix(in_srgb,var(--accent)_40%,transparent)]"
+                  className="w-full max-w-[220px] bg-btn-primary hover:bg-btn-primary-hover active:bg-btn-primary-active text-btn-primary-fg py-4 rounded-full font-black text-base transition-[scale,background-color] duration-150 ease-out hover:scale-[1.02] active:scale-[0.97] shadow-[0_12px_32px_-8px_color-mix(in_srgb,var(--accent)_40%,transparent)]"
                 >
                   המשך
                 </button>
@@ -326,7 +332,7 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
                 <div className="flex items-center justify-center gap-8">
                   <button
                     onClick={session.skipExerciseTimer}
-                    className="flex flex-col items-center gap-1 text-muted hover:text-fg active:scale-90 transition-all duration-150 ease-out"
+                    className="flex flex-col items-center gap-1 text-muted hover:text-fg active:scale-90 transition-[scale,background-color,color,border-color] duration-150 ease-out"
                   >
                     <SkipForward size={20} />
                     <span className="text-[10px] font-bold uppercase tracking-wide">דלג</span>
@@ -345,13 +351,13 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
                 <button
                   onClick={session.makeEasier}
                   aria-label="הפוך לקל יותר"
-                  className="w-12 h-12 shrink-0 rounded-full bg-fg/10 hover:bg-line flex items-center justify-center text-muted hover:text-fg active:scale-90 transition-all duration-150 ease-out"
+                  className="w-12 h-12 shrink-0 rounded-full bg-fg/10 hover:bg-line flex items-center justify-center text-muted hover:text-fg active:scale-90 transition-[scale,background-color,color,border-color] duration-150 ease-out"
                 >
                   <Minus size={18} />
                 </button>
                 <button
                   onClick={session.handleFinishAction}
-                  className="flex-1 bg-btn-primary hover:bg-btn-primary-hover active:bg-btn-primary-active text-btn-primary-fg font-black text-base py-4 rounded-full flex items-center justify-center gap-2 transition-all duration-200 ease-out hover:scale-[1.02] active:scale-[0.97] shadow-[0_12px_32px_-8px_color-mix(in_srgb,var(--accent)_40%,transparent)]"
+                  className="flex-1 bg-btn-primary hover:bg-btn-primary-hover active:bg-btn-primary-active text-btn-primary-fg font-black text-base py-4 rounded-full flex items-center justify-center gap-2 transition-[scale,background-color] duration-150 ease-out hover:scale-[1.02] active:scale-[0.97] shadow-[0_12px_32px_-8px_color-mix(in_srgb,var(--accent)_40%,transparent)]"
                 >
                   <SkipForward size={18} />
                   סיום סט
@@ -359,7 +365,7 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
                 <button
                   onClick={session.makeHarder}
                   aria-label="הפוך לקשה יותר"
-                  className="w-12 h-12 shrink-0 rounded-full bg-fg/10 hover:bg-line flex items-center justify-center text-muted hover:text-fg active:scale-90 transition-all duration-150 ease-out"
+                  className="w-12 h-12 shrink-0 rounded-full bg-fg/10 hover:bg-line flex items-center justify-center text-muted hover:text-fg active:scale-90 transition-[scale,background-color,color,border-color] duration-150 ease-out"
                 >
                   <Plus size={18} />
                 </button>
@@ -405,8 +411,13 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
                       style={{ stroke: "var(--border)" }}
                       strokeWidth={REST_SQUARE_STROKE}
                     />
+                    {/* Keyed per rest so a new rest starts full instead of
+                        sweeping back up from the last one's empty ring; the
+                        1s linear transition matches the 1s timer tick, so the
+                        ring drains continuously instead of jumping. */}
                     {showProgress && (
                       <rect
+                        key={session.restTimerTotal + ":" + session.activeBlockKey + ":" + session.currentBlockSet + ":" + (session.activeAssign?.id ?? "")}
                         x={REST_SQUARE_STROKE / 2}
                         y={REST_SQUARE_STROKE / 2}
                         width={REST_SQUARE_SIZE - REST_SQUARE_STROKE}
@@ -418,6 +429,7 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
                         strokeLinecap="round"
                         strokeDasharray={REST_SQUARE_PERIMETER}
                         strokeDashoffset={REST_SQUARE_PERIMETER * (1 - restProgress)}
+                        style={{ transition: "stroke-dashoffset 1s linear" }}
                       />
                     )}
                   </svg>
@@ -478,7 +490,8 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
               <div className="flex items-center gap-6">
                 <button
                   onClick={() => session.adjustRestReps(session.activeAssign?.is_time ? -5 : -1)}
-                  className="w-9 h-9 rounded-full bg-fg/10 border border-line flex items-center justify-center text-fg active:scale-90 transition-transform duration-150 ease-out"
+                  aria-label={session.activeAssign?.is_time ? "פחות שניות" : "פחות חזרות"}
+                  className="w-11 h-11 rounded-full bg-fg/10 border border-line flex items-center justify-center text-fg active:scale-90 transition-transform duration-150 ease-out"
                 >
                   <Minus size={15} />
                 </button>
@@ -492,13 +505,14 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
                 </div>
                 <button
                   onClick={() => session.adjustRestReps(session.activeAssign?.is_time ? 5 : 1)}
-                  className="w-9 h-9 rounded-full bg-accent/15 border border-accent/25 flex items-center justify-center text-accent-fg active:scale-90 transition-transform duration-150 ease-out"
+                  aria-label={session.activeAssign?.is_time ? "יותר שניות" : "יותר חזרות"}
+                  className="w-11 h-11 rounded-full bg-accent/15 border border-accent/25 flex items-center justify-center text-accent-fg active:scale-90 transition-transform duration-150 ease-out"
                 >
                   <Plus size={15} />
                 </button>
               </div>
 
-              <div className="relative flex items-center gap-2">
+              <div className="relative flex items-center gap-3">
                 <span className="text-[11px] font-bold text-muted uppercase tracking-wide">RIR</span>
                 <RirInfoButton />
 
@@ -508,7 +522,10 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
                     <button
                       key={val}
                       onClick={() => session.selectRestRir(val)}
-                      className={`w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold transition-all duration-150 ease-out active:scale-90 ${
+                      aria-pressed={isSelected}
+                      aria-label={`RIR ${val === 4 ? "4 ומעלה" : val}`}
+                      // 28px circle, 40×44 tap target (the after: inset, sized to the gap-3 so neighbours don't overlap) — tapped between sets with a raised pulse.
+                      className={`relative w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold transition-[scale,background-color,color,box-shadow] duration-150 ease-out active:scale-90 after:absolute after:-inset-x-1.5 after:-inset-y-2 after:content-[''] ${
                         isSelected ? "bg-accent text-on-accent scale-110 shadow-[0_2px_10px_-2px_color-mix(in_srgb,var(--accent)_50%,transparent)]" : "text-muted border border-line"
                       }`}
                     >
@@ -555,7 +572,7 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
                 <>
                   <button
                     onClick={session.addRestTime}
-                    className="flex flex-col items-center gap-1 text-muted hover:text-fg active:scale-90 transition-all duration-150 ease-out"
+                    className="flex flex-col items-center gap-1 text-muted hover:text-fg active:scale-90 transition-[scale,background-color,color,border-color] duration-150 ease-out"
                   >
                     <span className="text-lg font-black">+15</span>
                     <span className="text-[10px] font-bold uppercase tracking-wide">שניות</span>

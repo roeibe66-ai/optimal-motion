@@ -1,8 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/app/lib/supabase";
 import { useAuth } from "@/app/context/AuthContext";
+import { useDevDataMode } from "@/app/components/dev/devDataMode";
+import { exploreFixture } from "@/app/components/dev/exploreFixtures";
 import type { ExploreProgram, Package, PackageExercise, Workout } from "@/app/types";
 
 // The Explore tab's catalog: every program template (packages) and single
@@ -142,25 +144,41 @@ export function useExplorePrograms() {
     [addedPrograms, fetchPatientState]
   );
 
-  const freePrograms = programs.filter((p) => p.is_free);
-  const premiumPrograms = programs.filter((p) => !p.is_free);
-  const likedPrograms = programs.filter((p) => likedProgramIds.has(String(p.id)));
+  // Dev-only `?data=worst|empty|one|huge` swap (break-ui stress test). Real
+  // data in production and in the default "demo" mode; fixture covers
+  // borrow real exercise ids so cards still get artwork.
+  const devDataMode = useDevDataMode();
+  const fixture = useMemo(() => {
+    const exerciseIds = [...new Set([...programs.flatMap((p) => p.exercises.map((e) => e.exercise_id)), ...workouts.flatMap((w) => w.items.map((it) => it.exercise_id))])];
+    return exploreFixture(devDataMode, exerciseIds);
+  }, [devDataMode, programs, workouts]);
+  const shownPrograms = fixture ? fixture.programs : programs;
+  const shownWorkouts = fixture ? fixture.workouts : workouts;
+  const shownLikedProgramIds = fixture ? new Set([...likedProgramIds, ...fixture.likedProgramIds]) : likedProgramIds;
+  const shownLikedWorkoutIds = fixture ? new Set([...likedWorkoutIds, ...fixture.likedWorkoutIds]) : likedWorkoutIds;
+  const shownAddedPrograms = fixture
+    ? new Map([...addedPrograms, ...fixture.addedProgramIds.map((id) => [id, { programId: id, isSelfAdded: true }] as const)])
+    : addedPrograms;
 
-  const likedWorkouts = workouts.filter((w) => likedWorkoutIds.has(String(w.id)));
+  const freePrograms = shownPrograms.filter((p) => p.is_free);
+  const premiumPrograms = shownPrograms.filter((p) => !p.is_free);
+  const likedPrograms = shownPrograms.filter((p) => shownLikedProgramIds.has(String(p.id)));
+
+  const likedWorkouts = shownWorkouts.filter((w) => shownLikedWorkoutIds.has(String(w.id)));
 
   return {
-    programs,
+    programs: shownPrograms,
     freePrograms,
     premiumPrograms,
     likedPrograms,
-    likedProgramIds,
-    addedPrograms,
+    likedProgramIds: shownLikedProgramIds,
+    addedPrograms: shownAddedPrograms,
     toggleLike,
     addToMyPrograms,
     removeFromMyPrograms,
-    workouts,
+    workouts: shownWorkouts,
     likedWorkouts,
-    likedWorkoutIds,
+    likedWorkoutIds: shownLikedWorkoutIds,
     toggleWorkoutLike,
     addWorkoutToDay,
   };

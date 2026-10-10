@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type TouchEvent } from "react";
+import { useEffect, useRef, useState, type TouchEvent } from "react";
 import { supabase } from "@/app/lib/supabase";
 import { useAuth } from "@/app/context/AuthContext";
 import type { HapticType } from "@/app/hooks/useHaptics";
@@ -154,8 +154,10 @@ export function useWorkoutSession({
   const [exTimer, setExTimer] = useState<number | null>(null);
   const [isExTimerRunning, setIsExTimerRunning] = useState(false);
 
-  const [touchStart, setTouchStart] = useState<number | null>(null);
-  const [touchEnd, setTouchEnd] = useState<number | null>(null);
+  // Swipe-to-finish tracking lives in refs, not state: a touchmove fires
+  // ~60x/s and setState there re-rendered the whole player on every frame.
+  const swipeStart = useRef<{ x: number; y: number; t: number } | null>(null);
+  const swipeLast = useRef<{ x: number; y: number } | null>(null);
 
   const [actualRepsLogged, setActualRepsLogged] = useState("");
   const [sessionPerformance, setSessionPerformance] = useState<SessionPerformanceEntry[]>([]);
@@ -468,17 +470,45 @@ export function useWorkoutSession({
 
   // --- Swipe gestures ---
 
+  // Swiping "forward" finishes the set — rightward in Hebrew (RTL), leftward
+  // in English. It used to fire on any 50px horizontal drift (wiping sweat,
+  // adjusting the phone, a diagonal scroll) and log a set the patient hadn't
+  // done, so now it needs a clearly horizontal gesture that's either a
+  // deliberate drag or a quick flick. A second finger cancels it.
   const onTouchStart = (e: TouchEvent) => {
-    setTouchEnd(null);
-    setTouchStart(e.targetTouches[0].clientX);
+    swipeLast.current = null;
+    if (e.touches.length > 1) {
+      swipeStart.current = null;
+      return;
+    }
+    swipeStart.current = { x: e.touches[0].clientX, y: e.touches[0].clientY, t: e.timeStamp };
   };
   const onTouchMove = (e: TouchEvent) => {
-    setTouchEnd(e.targetTouches[0].clientX);
+    if (!swipeStart.current) return;
+    if (e.touches.length > 1) {
+      swipeStart.current = null;
+      return;
+    }
+    swipeLast.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
   };
-  const onTouchEnd = () => {
-    if (!touchStart || !touchEnd) return;
-    const distance = touchStart - touchEnd;
-    if (distance < -50 && !isResting && !isSupersetCheck) handleFinishAction();
+  const onTouchEnd = (e: TouchEvent) => {
+    const start = swipeStart.current;
+    const last = swipeLast.current;
+    swipeStart.current = null;
+    swipeLast.current = null;
+    if (!start || !last || isResting || isSupersetCheck) return;
+
+    const dx = last.x - start.x;
+    const dy = last.y - start.y;
+    const distance = Math.abs(dx);
+    if (distance < Math.abs(dy) * 2) return; // not clearly horizontal
+    const isForward = lang === "he" ? dx > 0 : dx < 0;
+    if (!isForward) return;
+
+    const velocity = distance / Math.max(1, e.timeStamp - start.t); // px/ms
+    const isDeliberateDrag = distance >= 80;
+    const isFlick = distance >= 40 && velocity > 0.5;
+    if (isDeliberateDrag || isFlick) handleFinishAction();
   };
 
   // --- Remaining actions ---

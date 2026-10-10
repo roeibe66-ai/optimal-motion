@@ -3,6 +3,7 @@
 import { useState, type ReactNode } from "react";
 import { CalendarPlus, Check, Compass, Crown, Dumbbell, Flame, Heart, Lock, Play, Plus, Timer } from "lucide-react";
 import Modal from "@/app/components/ui/Modal";
+import DevDataToggle from "@/app/components/dev/DevDataToggle";
 import { DAYS_OF_WEEK } from "@/app/constants/catalog";
 import { formatRepTarget, formatWeightKg, getExerciseName } from "@/app/utils/format";
 import { getExerciseThumbUrl } from "@/app/utils/media";
@@ -29,7 +30,11 @@ interface ExploreTabProps {
   onAddWorkoutToDay: (workoutId: string, dayId: string, date?: string) => Promise<boolean>;
 }
 
-const workoutFormatLabel = (w: Workout) => (w.format === "amrap" ? `AMRAP · ${Math.round((w.time_cap_seconds ?? 0) / 60)} דק׳` : `${w.items.length} תרגילים`);
+// Hebrew count labels: "1 תרגילים" reads wrong — singular is "תרגיל אחד".
+const exerciseCountLabel = (n: number) => (n === 1 ? "תרגיל אחד" : `${n} תרגילים`);
+const trainingDaysLabel = (n: number) => (n === 1 ? "יום אימון אחד" : `${n} ימי אימון`);
+
+const workoutFormatLabel = (w: Workout) => (w.format === "amrap" ? `AMRAP · ${Math.round((w.time_cap_seconds ?? 0) / 60)} דק׳` : exerciseCountLabel(w.items.length));
 
 const workoutItemLabel = (w: Workout, item: Workout["items"][number]) => {
   const amount = `${item.is_time ? item.reps : formatRepTarget(item.reps, item.reps_max)} ${item.is_time ? "שנ׳" : "חזרות"}`;
@@ -45,6 +50,25 @@ function coverGifForWorkout(workout: Workout, exerciseCatalog: Exercise[]) {
     if (url) return url;
   }
   return null;
+}
+
+// Card titles wrap to two lines (not one-line truncate): long program names
+// often differ only at the end ("…שלב א׳" / "…שלב ב׳"), and a one-line clip
+// of a mixed Hebrew/English title cut it mid-run and scrambled the order.
+// Kept in the page's RTL on purpose — dir="auto" would flip Hebrew titles
+// that open with an English term ("AMRAP מלא…") to LTR and misorder them.
+// overflow-wrap lets one long token ("HIIT-Tabata-EMOM-…") wrap too.
+const CARD_TITLE_CLASS = "font-extrabold text-[13px] leading-snug text-fg line-clamp-2 [overflow-wrap:anywhere]";
+
+// Card artwork, or the soft accent gradient when there's none — or when the
+// image fails to load (a dead cover URL would otherwise show the browser's
+// broken-image icon). Lazy: Explore can list hundreds of GIF covers.
+function CardCover({ coverUrl }: { coverUrl: string | null }) {
+  const [failedSrc, setFailedSrc] = useState<string | null>(null);
+  if (coverUrl && coverUrl !== failedSrc) {
+    return <img src={coverUrl} alt="" loading="lazy" onError={() => setFailedSrc(coverUrl)} className="absolute inset-0 w-full h-full object-contain p-2" />;
+  }
+  return <div className="absolute inset-0" style={{ background: "radial-gradient(circle at 70% 20%, color-mix(in srgb, var(--accent) 22%, transparent), transparent 70%)" }} />;
 }
 
 function WorkoutCard({
@@ -66,11 +90,7 @@ function WorkoutCard({
       className="on-light min-w-[180px] w-[180px] shrink-0 rounded-3xl overflow-hidden bg-surface text-start shadow-card border border-line hover:-translate-y-0.5 hover:shadow-[0_16px_32px_-8px_color-mix(in_srgb,var(--shadow-ink)_12%,transparent)] active:scale-[0.97] transition-all duration-200 ease-out"
     >
       <div className="on-light h-[110px] relative bg-surface-alt">
-        {coverUrl ? (
-          <img src={coverUrl} alt="" className="absolute inset-0 w-full h-full object-contain p-2" />
-        ) : (
-          <div className="absolute inset-0" style={{ background: "radial-gradient(circle at 70% 20%, color-mix(in srgb, var(--accent) 22%, transparent), transparent 70%)" }} />
-        )}
+        <CardCover coverUrl={coverUrl} />
         <div
           onClick={(e) => {
             e.stopPropagation();
@@ -87,7 +107,9 @@ function WorkoutCard({
         )}
       </div>
       <div className="p-3.5 flex flex-col gap-1.5">
-        <h4 className="font-extrabold text-[13px] text-fg truncate">{workout.title}</h4>
+        <h4 className={CARD_TITLE_CLASS}>
+          {workout.title}
+        </h4>
         <span className={`text-[10px] font-extrabold w-fit ${workout.format === "amrap" ? "px-2 py-0.5 rounded-full bg-accent/15 text-accent-fg" : "text-muted"}`}>
           {workoutFormatLabel(workout)}
         </span>
@@ -141,11 +163,7 @@ function ProgramCard({
       className="on-light min-w-[180px] w-[180px] shrink-0 rounded-3xl overflow-hidden bg-surface text-start shadow-card border border-line hover:-translate-y-0.5 hover:shadow-[0_16px_32px_-8px_color-mix(in_srgb,var(--shadow-ink)_12%,transparent)] active:scale-[0.97] transition-all duration-200 ease-out"
     >
       <div className="on-light h-[110px] relative bg-surface-alt">
-        {coverUrl ? (
-          <img src={coverUrl} alt="" className="absolute inset-0 w-full h-full object-contain p-2" />
-        ) : (
-          <div className="absolute inset-0" style={{ background: "radial-gradient(circle at 70% 20%, color-mix(in srgb, var(--accent) 22%, transparent), transparent 70%)" }} />
-        )}
+        <CardCover coverUrl={coverUrl} />
 
         <div
           onClick={(e) => {
@@ -167,10 +185,12 @@ function ProgramCard({
       </div>
 
       <div className="p-3.5 flex flex-col gap-1.5">
-        <h4 className="font-extrabold text-[13px] text-fg truncate">{program.title}</h4>
+        <h4 className={CARD_TITLE_CLASS}>
+          {program.title}
+        </h4>
         <span className="text-[10px] font-bold text-muted">
           {weeks > 1 ? `${weeks} שבועות · ` : ""}
-          {days} ימי אימון
+          {trainingDaysLabel(days)}
         </span>
         {isAdded && (
           <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full w-fit bg-accent/15 text-accent-fg flex items-center gap-1">
@@ -328,6 +348,7 @@ export default function ExploreTab({
 
   return (
     <div>
+      {process.env.NODE_ENV === "development" && <DevDataToggle />}
       <div className="mb-6">
         <h2 className="text-2xl md:text-3xl font-black text-fg tracking-tight mb-1.5 flex items-center gap-2">
           <Compass size={24} className="text-accent-fg" /> גלה אימונים ותוכניות
@@ -354,7 +375,7 @@ export default function ExploreTab({
           <h4 className="text-start font-black text-xl tracking-tight mb-1 text-fg">{preview.title}</h4>
           <p className="text-start text-muted text-xs font-bold mb-2">
             {previewShape.weeks > 1 ? `${previewShape.weeks} שבועות · ` : ""}
-            {previewShape.days} ימי אימון בשבוע
+            {trainingDaysLabel(previewShape.days)} בשבוע
             {!preview.is_free && " · פרימיום"}
           </p>
           {preview.description && <p className="text-start text-muted text-sm leading-relaxed mb-5">{preview.description}</p>}
@@ -414,7 +435,7 @@ export default function ExploreTab({
           <p className="text-start text-muted text-xs font-bold mb-2">
             {workoutPreview.format === "amrap"
               ? `AMRAP · ${Math.round((workoutPreview.time_cap_seconds ?? 0) / 60)} דקות — כמה שיותר סבבים`
-              : `${workoutPreview.items.length} תרגילים`}
+              : exerciseCountLabel(workoutPreview.items.length)}
             {!workoutPreview.is_free && " · פרימיום"}
           </p>
           {workoutPreview.description && <p className="text-start text-muted text-sm leading-relaxed mb-5">{workoutPreview.description}</p>}

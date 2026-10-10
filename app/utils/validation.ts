@@ -11,3 +11,8 @@ export const isStrongPassword = (password: string) =>
   passwordCriteria.minLength(password) && passwordCriteria.hasLetter(password) && passwordCriteria.hasNumber(password);
 
 export const isPasswordConfirmed = (password: string, confirmPassword: string) => confirmPassword.length > 0 && password === confirmPassword;
+
+// Max length for program/workout titles the admin publishes to Explore. The
+// patient cards show two lines (~45 chars at 180px); longer names that differ
+// only at the end ("…שלב א׳" / "…שלב ב׳") became indistinguishable there.
+export const MAX_CATALOG_TITLE_LENGTH = 45;

@@ -391,3 +391,12 @@ html {
   .animate-step-in,
   .animate-card-in { animation-name: motion-fade; }
 }
+
+/* Horizontal carousels (Explore, PlanTab, DiyBuilder, admin) scroll by
+   swipe/trackpad; hide the scrollbar itself. */
+@utility no-scrollbar {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}

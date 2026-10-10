@@ -10,6 +10,7 @@ import AssignToPatientsModal, { type AssignResult, type AssignSchedule } from "@
 import { ExerciseThumb } from "@/app/components/ExerciseMedia";
 import WorkoutBuilderAssistant from "@/app/components/admin/WorkoutBuilderAssistant";
 import type { BuilderProposal } from "@/app/actions/workoutBuilderAssistant";
+import { MAX_CATALOG_TITLE_LENGTH } from "@/app/utils/validation";
 
 interface WorkoutBuilderTabProps {
   exercises: Exercise[];
@@ -525,9 +526,13 @@ function WorkoutEditor({
               <input
                 value={draft.title}
                 onChange={(e) => set({ title: e.target.value })}
+                maxLength={MAX_CATALOG_TITLE_LENGTH}
                 placeholder="שם האימון (מה שהמטופל יראה)"
                 className="on-light w-full bg-transparent border-b-2 border-line-input focus:border-focus px-1 py-2 text-2xl md:text-3xl font-black text-fg placeholder:text-muted/60 outline-none"
               />
+              <span className={`block text-[10px] font-bold -mt-3 tabular-nums text-start ${draft.title.length >= MAX_CATALOG_TITLE_LENGTH ? "text-warm-fg" : "text-muted"}`}>
+                {draft.title.length}/{MAX_CATALOG_TITLE_LENGTH}
+              </span>
               <div className="grid md:grid-cols-[auto_1fr] gap-4 items-start">
                 <div className="flex bg-surface-alt p-1 rounded-xl border border-line">
                   {(["standard", "amrap"] as const).map((fmt) => (

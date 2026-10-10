@@ -51,6 +51,7 @@ import { getAIInsight } from "@/app/utils/scoring";
 import { generateResearchFacts, type ResearchInterpretation } from "@/app/actions/researchAgent";
 import type { AIAssistantContext, CuratedFact, PatientProgram, ResearchFinding } from "@/app/types";
 import { SELF_BUILT_PROGRAM_NAME } from "@/app/hooks/useWorkoutSession";
+import { MAX_CATALOG_TITLE_LENGTH } from "@/app/utils/validation";
 
 // NOT YET REFACTORED. This is a byte-faithful port of the admin side of the
 // original monolith — CRM, exercise library, the drag-and-drop builder,
@@ -1245,9 +1246,13 @@ export default function LegacyAdminApp() {
                           type="text"
                           value={builderProtocolName}
                           onChange={(e) => setBuilderProtocolName(e.target.value)}
+                          maxLength={MAX_CATALOG_TITLE_LENGTH}
                           placeholder="למשל: קליסטניקס רמה 1 (12 שבועות)"
                           className="w-full border-b-2 border-line-input p-1.5 outline-none font-bold text-fg placeholder:text-muted bg-transparent"
                         />
+                        <span className={`block text-[10px] font-bold mt-1 tabular-nums text-start ${builderProtocolName.length >= MAX_CATALOG_TITLE_LENGTH ? "text-warm-fg" : "text-muted"}`}>
+                          {builderProtocolName.length}/{MAX_CATALOG_TITLE_LENGTH}
+                        </span>
                       </div>
                       <div className="flex-1">
                         <label className="block text-[10px] font-extrabold text-muted mb-2 uppercase tracking-wider">תיאור קצר (אופציונלי)</label>

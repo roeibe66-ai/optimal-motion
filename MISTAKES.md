@@ -208,5 +208,28 @@ plugin, which this project has never installed, so Tailwind emits nothing for th
 **Rule:** don't use `animate-in`-family classes. Real motion goes in `globals.css`
 (`@theme` keyframes like `landing-*`, or transitions + `@starting-style` like
 `.sheet-panel`). All removed (2026-10-10); `RegisterPage` got a real `animate-card-in` instead.
+Same story for `no-scrollbar` (6 carousels showed a scrollbar) — now a real `@utility` in
+`globals.css`.
 Don't "fix" this by installing the plugin — it would switch on 500–700ms fades on tab
 switches and every workout-player screen.
+
+## 2026-10-10 — Swipe-to-finish logged sets the patient hadn't done
+
+**What happened:** the workout player finished the current set on any touch that ended
+≥50px to the right of where it started — no vertical check, no speed check, no visual
+feedback. Wiping sweat, adjusting the phone or a diagonal scroll could log a set.
+**Why:** a distance-only threshold, tracked in state (which also re-rendered the whole
+player on every `touchmove`).
+**Rule:** gestures that write data need a clearly intentional shape — horizontal
+dominance (|dx| ≥ 2|dy|), a deliberate distance (80px) or a real flick (≥40px at
+>0.5px/ms), forward relative to the UI direction — and track touches in refs
+(`useWorkoutSession.ts` onTouch*).
+
+## 2026-10-10 — In Tailwind v4, `scale-*` is not `transform`
+
+**What happened:** replacing `transition-all` with `transition-[transform,…]` on buttons
+that use `active:scale-90` made the press snap instead of animate.
+**Why:** v4's `scale-*` / `translate-*` / `rotate-*` utilities set the individual CSS
+`scale` / `translate` / `rotate` properties, not `transform`.
+**Rule:** an explicit transition list for those utilities names `scale` (etc.), or use
+`transition-transform`, which v4 expands to all four.
