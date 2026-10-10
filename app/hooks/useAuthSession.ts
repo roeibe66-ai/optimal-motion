@@ -59,13 +59,17 @@ export function useAuthSession() {
     setLoginPassword("");
   };
 
-  // No explicit redirectTo — same as resetPasswordForEmail, relies on the
-  // Supabase project's own configured Site URL. AuthContext's existing
+  // redirectTo = the origin the user is on (prod, preview or localhost), so
+  // the round trip lands back where it started instead of on the Supabase
+  // project's Site URL. Each origin must be in the project's Auth "Redirect
+  // URLs" allow-list, or Supabase silently falls back to the Site URL.
+  // Same for signUp's emailRedirectTo and resetPasswordForEmail below.
+  // AuthContext's existing
   // onAuthStateChange listener already hydrates loggedInPatient and routes
   // to patient/admin for any new session regardless of how it was
   // established, so the OAuth redirect back needs no special handling here.
   const handleGoogleSignIn = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({ provider: "google" });
+    const { error } = await supabase.auth.signInWithOAuth({ provider: "google", options: { redirectTo: window.location.origin } });
     if (error) {
       alert("שגיאה בהתחברות עם Google: " + error.message);
     }
@@ -124,7 +128,7 @@ export function useAuthSession() {
     const { data, error } = await supabase.auth.signUp({
       email: regEmail,
       password: regPass,
-      options: { data: { full_name: fullName, patient_type: regPatientType } },
+      options: { data: { full_name: fullName, patient_type: regPatientType }, emailRedirectTo: window.location.origin },
     });
 
     if (error) {
@@ -162,7 +166,7 @@ export function useAuthSession() {
   const handleForgotPassword = async (e: FormEvent) => {
     e.preventDefault();
 
-    const { error } = await supabase.auth.resetPasswordForEmail(forgotEmail);
+    const { error } = await supabase.auth.resetPasswordForEmail(forgotEmail, { redirectTo: window.location.origin });
 
     if (error) {
       alert("שגיאה בשליחת קישור לאיפוס: " + error.message);

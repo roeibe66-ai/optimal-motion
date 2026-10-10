@@ -184,3 +184,15 @@ server never had.
 through `useSyncExternalStore` with a server snapshot (or is set after mount) — never
 a `useState` initializer. Keep an in-memory fallback so the UI still works when
 localStorage throws (private mode).
+
+## 2026-10-10 — Signup confirmation / password-reset emails linked to localhost
+
+**What happened:** A new user's confirmation email and the "forgot password" email both
+opened `localhost:3000` on the phone (Safari: can't connect / ERR_CONNECTION_FAILED).
+**Why:** `signUp`, `resetPasswordForEmail` and `signInWithOAuth` passed no redirect URL,
+so Supabase used the project's Auth **Site URL** — still set to `http://localhost:3000`
+from development.
+**Rule:** auth calls that send the user away pass `emailRedirectTo` / `redirectTo:
+window.location.origin` (`useAuthSession.ts`), and the Supabase project keeps Site URL =
+the production domain with production, Vercel previews and localhost in the Redirect URLs
+allow-list — an origin missing from that list silently falls back to the Site URL.
