@@ -284,9 +284,10 @@ function HistoryChart({
             <YAxis yAxisId="left" tick={{ fontSize: 10, fill: "var(--text-muted)" }} width={34} domain={["auto", "auto"]} />
             {secondary && <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10, fill: "var(--text-muted)" }} width={24} allowDecimals={false} />}
             <RechartsTooltip contentStyle={{ backgroundColor: "var(--surface)", borderColor: "var(--border)", color: "var(--text-fg)" }} />
-            <Line yAxisId="left" type="monotone" dataKey={dataKey} name={name} stroke={color} strokeWidth={3} dot={{ r: 4 }} connectNulls />
+            {/* No draw-in animation (recharts defaults to ~1.5s) — data to read, not decoration. */}
+            <Line yAxisId="left" type="monotone" dataKey={dataKey} name={name} stroke={color} strokeWidth={3} dot={{ r: 4 }} connectNulls isAnimationActive={false} />
             {secondary && (
-              <Line yAxisId="right" type="monotone" dataKey={secondary.dataKey} name={secondary.name} stroke={secondary.color} strokeWidth={2} dot={{ r: 3 }} connectNulls={false} />
+              <Line yAxisId="right" type="monotone" dataKey={secondary.dataKey} name={secondary.name} stroke={secondary.color} strokeWidth={2} dot={{ r: 3 }} connectNulls={false} isAnimationActive={false} />
             )}
           </LineChart>
         </ResponsiveContainer>

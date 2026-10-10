@@ -13,7 +13,12 @@ interface WorkoutFinishFlowProps {
   onClose: () => void;
 }
 
-// Post-workout feedback: RPE -> (clinical only) pain-after -> done.
+// Post-workout feedback: RPE -> (clinical only) pain-after -> done. Each
+// question step's content slides in from the "forward" side
+// (animate-step-in, globals.css) over an opaque page that never moves, so the
+// dashboard underneath can't flash through between steps. The keys force a
+// fresh mount per step — otherwise React reuses the wrapper and the
+// animation wouldn't replay.
 export default function WorkoutFinishFlow({ feedbackPhase, onSelectRpe, onSubmitPainAfter, onClose }: WorkoutFinishFlowProps) {
   const { lang } = useAuth();
   const dir = lang === "he" ? "rtl" : "ltr";
@@ -21,15 +26,17 @@ export default function WorkoutFinishFlow({ feedbackPhase, onSelectRpe, onSubmit
   if (feedbackPhase === "rpe") {
     return (
       <div
-        className="fixed inset-0 z-[100] bg-page flex flex-col items-center justify-center p-6 text-center animate-in zoom-in duration-500"
+        className="fixed inset-0 z-[100] bg-page flex flex-col items-center justify-center p-6 text-center"
         dir={dir}
       >
-        <Flame size={60} className="text-warm-fg mb-6" />
-        <h2 className="text-3xl md:text-5xl font-black text-fg mb-4">כל הכבוד! סיימת.</h2>
-        <p className="text-lg md:text-xl text-muted mb-12 max-w-lg mx-auto">
-          <strong className="text-fg">עד כמה קשה היה לך האימון (RPE)?</strong>
-        </p>
-        <RatingScale values={[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]} getColor={getRPEColor} onSelect={onSelectRpe} />
+        <div key="rpe" className="animate-step-in w-full flex flex-col items-center">
+          <Flame size={60} className="text-warm-fg mb-6" />
+          <h2 className="text-3xl md:text-5xl font-black text-fg mb-4">כל הכבוד! סיימת.</h2>
+          <p className="text-lg md:text-xl text-muted mb-12 max-w-lg mx-auto">
+            <strong className="text-fg">עד כמה קשה היה לך האימון (RPE)?</strong>
+          </p>
+          <RatingScale values={[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]} getColor={getRPEColor} onSelect={onSelectRpe} />
+        </div>
       </div>
     );
   }
@@ -37,29 +44,37 @@ export default function WorkoutFinishFlow({ feedbackPhase, onSelectRpe, onSubmit
   if (feedbackPhase === "pain_after") {
     return (
       <div
-        className="fixed inset-0 z-[100] bg-page flex flex-col items-center justify-center p-6 text-center animate-in slide-in-from-right duration-300"
+        className="fixed inset-0 z-[100] bg-page flex flex-col items-center justify-center p-6 text-center"
         dir={dir}
       >
-        <Activity size={60} className="text-accent-fg mb-6" />
-        <h2 className="text-3xl md:text-5xl font-black text-fg mb-4">שאלה אחרונה</h2>
-        <p className="text-lg md:text-xl text-muted mb-12 max-w-lg mx-auto">
-          <strong className="text-fg">מה רמת הכאב שלך עכשיו (אחרי האימון)?</strong>
-        </p>
-        <RatingScale values={[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]} getColor={getPainColor} onSelect={onSubmitPainAfter} />
+        <div key="pain_after" className="animate-step-in w-full flex flex-col items-center">
+          <Activity size={60} className="text-accent-fg mb-6" />
+          <h2 className="text-3xl md:text-5xl font-black text-fg mb-4">שאלה אחרונה</h2>
+          <p className="text-lg md:text-xl text-muted mb-12 max-w-lg mx-auto">
+            <strong className="text-fg">מה רמת הכאב שלך עכשיו (אחרי האימון)?</strong>
+          </p>
+          <RatingScale values={[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]} getColor={getPainColor} onSelect={onSubmitPainAfter} />
+        </div>
       </div>
     );
   }
 
-  // feedbackPhase === "done"
+  // feedbackPhase === "done" — the once-per-workout celebration: the trophy
+  // pops in once (overshoot, no endless bounce), then the text and button
+  // rise in 60ms apart. The button is clickable from the first frame.
   return (
     <div
-      className="fixed inset-0 z-[100] bg-page flex flex-col items-center justify-center p-6 text-center animate-in zoom-in duration-500"
+      className="fixed inset-0 z-[100] bg-page flex flex-col items-center justify-center p-6 text-center"
       dir={dir}
     >
-      <Trophy size={80} className="text-warm-fg mb-8 animate-bounce" />
-      <h2 className="text-4xl md:text-5xl font-black text-fg mb-4">הפידבק נשלח!</h2>
-      <p className="text-xl text-muted mb-10">הנתונים התעדכנו בתיק שלך.</p>
-      <button onClick={onClose} className="bg-btn-primary text-btn-primary-fg px-10 py-4 rounded-full font-bold text-lg hover:bg-btn-primary-hover active:bg-btn-primary-active transition">
+      <Trophy size={80} className="text-warm-fg mb-8 animate-celebrate-pop" />
+      <h2 className="text-4xl md:text-5xl font-black text-fg mb-4 animate-celebrate-rise" style={{ animationDelay: "100ms" }}>
+        הפידבק נשלח!
+      </h2>
+      <p className="text-xl text-muted mb-10 animate-celebrate-rise" style={{ animationDelay: "160ms" }}>
+        הנתונים התעדכנו בתיק שלך.
+      </p>
+      <button onClick={onClose} style={{ animationDelay: "220ms" }} className="animate-celebrate-rise bg-btn-primary text-btn-primary-fg px-10 py-4 rounded-full font-bold text-lg hover:bg-btn-primary-hover active:bg-btn-primary-active transition">
         חזרה למסך הראשי
       </button>
     </div>

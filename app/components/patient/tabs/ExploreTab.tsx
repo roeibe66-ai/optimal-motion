@@ -327,7 +327,7 @@ export default function ExploreTab({
   };
 
   return (
-    <div className="animate-in fade-in duration-500">
+    <div>
       <div className="mb-6">
         <h2 className="text-2xl md:text-3xl font-black text-fg tracking-tight mb-1.5 flex items-center gap-2">
           <Compass size={24} className="text-accent-fg" /> גלה אימונים ותוכניות

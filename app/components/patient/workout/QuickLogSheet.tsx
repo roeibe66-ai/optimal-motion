@@ -202,8 +202,21 @@ export default function QuickLogSheet({ title, blocksMap, blocksKeys, isAmrap, p
                 </div>
               </div>
 
-              {draft.done && !isAmrap && (
-                <div className="mt-3.5 flex flex-col gap-2">
+              {/* Set inputs fold open/closed with the done toggle (the same
+                  grid-template-rows 0fr -> 1fr trick as PlanTab's
+                  CuratedFactCard) instead of popping in and making the list
+                  jump. Always mounted so it can animate out; inert while
+                  folded so its inputs aren't focusable. -mx-1/px-1 and pb-1
+                  leave room for the inputs' focus ring inside the clip. */}
+              {!isAmrap && (
+                <div
+                  inert={!draft.done}
+                  className={`grid transition-[grid-template-rows,opacity] duration-200 ease-out-strong motion-reduce:transition-opacity ${
+                    draft.done ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
+                  }`}
+                >
+                <div className="overflow-hidden -mx-1 px-1">
+                <div className="pt-3.5 pb-1 flex flex-col gap-2">
                   <div className="grid grid-cols-[2.5rem_1fr_1fr] gap-2 text-[10px] font-extrabold text-muted px-0.5">
                     <span>סט</span>
                     <span className="text-center">{unit}</span>
@@ -246,6 +259,8 @@ export default function QuickLogSheet({ title, blocksMap, blocksKeys, isAmrap, p
                       </button>
                     )}
                   </div>
+                </div>
+                </div>
                 </div>
               )}
             </div>

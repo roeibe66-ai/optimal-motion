@@ -121,7 +121,7 @@ export default function ProgramLibraryTab({ packages, exercises, patients, onRef
   const patientNameOf = (id: string) => patients.find((p) => String(p.id) === id)?.full_name ?? id;
 
   return (
-    <div className="max-w-6xl mx-auto animate-in fade-in">
+    <div className="max-w-6xl mx-auto">
       <header className="mb-10 hidden md:block">
         <h1 className="text-3xl md:text-4xl font-black text-fg tracking-tight">ספריית תוכניות</h1>
         <p className="text-muted font-medium mt-2">נהל, שגר ובדוק את התבניות שבנית בבונה החכם.</p>

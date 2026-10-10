@@ -47,7 +47,7 @@ export default function MyWorkoutsScreen({ savedPrograms, exerciseCatalog, onBac
     // print-only sheet (via that component's own print: modifiers) fixed
     // over the whole page; without hiding this normal on-screen list too,
     // printing would show every card here layered underneath that one sheet.
-    <div className="animate-in fade-in duration-500 print:hidden">
+    <div className="print:hidden">
       <div className="flex items-center gap-3 mb-6">
         <button
           onClick={onBack}

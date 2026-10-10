@@ -12,7 +12,7 @@ export default function PremiumStoreTab({ onGoToPlan }: PremiumStoreTabProps) {
   const { loggedInPatient } = useAuth();
 
   return (
-    <div className="animate-in fade-in duration-500">
+    <div>
       <div className="mb-10 text-center max-w-2xl mx-auto flex flex-col items-center gap-2.5">
         <Crown className="text-warm-fg" size={34} />
         <h2 className="text-2xl md:text-4xl font-black text-fg tracking-tight">התוכניות שלנו</h2>

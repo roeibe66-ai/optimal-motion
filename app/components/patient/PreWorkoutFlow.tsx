@@ -18,7 +18,9 @@ interface PreWorkoutFlowProps {
 }
 
 // The clinical-patient pain check-in shown before a workout starts: pick
-// painful areas on the body diagram, then rate overall pain 0-10.
+// painful areas on the body diagram, then rate overall pain 0-10. Each step's
+// content slides in from the "forward" side (animate-step-in, keyed per step
+// so it replays) — same pattern as WorkoutFinishFlow.
 export default function PreWorkoutFlow({
   feedbackPhase,
   selectedPainAreas,
@@ -38,25 +40,27 @@ export default function PreWorkoutFlow({
   if (feedbackPhase === "pain_heatmap") {
     return (
       <div
-        className="fixed inset-0 z-[100] bg-page flex flex-col items-center justify-start pt-12 p-6 text-center animate-in zoom-in duration-500 overflow-y-auto"
+        className="fixed inset-0 z-[100] bg-page flex flex-col items-center justify-start pt-12 p-6 text-center overflow-y-auto overflow-x-hidden"
         dir={dir}
       >
-        <Activity size={40} className="text-accent-fg mb-4" />
-        <h2 className="text-3xl md:text-4xl font-black text-fg mb-2 tracking-tight">איפה כואב לך היום?</h2>
-        <p className="text-muted mb-8 max-w-sm mx-auto text-sm">סמן על גבי המודל את האזורים שמרגישים מתוחים או כואבים כרגע.</p>
+        <div key="pain_heatmap" className="animate-step-in w-full flex flex-col items-center">
+          <Activity size={40} className="text-accent-fg mb-4" />
+          <h2 className="text-3xl md:text-4xl font-black text-fg mb-2 tracking-tight">איפה כואב לך היום?</h2>
+          <p className="text-muted mb-8 max-w-sm mx-auto text-sm">סמן על גבי המודל את האזורים שמרגישים מתוחים או כואבים כרגע.</p>
 
-        <div className="scheme-dark bg-elevated p-6 rounded-3xl w-full max-w-sm mb-8 flex justify-center border border-line">
-          <div className="pointer-events-auto" style={{ width: "150px" }}>
-            <BodyDiagram highlightedMuscles={selectedPainAreas} onMuscleClick={toggleMuscle} />
+          <div className="scheme-dark bg-elevated p-6 rounded-3xl w-full max-w-sm mb-8 flex justify-center border border-line">
+            <div className="pointer-events-auto" style={{ width: "150px" }}>
+              <BodyDiagram highlightedMuscles={selectedPainAreas} onMuscleClick={toggleMuscle} />
+            </div>
           </div>
-        </div>
 
-        <button
-          onClick={onConfirmPainAreas}
-          className="bg-btn-primary text-btn-primary-fg px-10 py-4 rounded-full font-bold text-lg hover:bg-btn-primary-hover active:bg-btn-primary-active transition-colors shadow-lg w-full max-w-sm"
-        >
-          המשך
-        </button>
+          <button
+            onClick={onConfirmPainAreas}
+            className="bg-btn-primary text-btn-primary-fg px-10 py-4 rounded-full font-bold text-lg hover:bg-btn-primary-hover active:bg-btn-primary-active transition-colors shadow-lg w-full max-w-sm"
+          >
+            המשך
+          </button>
+        </div>
       </div>
     );
   }
@@ -64,13 +68,15 @@ export default function PreWorkoutFlow({
   // feedbackPhase === "pain_scale"
   return (
     <div
-      className="fixed inset-0 z-[100] bg-page flex flex-col items-center justify-center p-6 text-center animate-in slide-in-from-right duration-300"
+      className="fixed inset-0 z-[100] bg-page flex flex-col items-center justify-center p-6 text-center"
       dir={dir}
     >
-      <Activity size={60} className="text-warm-fg mb-6" />
-      <h2 className="text-3xl md:text-5xl font-black text-fg mb-4 tracking-tight">ועד כמה זה כואב?</h2>
-      <p className="text-lg md:text-xl text-muted mb-12 max-w-lg mx-auto">מ-0 (ללא כאב) עד 10 (כאב בלתי נסבל).</p>
-      <RatingScale values={[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]} getColor={getPainColor} onSelect={onConfirmPreWorkout} />
+      <div key="pain_scale" className="animate-step-in w-full flex flex-col items-center">
+        <Activity size={60} className="text-warm-fg mb-6" />
+        <h2 className="text-3xl md:text-5xl font-black text-fg mb-4 tracking-tight">ועד כמה זה כואב?</h2>
+        <p className="text-lg md:text-xl text-muted mb-12 max-w-lg mx-auto">מ-0 (ללא כאב) עד 10 (כאב בלתי נסבל).</p>
+        <RatingScale values={[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]} getColor={getPainColor} onSelect={onConfirmPreWorkout} />
+      </div>
     </div>
   );
 }

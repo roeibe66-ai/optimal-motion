@@ -51,7 +51,7 @@ export default function ExerciseLibraryTab({ exercises, internalNotesByExerciseI
   };
 
   return (
-    <div className="max-w-6xl mx-auto animate-in fade-in">
+    <div className="max-w-6xl mx-auto">
       <header className="mb-10 hidden md:flex items-center justify-between">
         <div>
           <h1 className="text-3xl md:text-4xl font-black text-fg tracking-tight">ספריית התרגילים</h1>

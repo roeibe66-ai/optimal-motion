@@ -274,3 +274,120 @@ html {
 @media (prefers-reduced-motion: reduce) {
   .animate-landing-drop, .animate-landing-rise { animation: none; }
 }
+
+/* Bottom-sheet enter/exit (ui/Modal.tsx). Enters via @starting-style on
+   mount; exits when Modal sets data-closing, then unmounts after
+   SHEET_EXIT_MS (keep the 250ms below in sync). Exit retraces the entry
+   edge. Reduced motion keeps a short fade instead of the slide. */
+@theme {
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-out-strong: cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.sheet-backdrop {
+  transition: opacity 250ms ease-out;
+}
+.sheet-backdrop[data-closing] {
+  opacity: 0;
+  pointer-events: none;
+}
+.sheet-panel {
+  transition: transform 400ms var(--ease-drawer);
+}
+.sheet-panel[data-closing] {
+  transform: translateY(100%);
+  transition-duration: 250ms;
+}
+@starting-style {
+  .sheet-backdrop { opacity: 0; }
+  .sheet-panel { transform: translateY(100%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sheet-panel,
+  .sheet-panel[data-closing] {
+    transform: none;
+    transition: opacity 150ms ease-out;
+  }
+  .sheet-panel[data-closing] { opacity: 0; }
+  @starting-style {
+    .sheet-panel { transform: none; opacity: 0; }
+  }
+}
+
+/* Toast enter/exit (ui/Toast.tsx): rises in from below on mount, drops back
+   out the same edge when Toast sets data-leaving, then unmounts after
+   TOAST_EXIT_MS (keep the 200ms below in sync). Reduced motion: fade only. */
+.toast-pill {
+  transition:
+    transform 300ms var(--ease-out-strong),
+    opacity 300ms var(--ease-out-strong);
+}
+.toast-pill[data-leaving] {
+  transform: translateY(100%);
+  opacity: 0;
+  transition-duration: 200ms;
+}
+@starting-style {
+  .toast-pill { transform: translateY(100%); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toast-pill,
+  .toast-pill[data-leaving] { transform: none; }
+  @starting-style {
+    .toast-pill { transform: none; }
+  }
+}
+
+/* Workout-done celebration (WorkoutFinishFlow.tsx): trophy pops in once with
+   an overshoot, then the headline/subtitle/button rise in, staggered via
+   inline animation-delay. Reduced motion: a plain fade, no scale or travel. */
+@theme {
+  --animate-celebrate-pop: celebrate-pop 500ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  --animate-celebrate-rise: celebrate-rise 300ms var(--ease-out-strong) both;
+
+  @keyframes celebrate-pop {
+    from { opacity: 0; transform: scale(0.6); }
+  }
+  @keyframes celebrate-rise {
+    from { opacity: 0; transform: translateY(8px); }
+  }
+}
+
+/* Multi-step flow steps (PreWorkoutFlow, WorkoutFinishFlow): each step's
+   content enters from the "forward" side — from the left in RTL Hebrew, from
+   the right in LTR — so the flow reads as moving ahead. */
+@theme {
+  --animate-step-in: step-in 250ms var(--ease-out-strong) both;
+
+  @keyframes step-in {
+    from { opacity: 0; transform: translateX(var(--step-from, 24px)); }
+  }
+}
+
+[dir="rtl"] { --step-from: -24px; }
+[dir="ltr"] { --step-from: 24px; }
+
+/* Auth card entrance (Register/Login/ResetPasswordPage.tsx): the form card settles in from
+   slightly smaller and lower — a once-per-user screen, so it gets a beat. */
+@theme {
+  --animate-card-in: card-in 300ms var(--ease-out-strong) both;
+
+  @keyframes card-in {
+    from { opacity: 0; transform: translateY(8px) scale(0.96); }
+  }
+}
+
+/* Reduced-motion stand-in for the celebrate, step-in and card-in animations above:
+   same timing, opacity only. */
+@keyframes motion-fade {
+  from { opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-celebrate-pop,
+  .animate-celebrate-rise,
+  .animate-step-in,
+  .animate-card-in { animation-name: motion-fade; }
+}

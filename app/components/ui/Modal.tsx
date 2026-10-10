@@ -1,7 +1,7 @@
 "use client";
 
 import { X } from "lucide-react";
-import type { ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 
 interface ModalProps {
@@ -10,6 +10,9 @@ interface ModalProps {
   icon: ReactNode;
   children: ReactNode;
 }
+
+// Must match the .sheet-panel[data-closing] duration in globals.css.
+const SHEET_EXIT_MS = 250;
 
 // Shared modal chrome (overlay + panel + header + close button) for the
 // patient app — an elevated dark sheet (header) over a dimmed backdrop, with
@@ -31,11 +34,35 @@ interface ModalProps {
 // a tab inside it could never rise above the fixed bottom nav (z-50) — the
 // nav covered the sheet's bottom buttons (e.g. Explore's "add to my
 // schedule"). Only ever opened by a user action, so `document` exists.
+//
+// Slides up from the bottom edge on open and back down on close (the
+// .sheet-backdrop/.sheet-panel transitions in globals.css). Closing from the
+// backdrop or the X plays that exit first and only then calls onClose, so
+// the parent unmounts us after the slide-down; a parent that unmounts the
+// modal directly (e.g. after a successful save) still closes instantly.
 export default function Modal({ onClose, title, icon, children }: ModalProps) {
+  const [isClosing, setIsClosing] = useState(false);
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => () => {
+    if (closeTimer.current) clearTimeout(closeTimer.current);
+  }, []);
+
+  const handleClose = () => {
+    if (isClosing) return;
+    setIsClosing(true);
+    closeTimer.current = setTimeout(onClose, SHEET_EXIT_MS);
+  };
+
   return createPortal(
-    <div className="fixed inset-0 z-[200] bg-backdrop backdrop-blur-sm flex items-end justify-center" onClick={onClose}>
+    <div
+      className="sheet-backdrop fixed inset-0 z-[200] bg-backdrop backdrop-blur-sm flex items-end justify-center"
+      data-closing={isClosing || undefined}
+      onClick={handleClose}
+    >
       <div
-        className="bg-elevated text-fg w-full overflow-hidden shadow-elevated relative flex flex-col max-h-[92vh] rounded-t-3xl m-0 pb-[env(safe-area-inset-bottom)] animate-in slide-in-from-bottom duration-300 ease-out"
+        className="sheet-panel bg-elevated text-fg w-full overflow-hidden shadow-elevated relative flex flex-col max-h-[92vh] rounded-t-3xl m-0 pb-[env(safe-area-inset-bottom)]"
+        data-closing={isClosing || undefined}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex justify-between items-center p-5 border-b border-line">
@@ -43,7 +70,7 @@ export default function Modal({ onClose, title, icon, children }: ModalProps) {
             {icon} {title}
           </h3>
           <button
-            onClick={onClose}
+            onClick={handleClose}
             aria-label="סגור"
             className="text-muted hover:text-fg bg-line hover:bg-fg/15 p-2 rounded-full transition-colors"
           >

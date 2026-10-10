@@ -38,7 +38,7 @@ export default function LoginPage() {
             "radial-gradient(circle at 20% 20%, color-mix(in srgb, var(--accent) 18%, transparent), transparent 45%), radial-gradient(circle at 85% 10%, color-mix(in srgb, var(--accent) 10%, transparent), transparent 40%)",
         }}
       ></div>
-      <div className="on-light bg-surface backdrop-blur-xl p-8 md:p-12 rounded-[2rem] shadow-elevated w-full max-w-md relative z-10 border border-line">
+      <div className="on-light bg-surface backdrop-blur-xl p-8 md:p-12 rounded-[2rem] shadow-elevated w-full max-w-md relative z-10 border border-line animate-card-in">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-3xl font-black text-fg">{t.login}</h2>
           <button

@@ -125,7 +125,7 @@ export default function CalendarTab({ patientExercises, workoutLogs, patientId, 
   const selectedDayCategories = Array.from(new Set(selectedDayExercises.map(programNameOf)));
 
   return (
-    <div className="animate-in fade-in duration-500">
+    <div>
       <h2 className="text-xl md:text-2xl font-black text-fg tracking-tight flex items-center gap-2 mb-6">
         <CalendarDays size={22} className="text-accent-fg" />
         לוח שנה

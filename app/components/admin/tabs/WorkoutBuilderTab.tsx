@@ -184,7 +184,7 @@ export default function WorkoutBuilderTab({ exercises, patients, lang }: Workout
   };
 
   return (
-    <div className="max-w-6xl mx-auto animate-in fade-in">
+    <div className="max-w-6xl mx-auto">
       <header className="mb-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl md:text-4xl font-black text-fg tracking-tight">יצירת אימונים</h1>

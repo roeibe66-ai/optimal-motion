@@ -767,7 +767,7 @@ export default function LegacyAdminApp() {
 
       <main className="flex-1 overflow-y-auto p-4 md:p-12">
         {adminTab === "video_reviews" && (
-          <div className="max-w-6xl mx-auto animate-in fade-in">
+          <div className="max-w-6xl mx-auto">
             <header className="mb-10 hidden md:block">
               <h1 className="text-3xl md:text-4xl font-black text-fg tracking-tight flex items-center gap-3">
                 <Video className="text-warm-fg" size={32} /> ביקורות וידאו ממטופלים
@@ -796,7 +796,7 @@ export default function LegacyAdminApp() {
         )}
 
         {adminTab === "dashboard" && (
-          <div className="max-w-6xl mx-auto animate-in fade-in">
+          <div className="max-w-6xl mx-auto">
             <header className="mb-10 hidden md:block">
               <h1 className="text-3xl md:text-4xl font-black text-fg tracking-tight">קליניקה לייב</h1>
             </header>
@@ -887,7 +887,7 @@ export default function LegacyAdminApp() {
         )}
 
         {adminTab === "crm" && (
-          <div className="max-w-6xl mx-auto animate-in fade-in">
+          <div className="max-w-6xl mx-auto">
             <header className="mb-10 hidden md:block">
               <h1 className="text-3xl md:text-4xl font-black text-fg tracking-tight">ניהול תיקים ולקוחות</h1>
             </header>
@@ -990,7 +990,7 @@ export default function LegacyAdminApp() {
 
         {/* ----- הבונה החכם המבוסס ימים ----- */}
         {adminTab === "builder" && (
-          <div className="max-w-7xl mx-auto animate-in fade-in h-full flex flex-col">
+          <div className="max-w-7xl mx-auto h-full flex flex-col">
             <AdminCoPilotDrawer contextData={builderCoPilotContext} />
             <header className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
               <h1 className="text-2xl md:text-3xl font-black text-fg tracking-tight flex items-center gap-3">
@@ -1053,7 +1053,7 @@ export default function LegacyAdminApp() {
             </div>
 
             {enablePeriodizationUI && (
-              <div className="on-light mb-5 bg-surface border border-line p-6 rounded-2xl animate-in zoom-in duration-300">
+              <div className="on-light mb-5 bg-surface border border-line p-6 rounded-2xl">
                 <h4 className="font-black text-fg mb-4">הגדרת חוקי התקדמות לפרוטוקול</h4>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
@@ -1416,7 +1416,7 @@ export default function LegacyAdminApp() {
         )}
 
         {adminTab === "manage_plans" && (
-          <div className="max-w-6xl mx-auto animate-in fade-in">
+          <div className="max-w-6xl mx-auto">
             <header className="mb-10 hidden md:block">
               <h1 className="text-3xl md:text-4xl font-black text-fg tracking-tight">עריכת תוכניות פעילות</h1>
             </header>
@@ -1639,7 +1639,7 @@ export default function LegacyAdminApp() {
         )}
 
         {adminTab === "research" && (
-          <div className="max-w-6xl mx-auto animate-in fade-in">
+          <div className="max-w-6xl mx-auto">
             <header className="mb-10 hidden md:block">
               <h1 className="text-3xl md:text-4xl font-black text-fg tracking-tight">מחקר ועדכוני &quot;הידעת?&quot;</h1>
               <p className="text-[13px] text-muted mt-1.5">חפש ספרות אקדמית מדורגת לפי ציטוטים, ובחר אילו ממצאים יוצגו למטופלים כעובדות &quot;הידעת?&quot; באפליקציה.</p>

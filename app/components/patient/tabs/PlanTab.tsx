@@ -218,7 +218,7 @@ export default function PlanTab({
     const firstName = loggedInPatient?.full_name?.split(" ")[0] ?? "";
 
     return (
-      <div className="animate-in fade-in duration-700 print:hidden">
+      <div className="print:hidden">
         {FEATURES.patientAiCoach && <PatientCoachSheet contextData={patientCoachContext} />}
 
         {/* Premium hero greeting — dominates the top of the dashboard on its
@@ -457,7 +457,8 @@ export default function PlanTab({
                       contentStyle={{ backgroundColor: "var(--surface)", borderColor: "var(--border)", color: "var(--text-fg)", direction: "rtl" }}
                       labelFormatter={(label, payload) => `${label}${payload?.[0]?.payload?.workout ? ` · ${payload[0].payload.workout}` : ""}`}
                     />
-                    <Area type="monotone" dataKey="rpe" name="RPE" stroke="var(--warm-fg)" strokeWidth={2.5} fill="url(#rpeGradient)" dot={{ r: 3 }} />
+                    {/* No draw-in animation: this is data to read, and it sits on the home screen. */}
+                    <Area type="monotone" dataKey="rpe" name="RPE" stroke="var(--warm-fg)" strokeWidth={2.5} fill="url(#rpeGradient)" dot={{ r: 3 }} isAnimationActive={false} />
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
@@ -472,7 +473,7 @@ export default function PlanTab({
   // No mockup covers this state yet — recolored to the same base palette for
   // consistency with the overview above, structure otherwise unchanged.
   return (
-    <div className="animate-in slide-in-from-left duration-500 print:hidden max-w-lg mx-auto">
+    <div className="print:hidden max-w-lg mx-auto">
       {FEATURES.patientAiCoach && <PatientCoachSheet contextData={patientCoachContext} />}
 
       <div className="mb-6 flex items-center justify-between">

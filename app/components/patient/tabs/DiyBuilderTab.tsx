@@ -158,7 +158,7 @@ export default function DiyBuilderTab({
   };
 
   return (
-    <div className="animate-in fade-in duration-500">
+    <div>
       {toastMessage && <Toast message={toastMessage} onDismiss={() => setToastMessage(null)} />}
 
       <div className="flex items-start justify-between gap-3 mb-6">

@@ -79,7 +79,7 @@ export default function ProfileTab({
     : "";
 
   return (
-    <div className="animate-in fade-in duration-500">
+    <div>
       <h1 className="text-4xl font-black italic text-fg tracking-tight mb-6">פרופיל</h1>
 
       {/* Avatar + name row — avatar first (renders on the right under RTL),

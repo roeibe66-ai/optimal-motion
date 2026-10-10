@@ -323,7 +323,7 @@ export default function PatientShell() {
         <main className="flex-1 overflow-y-auto max-w-5xl w-full mx-auto px-4 md:px-8 pb-[calc(6rem+env(safe-area-inset-bottom))] md:pb-24 pt-[max(1rem,env(safe-area-inset-top))] relative z-0">
           {loggedInPatient.patient_type === "fitness" && loggedInPatient.email_verified === false && (
             <div className="print:hidden mb-6">
-              <div className="bg-warm/15 border border-warm/40 p-4 rounded-2xl flex items-start gap-4 shadow-card animate-in fade-in slide-in-from-top-4">
+              <div className="bg-warm/15 border border-warm/40 p-4 rounded-2xl flex items-start gap-4 shadow-card">
                 <div className="w-10 h-10 bg-warm/15 text-warm-fg rounded-full flex items-center justify-center shrink-0 mt-1">
                   <AlertCircle size={20} />
                 </div>

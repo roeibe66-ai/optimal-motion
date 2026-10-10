@@ -196,3 +196,17 @@ from development.
 window.location.origin` (`useAuthSession.ts`), and the Supabase project keeps Site URL =
 the production domain with production, Vercel previews and localhost in the Redirect URLs
 allow-list — an origin missing from that list silently falls back to the Site URL.
+
+## 2026-10-10 — `animate-in` / `fade-in` / `slide-in-from-*` classes never animated anything
+
+**What happened:** ~35 elements (every patient tab root, the workout player screens,
+pre/post-workout flows, the shared `Modal` sheet, `Toast`, plus admin tabs) carried
+`animate-in fade-in` / `zoom-in` / `slide-in-from-bottom` etc. They all appeared
+instantly — those utilities come from the `tailwindcss-animate` / `tw-animate-css`
+plugin, which this project has never installed, so Tailwind emits nothing for them.
+**Why:** same trap as `pb-safe`: an unknown class name is silently ignored, no build error.
+**Rule:** don't use `animate-in`-family classes. Real motion goes in `globals.css`
+(`@theme` keyframes like `landing-*`, or transitions + `@starting-style` like
+`.sheet-panel`). All removed (2026-10-10); `RegisterPage` got a real `animate-card-in` instead.
+Don't "fix" this by installing the plugin — it would switch on 500–700ms fades on tab
+switches and every workout-player screen.

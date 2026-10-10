@@ -275,7 +275,7 @@ export default function ExerciseFormModal({ exercise, exercises, internalNotes, 
   return (
     <div className="fixed inset-0 z-[60] bg-backdrop backdrop-blur-sm flex items-end sm:items-center justify-center" onClick={onClose}>
       <div
-        className="bg-elevated border border-line w-full sm:max-w-3xl sm:rounded-[2rem] rounded-t-[2rem] max-h-[92vh] flex flex-col animate-in slide-in-from-bottom sm:zoom-in-95 duration-200"
+        className="bg-elevated border border-line w-full sm:max-w-3xl sm:rounded-[2rem] rounded-t-[2rem] max-h-[92vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between p-6 border-b border-line shrink-0">

@@ -19,7 +19,7 @@ export default function PasskeyPrompt() {
       onClick={dismissPrompt}
     >
       <div
-        className="bg-elevated w-full sm:max-w-sm rounded-t-3xl sm:rounded-3xl p-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] sm:pb-6 shadow-elevated animate-in slide-in-from-bottom-6 sm:zoom-in-95 duration-300"
+        className="bg-elevated w-full sm:max-w-sm rounded-t-3xl sm:rounded-3xl p-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] sm:pb-6 shadow-elevated"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex justify-between items-start mb-4">

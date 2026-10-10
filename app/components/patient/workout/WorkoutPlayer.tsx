@@ -66,7 +66,7 @@ function RirInfoButton() {
       {isOpen && (
         <>
           <span className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
-          <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 z-50 w-64 bg-elevated text-fg rounded-2xl shadow-elevated border border-line p-4 text-start font-normal animate-in fade-in zoom-in-95 duration-150 block">
+          <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 z-50 w-64 bg-elevated text-fg rounded-2xl shadow-elevated border border-line p-4 text-start font-normal block">
             <span className="block font-black text-fg text-[13px] mb-1.5">מהו RIR?</span>
             <span className="block text-xs leading-relaxed">
               Reps In Reserve — כמה חזרות נוספות היית יכול לבצע בטכניקה תקינה. לדוגמה, RIR 2 אומר שצריך לעצור את הסט כשאתה מרגיש שנשארו לך עוד 2 חזרות בלבד עד הכשל.
@@ -182,7 +182,7 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
         /* Top bar for the active-set screen: one continuous progress line
            (overallProgress — real, derived above, not decoration) with the
            help (exercise-info) control on the right and close on the left. */
-        <div className="relative z-10 pt-safe px-5 md:px-8 pt-5 flex flex-col gap-5 w-full animate-in fade-in duration-500">
+        <div className="relative z-10 pt-safe px-5 md:px-8 pt-5 flex flex-col gap-5 w-full">
           <div className="flex items-center gap-3 w-full">
             {session.canGoBack && <BackButton onClick={session.goBack} />}
             <button
@@ -253,7 +253,7 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
           lightweight mid-superset check doesn't run one, same distinction
           the old ring's !isSupersetCheck guard made. */}
       {isPostSet && !session.isSupersetCheck && (
-        <div className="relative z-10 flex flex-col items-center pt-2 animate-in fade-in duration-500">
+        <div className="relative z-10 flex flex-col items-center pt-2">
           <span className="text-[11px] font-bold tracking-[0.25em] uppercase text-muted mb-1">מנוחה</span>
           <span className="text-6xl font-black tabular-nums text-fg tracking-tighter" dir="ltr">
             {formatTime(session.restTimer)}
@@ -266,7 +266,7 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
           screen; the rest screen's own content below its timer above. */}
       <div className="relative z-10 flex-1 flex flex-col justify-center items-center pb-safe pb-6 px-5 md:px-8 w-full max-w-md mx-auto">
         {!isPostSet ? (
-          <div className="w-full flex flex-col items-center gap-7 animate-in fade-in duration-500">
+          <div className="w-full flex flex-col items-center gap-7">
             {/* Dynamic hero metric — a massive countdown for a timed set, or
                 split reps/RIR typography for a countable one. */}
             {session.activeAssign?.is_time ? (
@@ -367,7 +367,7 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
             )}
           </div>
         ) : (
-          <div className="flex flex-col items-center text-center animate-in fade-in zoom-in-95 duration-500 w-full gap-8">
+          <div className="flex flex-col items-center text-center w-full gap-8">
             {/* Hero square — the next exercise's media inside a rounded-rect
                 progress border (same stroke-dasharray technique the old
                 circular ring used, traced around a <rect>). No progress
