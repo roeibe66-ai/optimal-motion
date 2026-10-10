@@ -138,3 +138,7 @@ export const parseRepInput = (text: string, allowRange = true): { reps: number; 
   const high = Math.max(nums[0], nums[1] ?? nums[0]);
   return { reps: low, reps_max: allowRange && high > low ? high : null };
 };
+
+// Hebrew count labels: "1 תרגילים" reads wrong, the singular has its own
+// form ("תרגיל אחד"). countLabel(n, "תרגיל אחד", "תרגילים").
+export const countLabel = (n: number, one: string, many: string) => (n === 1 ? one : `${n} ${many}`);

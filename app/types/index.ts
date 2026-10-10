@@ -10,6 +10,10 @@ export interface Patient {
   user_id: string; // 1:1 link to auth.users.id — real Supabase Auth identity, not a local password column
   role: UserRole;
   full_name: string;
+  // What the patient typed in the signup first-name field ("בת שבע") — the
+  // greeting uses it instead of guessing from full_name. Null for patients
+  // who signed up before 20261010190000_patients_first_name.sql, or via Google.
+  first_name?: string | null;
   email?: string;
   phone?: string;
   patient_type: PatientType;

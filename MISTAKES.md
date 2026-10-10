@@ -233,3 +233,15 @@ that use `active:scale-90` made the press snap instead of animate.
 `scale` / `translate` / `rotate` properties, not `transform`.
 **Rule:** an explicit transition list for those utilities names `scale` (etc.), or use
 `transition-transform`, which v4 expands to all four.
+
+## 2026-10-10 — Plan tab showed a workout on rest days, and "אימון 6" for Saturday
+
+**What happened:** the home hero always showed `patientCategories[0]` — the first program
+of the *week* — so on a day with nothing scheduled it offered "0 תרגילים · 0 בלוקים" with
+a play button into an empty list (and the rest-day card never appeared for anyone with a
+program). The detail subtitle printed the weekday id as a workout number ("אימון 6" on
+Saturday, "אימון 0" on Sunday) next to today's date even when another day was selected.
+**Why:** both reused week-level / id values where a day-level, human value was needed.
+Found with the `/dev/plan?data=one` fixture (break-ui), not with the demo data.
+**Rule:** anything labelled "today" / "this day" filters by the selected day; ids
+(`DAYS_OF_WEEK` "0"–"6") are never rendered — map them to `DAYS_OF_WEEK[].label`.

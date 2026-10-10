@@ -19,6 +19,7 @@ import { useAuth } from "@/app/context/AuthContext";
 import { getExerciseName } from "@/app/utils/format";
 import { ExerciseThumb } from "@/app/components/ExerciseMedia";
 import type { Exercise } from "@/app/types";
+import { MAX_CATALOG_TITLE_LENGTH } from "@/app/utils/validation";
 
 interface DiyBuilderTabProps {
   exerciseCatalog: Exercise[];
@@ -296,6 +297,7 @@ export default function DiyBuilderTab({
               type="text"
               value={diyProgramName}
               onChange={(e) => setDiyProgramName(e.target.value)}
+              maxLength={MAX_CATALOG_TITLE_LENGTH}
               className="on-light w-full bg-surface border border-line-input text-fg p-2.5 rounded-xl text-xs font-bold outline-none focus:border-focus focus:ring-2 focus:ring-focus"
             />
           </div>

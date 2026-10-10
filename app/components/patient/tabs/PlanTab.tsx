@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type UIEvent } from "react";
 import {
   ArrowDown,
   ChevronDown,
@@ -18,8 +18,8 @@ import {
 } from "lucide-react";
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip as RechartsTooltip, XAxis, YAxis } from "recharts";
 import { useAuth } from "@/app/context/AuthContext";
-import { formatRepTarget, formatTime, formatWeightKg, getExerciseName, getWorkoutMuscleAggregation, type WorkoutMuscleAggregation } from "@/app/utils/format";
-import { AVAILABLE_MUSCLES, DEFAULT_TRACK_GLOW, EQUIPMENT_LIST, TRACK_GLOW_TINTS } from "@/app/constants/catalog";
+import { countLabel, formatRepTarget, formatTime, formatWeightKg, getExerciseName, getWorkoutMuscleAggregation, type WorkoutMuscleAggregation } from "@/app/utils/format";
+import { AVAILABLE_MUSCLES, DAYS_OF_WEEK, DEFAULT_TRACK_GLOW, EQUIPMENT_LIST, TRACK_GLOW_TINTS } from "@/app/constants/catalog";
 import type { AIAssistantContext, CuratedFact, Exercise, ExploreProgram, WorkoutLog } from "@/app/types";
 import { dailyWorkoutImage, dominantWorkoutCategory } from "@/app/utils/workoutImages";
 import { programNameOf, type HydratedPatientExercise, type SessionExercise } from "@/app/hooks/useWorkoutSession";
@@ -80,7 +80,9 @@ function CuratedFactCard({ fact }: { fact: CuratedFact }) {
         <Sparkles size={12} /> הידעת?
       </span>
 
-      <p className="relative text-fg text-[22px] md:text-[26px] font-black leading-snug">{fact.did_you_know_he}</p>
+      {/* Clamped to 4 lines until "קרא עוד": facts are LLM-drafted and some
+          run 250+ characters (9 lines at this size). */}
+      <p className={`relative text-fg text-[22px] md:text-[26px] font-black leading-snug ${isExpanded ? "" : "line-clamp-4"}`}>{fact.did_you_know_he}</p>
 
       <div className={`relative grid transition-[grid-template-rows] duration-300 ease-out ${isExpanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}>
         <div className="overflow-hidden">
@@ -134,6 +136,13 @@ export default function PlanTab({
 }: PlanTabProps) {
   const { loggedInPatient, lang } = useAuth();
   const [isQuickLogOpen, setIsQuickLogOpen] = useState(false);
+  // Which "Did you know?" card is snapped into view — the carousel has no
+  // scrollbar, so a "2/5" counter is the only cue that more facts exist.
+  const [factIndex, setFactIndex] = useState(0);
+  const onFactsScroll = (e: UIEvent<HTMLDivElement>) => {
+    const el = e.currentTarget;
+    setFactIndex(Math.round(Math.abs(el.scrollLeft) / el.clientWidth));
+  };
 
   // Grounds the patient coach chat in this patient's real plan and recent
   // sessions — the same week's assigned exercises shown below, plus their
@@ -160,7 +169,15 @@ export default function PlanTab({
 
   // ----- Overview screen -----
   if (!selectedCategory) {
-    const todayCat = patientCategories[0] ?? null;
+    // The program shown in the hero: the first one with exercises on the
+    // selected day. It used to be patientCategories[0] regardless of day, so
+    // a rest day showed "0 תרגילים" with a play button into an empty list
+    // (and a second program training that day was never offered).
+    const isOnSelectedDay = (pe: HydratedPatientExercise) =>
+      selectedDayFilter === "all" || !pe.scheduled_days || pe.scheduled_days.trim() === "" || pe.scheduled_days.split(",").includes(selectedDayFilter);
+    const todayCat = patientCategories.find((cat) => weekFilteredExercises.some((pe) => programNameOf(pe) === cat && isOnSelectedDay(pe))) ?? null;
+    const isTodaySelected = selectedDayFilter === String(new Date().getDay());
+    const selectedDayLabel = DAYS_OF_WEEK.find((d) => d.id === selectedDayFilter)?.label;
 
     // Real stats for today's hero card (replacing the original's hardcoded
     // "45 Minutes" / "For All Levels") — mirrors the same category+day
@@ -177,12 +194,7 @@ export default function PlanTab({
     let todayMuscleAggregation: WorkoutMuscleAggregation = { primeMovers: [], synergists: [] };
     let todayHeroImage = dailyWorkoutImage(null);
     if (todayCat) {
-      const todayCategoryExercises = weekFilteredExercises.filter((pe) => {
-        if (programNameOf(pe) !== todayCat) return false;
-        if (selectedDayFilter === "all") return true;
-        if (!pe.scheduled_days || pe.scheduled_days.trim() === "") return true;
-        return pe.scheduled_days.split(",").includes(selectedDayFilter);
-      });
+      const todayCategoryExercises = weekFilteredExercises.filter((pe) => programNameOf(pe) === todayCat && isOnSelectedDay(pe));
       todayExerciseCount = todayCategoryExercises.length;
       todayBlockCount = new Set(todayCategoryExercises.map((pe) => pe.block || "A")).size;
       // Number(...): pe.sets is patient_exercises.sets, a text column (the
@@ -215,7 +227,9 @@ export default function PlanTab({
       workout: log.category,
     }));
 
-    const firstName = loggedInPatient?.full_name?.split(" ")[0] ?? "";
+    // The first name as typed at signup; older/Google accounts have none
+    // stored, so fall back to full_name's first word for them.
+    const firstName = loggedInPatient?.first_name?.trim() || loggedInPatient?.full_name?.split(" ")[0] || "";
 
     return (
       <div className="print:hidden">
@@ -240,7 +254,7 @@ export default function PlanTab({
             is gone (week navigation now lives only in the Calendar tab), so
             the hero expands upward into that freed space instead of just
             leaving a gap. */}
-        {todayCat ? (
+        {patientCategories.length > 0 || isDiyMode ? (
           // -mx-4 md:-mx-8 cancels out `main`'s own side padding
           // (PatientShell) so this hero bleeds to the actual viewport edges
           // instead of sitting inside the page's normal content gutter —
@@ -289,9 +303,9 @@ export default function PlanTab({
               })}
             </div>
 
-            {/* Floating status badge */}
+            {/* Floating status badge — names the selected day when it isn't today. */}
             <div className="absolute top-[4.75rem] right-4 z-10 bg-fg/15 backdrop-blur-md border border-fg/20 text-fg text-[10px] font-bold tracking-wide px-3 py-1.5 rounded-full">
-              האימון של היום
+              {isTodaySelected ? "האימון של היום" : `יום ${selectedDayLabel}`}
             </div>
 
             {/* Muscle-engagement overlay, left side (RTL: text lives on the
@@ -305,34 +319,47 @@ export default function PlanTab({
                 it in. Fixed width (AnatomyHeatmap sizes itself via
                 aspect-ratio off that width) is what keeps this a clean
                 thumbnail instead of stretching to fill the overlay. */}
-            {(todayMuscleAggregation.primeMovers.length > 0 || todayMuscleAggregation.synergists.length > 0) && (
+            {todayCat && (todayMuscleAggregation.primeMovers.length > 0 || todayMuscleAggregation.synergists.length > 0) && (
               <div className="absolute top-1/2 left-4 -translate-y-1/2 z-10 w-28" style={{ filter: "drop-shadow(0 6px 16px color-mix(in srgb, var(--shadow-ink) 45%, transparent))" }}>
                 <AnatomyHeatmap primeMovers={todayMuscleAggregation.primeMovers} synergists={todayMuscleAggregation.synergists} />
               </div>
             )}
 
-            {/* Title + meta, bottom-right (RTL) */}
+            {/* Title + meta, bottom-right (RTL). Nothing on the selected day
+                -> the rest state, in the same card so the day selector
+                above stays reachable. */}
+            {!todayCat && !isDiyMode ? (
+              <div className="absolute bottom-5 inset-x-5 z-10 flex flex-col gap-1.5">
+                <h3 className="text-[26px] font-black tracking-tight leading-tight text-fg flex items-center gap-2">
+                  <Wind size={24} /> מנוחה פעילה
+                </h3>
+                <p className="text-fg/80 text-[13px] font-semibold">אין אימון מתוכנן ביום הזה. מומלץ לבצע רוטינת תנועתיות בסיסית.</p>
+              </div>
+            ) : (
             <div className="absolute bottom-5 right-5 left-24 z-10 flex flex-col gap-2">
-              <h3 className="text-[26px] font-black tracking-tight leading-tight text-fg truncate">{isDiyMode ? diyProgramName : todayCat}</h3>
-              <div className="flex items-center gap-3.5 text-fg text-[13px] font-semibold">
+              <h3 className="text-[26px] font-black tracking-tight leading-tight text-fg line-clamp-2 [overflow-wrap:anywhere]">{isDiyMode ? diyProgramName : todayCat}</h3>
+              <div className="flex flex-wrap items-center gap-x-3.5 gap-y-1 text-fg text-[13px] font-semibold">
                 <span className="flex items-center gap-1.5">
                   <Timer size={14} /> כ-{todayEstimatedMinutes} דק&apos;
                 </span>
                 <span className="flex items-center gap-1.5">
                   <Dumbbell size={14} />
-                  {todayExerciseCount} תרגילים · {todayBlockCount} בלוקים
+                  {countLabel(todayExerciseCount, "תרגיל אחד", "תרגילים")} · {countLabel(todayBlockCount, "בלוק אחד", "בלוקים")}
                 </span>
               </div>
             </div>
+            )}
 
             {/* Primary action, bottom-left — mirrors the reference's
                 bottom-right button for RTL. */}
+            {(todayCat || isDiyMode) && (
             <button
               onClick={() => setSelectedCategory(String(todayCat))}
               className="absolute bottom-5 left-5 z-10 w-14 h-14 rounded-full bg-fg/15 border border-fg/25 backdrop-blur-md flex items-center justify-center hover:bg-fg/25 hover:scale-110 active:scale-95 transition-all duration-200 ease-out shadow-[0_8px_24px_-4px_color-mix(in_srgb,var(--shadow-ink)_50%,transparent)]"
             >
               <Play size={20} className="fill-fg text-fg" />
             </button>
+            )}
           </div>
         ) : !isDiyMode && !hasAnyAssignedExercises && starterPrograms.length > 0 ? (
           // No program at all yet (never just "nothing scheduled today" —
@@ -355,7 +382,7 @@ export default function PlanTab({
                   <div className="w-11 h-11 rounded-full bg-accent text-on-accent flex items-center justify-center font-black text-sm shrink-0">{idx + 1}</div>
                   <div className="flex-1 overflow-hidden">
                     <div className="text-[10px] font-extrabold text-accent-fg uppercase tracking-wide mb-0.5">תוכנית חינמית</div>
-                    <div className="font-bold text-fg truncate">{w.title}</div>
+                    <div className="font-bold text-fg line-clamp-2 [overflow-wrap:anywhere]">{w.title}</div>
                   </div>
                   <Plus size={16} className="text-muted shrink-0" />
                 </button>
@@ -379,8 +406,15 @@ export default function PlanTab({
             Renders nothing until the admin has published at least one fact. */}
         {curatedFacts.length > 0 && (
           <div className="mb-10">
-            <div className="text-[11px] font-extrabold tracking-widest text-muted uppercase mb-3.5">הידעת?</div>
-            <div className="flex gap-4 overflow-x-auto no-scrollbar snap-x snap-mandatory -mx-1 px-1">
+            <div className="flex items-center justify-between mb-3.5">
+              <div className="text-[11px] font-extrabold tracking-widest text-muted uppercase">הידעת?</div>
+              {curatedFacts.length > 1 && (
+                <div className="text-[11px] font-bold text-muted tabular-nums" dir="ltr">
+                  {Math.min(factIndex + 1, curatedFacts.length)}/{curatedFacts.length}
+                </div>
+              )}
+            </div>
+            <div onScroll={onFactsScroll} className="flex items-start gap-4 overflow-x-auto no-scrollbar snap-x snap-mandatory -mx-1 px-1">
               {curatedFacts.map((fact) => (
                 <CuratedFactCard key={fact.id} fact={fact} />
               ))}
@@ -388,14 +422,12 @@ export default function PlanTab({
           </div>
         )}
 
-        {/* Tracks */}
+        {/* Tracks — hidden with no programs (a new patient already gets the
+            starter-program offer above; an empty box here only confused). */}
+        {patientCategories.length > 0 && (
         <div className="mb-10">
           <div className="text-[11px] font-extrabold tracking-widest text-muted uppercase mb-3.5">המסלולים שלך</div>
-          {patientCategories.length === 0 ? (
-            <div className="on-light bg-surface p-10 rounded-[2rem] shadow-card text-center flex flex-col items-center">
-              <p className="text-muted text-sm">אתה יכול גם להסתכל על שאר התוכניות שלך (אם קיימות).</p>
-            </div>
-          ) : (
+          {(
             <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1">
               {patientCategories.map((cat, idx) => {
                 const glowTint = TRACK_GLOW_TINTS[cat] ?? DEFAULT_TRACK_GLOW;
@@ -404,7 +436,7 @@ export default function PlanTab({
                   <button
                     key={idx}
                     onClick={() => setSelectedCategory(String(cat))}
-                    className="on-light min-w-[158px] rounded-3xl overflow-hidden bg-surface text-right shrink-0 shadow-card transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-[0_16px_32px_-8px_color-mix(in_srgb,var(--shadow-ink)_10%,transparent)] active:scale-[0.97] active:translate-y-0"
+                    className="on-light w-[158px] rounded-3xl overflow-hidden bg-surface text-right shrink-0 shadow-card transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-[0_16px_32px_-8px_color-mix(in_srgb,var(--shadow-ink)_10%,transparent)] active:scale-[0.97] active:translate-y-0"
                   >
                     <div className="on-light h-[120px] relative bg-surface-alt">
                       <div
@@ -413,7 +445,7 @@ export default function PlanTab({
                       ></div>
                     </div>
                     <div className="p-3 flex flex-col gap-2">
-                      <div className="font-bold text-[13px] text-fg">{cat}</div>
+                      <div className="font-bold text-[13px] leading-snug text-fg line-clamp-2 [overflow-wrap:anywhere]">{cat}</div>
                       <div className="text-[11px] font-bold px-2.5 py-1 rounded-full w-fit bg-accent/15 text-accent-fg">
                         פעיל
                       </div>
@@ -424,6 +456,7 @@ export default function PlanTab({
             </div>
           )}
         </div>
+        )}
 
         {/* Recent trend */}
         <div>
@@ -435,7 +468,7 @@ export default function PlanTab({
           ) : (
             <div className="on-light bg-surface shadow-card rounded-[1.75rem] p-5">
               <div className="flex justify-between items-start mb-3.5">
-                <span className="text-[13px] font-bold text-muted">מאמץ (RPE) · {recentLogs.length} אימונים אחרונים</span>
+                <span className="text-[13px] font-bold text-muted">מאמץ (RPE) · {countLabel(recentLogs.length, "האימון האחרון", "אימונים אחרונים")}</span>
                 <div className="text-left" dir="ltr">
                   <div className="text-xl font-black text-warm-fg">{avgRpe.toFixed(1)}</div>
                   <div className="text-[10px] text-muted font-semibold">ממוצע</div>
@@ -516,7 +549,10 @@ export default function PlanTab({
                 </span>
                 <h1 className="text-4xl font-black text-fg tracking-tight leading-tight mb-2">{isDiyMode ? diyProgramName : selectedCategory}</h1>
                 <p className="text-muted text-sm font-medium">
-                  שבוע {activePatientWeek} - אימון {selectedDayFilter === "all" ? "1" : selectedDayFilter} - {new Date().toLocaleDateString("he-IL", { weekday: "short", month: "short", day: "numeric" })}
+                  {/* Was "אימון {day id}" ("אימון 6" on Saturday) plus today's
+                      date even when another day was selected. */}
+                  שבוע {activePatientWeek}
+                  {DAYS_OF_WEEK.find((d) => d.id === selectedDayFilter) ? ` · יום ${DAYS_OF_WEEK.find((d) => d.id === selectedDayFilter)!.label}` : ""}
                 </p>
               </div>
 
@@ -574,7 +610,12 @@ export default function PlanTab({
                         ? [{ label: "בכל סבב", value: assignment.is_time ? `${assignment.reps}"` : formatRepTarget(assignment.reps, assignment.reps_max) }]
                         : [
                             { label: "סטים", value: String(assignment.sets) },
-                            { label: assignment.is_time ? "שניות" : "חזרות", value: assignment.is_time ? String(assignment.reps) : formatRepTarget(assignment.reps, assignment.reps_max) },
+                            // Timed holds of a minute or more read as mm:ss, like the rest next to them.
+                            assignment.is_time
+                              ? Number(assignment.reps) >= 60
+                                ? { label: "זמן", value: formatTime(Number(assignment.reps)) }
+                                : { label: "שניות", value: String(assignment.reps) }
+                              : { label: "חזרות", value: formatRepTarget(assignment.reps, assignment.reps_max) },
                             ...(!isSuperset && rest > 0 ? [{ label: "מנוחה", value: formatTime(rest) }] : []),
                           ];
                       return (
@@ -594,7 +635,8 @@ export default function PlanTab({
                           </div>
                           <div className="flex-1 min-w-0 flex flex-col justify-between py-1">
                             <div className="flex items-start gap-2">
-                              <h4 dir="auto" className="flex-1 text-fg font-bold leading-snug line-clamp-2 text-start">{name}</h4>
+                              {/* No dir="auto": it flipped Hebrew names that open in English ("Nordic Hamstring Curl (אקסצנטרי…") to LTR and the clamp scrambled them. */}
+                              <h4 className="flex-1 text-fg font-bold leading-snug line-clamp-2 text-start [overflow-wrap:anywhere]">{name}</h4>
                               <ChevronLeft size={16} className="text-muted group-hover:text-fg transition-colors rotate-180 mt-1 shrink-0" />
                             </div>
                             <div className="flex gap-1.5 mt-2">
@@ -625,7 +667,7 @@ export default function PlanTab({
                     {isSuperset && !isAmrap && (
                       <div className="flex items-center justify-center gap-2 text-xs font-bold text-accent-fg bg-accent/10 rounded-full py-2">
                         <Timer size={14} />
-                        {blockRounds} סבבים{blockRest > 0 ? ` · מנוחה ${formatTime(blockRest)} אחרי כל סבב` : ""}
+                        {countLabel(blockRounds, "סבב אחד", "סבבים")}{blockRest > 0 ? ` · מנוחה ${formatTime(blockRest)} אחרי כל סבב` : ""}
                       </div>
                     )}
                   </div>
@@ -638,8 +680,10 @@ export default function PlanTab({
                 // bleeds through, holding a solid accent CTA pill — the
                 // primary accent now carries the button itself, not just
                 // its text. Sits just above the app's own fixed bottom nav
-                // (bottom-[4.5rem] matches its h-16 + gap).
-                <div className="fixed bottom-[4.5rem] left-0 right-0 z-40 bg-elevated/90 backdrop-blur-md border-t border-line px-5 py-4">
+                // (its h-16 + the same max(0.5rem, safe-area) bottom padding
+                // the nav uses — a fixed 4.5rem slid under the nav on phones
+                // with a home indicator).
+                <div className="fixed bottom-[calc(4rem+max(0.5rem,env(safe-area-inset-bottom)))] left-0 right-0 z-40 bg-elevated/90 backdrop-blur-md border-t border-line px-5 py-4">
                   <div className="w-full max-w-lg mx-auto flex flex-col gap-2">
                   <button
                     onClick={onStartWorkout}

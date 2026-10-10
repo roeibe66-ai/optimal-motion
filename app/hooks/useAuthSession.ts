@@ -128,7 +128,10 @@ export function useAuthSession() {
     const { data, error } = await supabase.auth.signUp({
       email: regEmail,
       password: regPass,
-      options: { data: { full_name: fullName, patient_type: regPatientType }, emailRedirectTo: window.location.origin },
+      // first_name rides along so the signup trigger (handle_new_patient)
+      // stores it as typed — full_name alone can't tell "בת שבע כהן"'s
+      // first name from its first word.
+      options: { data: { full_name: fullName, first_name: regFirstName.trim(), patient_type: regPatientType }, emailRedirectTo: window.location.origin },
     });
 
     if (error) {

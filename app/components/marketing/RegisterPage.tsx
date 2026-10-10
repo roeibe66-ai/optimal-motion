@@ -3,7 +3,7 @@
 import { Dumbbell, Globe, HeartPulse, UserPlus } from "lucide-react";
 import { useAuth } from "@/app/context/AuthContext";
 import { useAuthSession } from "@/app/hooks/useAuthSession";
-import { isPasswordConfirmed, isStrongPassword } from "@/app/utils/validation";
+import { isPasswordConfirmed, isStrongPassword, MAX_PERSON_NAME_LENGTH } from "@/app/utils/validation";
 import PasswordFieldsWithStrength from "@/app/components/marketing/PasswordFieldsWithStrength";
 
 export default function RegisterPage() {
@@ -66,6 +66,7 @@ export default function RegisterPage() {
                 placeholder="שם פרטי"
                 value={regFirstName}
                 onChange={(e) => setRegFirstName(e.target.value)}
+                maxLength={MAX_PERSON_NAME_LENGTH}
                 className="w-full border-b-2 border-line-input p-3 bg-transparent focus:border-focus focus:ring-2 focus:ring-focus outline-none transition-colors"
                 required
               />
@@ -80,6 +81,7 @@ export default function RegisterPage() {
                 placeholder="שם משפחה"
                 value={regLastName}
                 onChange={(e) => setRegLastName(e.target.value)}
+                maxLength={MAX_PERSON_NAME_LENGTH}
                 className="w-full border-b-2 border-line-input p-3 bg-transparent focus:border-focus focus:ring-2 focus:ring-focus outline-none transition-colors"
                 required
               />

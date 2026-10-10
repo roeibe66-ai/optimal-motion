@@ -12,7 +12,11 @@ export const isStrongPassword = (password: string) =>
 
 export const isPasswordConfirmed = (password: string, confirmPassword: string) => confirmPassword.length > 0 && password === confirmPassword;
 
-// Max length for program/workout titles the admin publishes to Explore. The
-// patient cards show two lines (~45 chars at 180px); longer names that differ
-// only at the end ("…שלב א׳" / "…שלב ב׳") became indistinguishable there.
+// Max length for program/workout names: Explore titles, the names of programs
+// assigned to a patient, and DIY program names. Patient cards show two lines
+// (~45 chars at 158–180px); longer names that differ only at the end
+// ("…שלב א׳" / "…שלב ב׳") became indistinguishable there.
 export const MAX_CATALOG_TITLE_LENGTH = 45;
+
+// Per name field (first / last) at signup — full_name is "first last".
+export const MAX_PERSON_NAME_LENGTH = 30;

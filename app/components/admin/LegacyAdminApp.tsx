@@ -1217,6 +1217,7 @@ export default function LegacyAdminApp() {
                           type="text"
                           value={builderProgramName}
                           onChange={(e) => setBuilderProgramName(e.target.value)}
+                          maxLength={MAX_CATALOG_TITLE_LENGTH}
                           placeholder="למשל: חיזוק ברך — שלב א׳"
                           className="w-full border-b-2 border-line-input p-1.5 outline-none font-bold text-fg placeholder:text-muted bg-transparent"
                         />

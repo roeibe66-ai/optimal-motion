@@ -5,7 +5,7 @@ import { CalendarPlus, Check, Compass, Crown, Dumbbell, Flame, Heart, Lock, Play
 import Modal from "@/app/components/ui/Modal";
 import DevDataToggle from "@/app/components/dev/DevDataToggle";
 import { DAYS_OF_WEEK } from "@/app/constants/catalog";
-import { formatRepTarget, formatWeightKg, getExerciseName } from "@/app/utils/format";
+import { countLabel, formatRepTarget, formatWeightKg, getExerciseName } from "@/app/utils/format";
 import { getExerciseThumbUrl } from "@/app/utils/media";
 import { ExerciseThumb as SharedExerciseThumb } from "@/app/components/ExerciseMedia";
 import { toDateKey } from "@/app/hooks/useWorkoutSession";
@@ -30,9 +30,8 @@ interface ExploreTabProps {
   onAddWorkoutToDay: (workoutId: string, dayId: string, date?: string) => Promise<boolean>;
 }
 
-// Hebrew count labels: "1 תרגילים" reads wrong — singular is "תרגיל אחד".
-const exerciseCountLabel = (n: number) => (n === 1 ? "תרגיל אחד" : `${n} תרגילים`);
-const trainingDaysLabel = (n: number) => (n === 1 ? "יום אימון אחד" : `${n} ימי אימון`);
+const exerciseCountLabel = (n: number) => countLabel(n, "תרגיל אחד", "תרגילים");
+const trainingDaysLabel = (n: number) => countLabel(n, "יום אימון אחד", "ימי אימון");
 
 const workoutFormatLabel = (w: Workout) => (w.format === "amrap" ? `AMRAP · ${Math.round((w.time_cap_seconds ?? 0) / 60)} דק׳` : exerciseCountLabel(w.items.length));
 

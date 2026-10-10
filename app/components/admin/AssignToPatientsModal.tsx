@@ -5,6 +5,7 @@ import { Check, Loader2, Search, Send, X } from "lucide-react";
 import { DAYS_OF_WEEK } from "@/app/constants/catalog";
 import { toDateKey } from "@/app/hooks/useWorkoutSession";
 import type { Patient } from "@/app/types";
+import { MAX_CATALOG_TITLE_LENGTH } from "@/app/utils/validation";
 
 // When an assigned single workout shows up in the patient's plan: on fixed
 // weekdays every week, or once on a specific date. Program templates carry
@@ -133,6 +134,7 @@ export default function AssignToPatientsModal({ heading, subtitle, defaultProgra
               type="text"
               value={programName}
               onChange={(e) => setProgramName(e.target.value)}
+              maxLength={MAX_CATALOG_TITLE_LENGTH}
               className="on-light w-full border-b-2 border-line p-2 outline-none font-bold text-fg bg-surface focus:border-focus focus:ring-2 focus:ring-focus"
             />
           </label>
