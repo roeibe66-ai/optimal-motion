@@ -61,6 +61,7 @@ export interface SessionExercise {
   exercise: Exercise;
   sets: number;
   reps: number;
+  reps_max?: number | null; // upper bound of a rep range (reps is the lower bound)
   rir: number | null;
   is_time: boolean;
   block: string;

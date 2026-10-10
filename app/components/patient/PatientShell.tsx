@@ -181,9 +181,9 @@ export default function PatientShell() {
   const handleStartExploreWorkout = (workout: Workout) => {
     if (workout.format === "amrap") {
       const stations: AmrapStation[] = workout.items
-        .map((item) => {
+        .map((item): AmrapStation | null => {
           const exercise = exerciseById(item.exercise_id);
-          return exercise ? { exercise, reps: item.reps, is_time: item.is_time } : null;
+          return exercise ? { exercise, reps: item.reps, reps_max: item.reps_max, is_time: item.is_time } : null;
         })
         .filter((st): st is AmrapStation => st !== null);
       if (stations.length === 0 || !workout.time_cap_seconds) return;
@@ -199,6 +199,7 @@ export default function PatientShell() {
           exercise,
           sets: item.sets ?? 3,
           reps: item.reps,
+          reps_max: item.reps_max ?? null,
           rir: item.rir ?? null,
           is_time: item.is_time,
           block: item.block || String.fromCharCode(65 + idx),
@@ -222,7 +223,7 @@ export default function PatientShell() {
       setAmrapConfig({
         title: amrapRow.program_name ?? "AMRAP",
         timeCapSeconds: amrapRow.program_time_cap_seconds,
-        stations: rows.map((pe) => ({ exercise: pe.exercise, reps: Number(pe.reps) || 0, is_time: pe.is_time })),
+        stations: rows.map((pe) => ({ exercise: pe.exercise, reps: Number(pe.reps) || 0, reps_max: pe.reps_max ?? null, is_time: pe.is_time })),
       });
       return;
     }

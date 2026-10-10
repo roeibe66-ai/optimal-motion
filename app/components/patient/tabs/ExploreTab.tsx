@@ -4,7 +4,7 @@ import { useState, type ReactNode } from "react";
 import { CalendarPlus, Check, Compass, Crown, Dumbbell, Flame, Heart, Lock, Play, Plus, Timer } from "lucide-react";
 import Modal from "@/app/components/ui/Modal";
 import { DAYS_OF_WEEK } from "@/app/constants/catalog";
-import { formatWeightKg, getExerciseName } from "@/app/utils/format";
+import { formatRepTarget, formatWeightKg, getExerciseName } from "@/app/utils/format";
 import { getExerciseThumbUrl } from "@/app/utils/media";
 import { ExerciseThumb as SharedExerciseThumb } from "@/app/components/ExerciseMedia";
 import { toDateKey } from "@/app/hooks/useWorkoutSession";
@@ -32,7 +32,7 @@ interface ExploreTabProps {
 const workoutFormatLabel = (w: Workout) => (w.format === "amrap" ? `AMRAP · ${Math.round((w.time_cap_seconds ?? 0) / 60)} דק׳` : `${w.items.length} תרגילים`);
 
 const workoutItemLabel = (w: Workout, item: Workout["items"][number]) => {
-  const amount = `${item.reps} ${item.is_time ? "שנ׳" : "חזרות"}`;
+  const amount = `${item.is_time ? item.reps : formatRepTarget(item.reps, item.reps_max)} ${item.is_time ? "שנ׳" : "חזרות"}`;
   const weight = formatWeightKg(item.weight_kg);
   const base = w.format === "amrap" ? `${amount} בכל סבב` : `${item.sets ?? 3} × ${amount}`;
   return weight ? `${base} · ${weight}` : base;

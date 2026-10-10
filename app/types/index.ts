@@ -110,6 +110,7 @@ export interface WorkoutItem {
   block?: string;
   sets?: number;
   reps: number;
+  reps_max?: number | null; // upper bound of a rep range ("8-12" → reps 8, reps_max 12); omitted/null = single target
   is_time: boolean;
   rir?: number | null;
   rest_time_seconds?: number;
@@ -196,7 +197,8 @@ export interface PatientExercise {
   exercise?: Exercise; // joined client-side after fetch, not a DB column
   block: string;
   sets: number;
-  reps: number;
+  reps: number; // lower bound when reps_max is set
+  reps_max?: number | null; // upper bound of a rep range; null = single target
   rir: number | null;
   notes?: string;
   is_time: boolean;

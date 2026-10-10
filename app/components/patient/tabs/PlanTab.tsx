@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip as RechartsTooltip, XAxis, YAxis } from "recharts";
 import { useAuth } from "@/app/context/AuthContext";
-import { formatTime, formatWeightKg, getExerciseName, getWorkoutMuscleAggregation, type WorkoutMuscleAggregation } from "@/app/utils/format";
+import { formatRepTarget, formatTime, formatWeightKg, getExerciseName, getWorkoutMuscleAggregation, type WorkoutMuscleAggregation } from "@/app/utils/format";
 import { AVAILABLE_MUSCLES, DEFAULT_TRACK_GLOW, EQUIPMENT_LIST, TRACK_GLOW_TINTS } from "@/app/constants/catalog";
 import type { AIAssistantContext, CuratedFact, Exercise, ExploreProgram, WorkoutLog } from "@/app/types";
 import { dailyWorkoutImage, dominantWorkoutCategory } from "@/app/utils/workoutImages";
@@ -570,10 +570,10 @@ export default function PlanTab({
                       const weight = formatWeightKg(assignment.weight_kg);
                       const rest = Number(assignment.rest_time_seconds) || 0;
                       const stats: { label: string; value: string }[] = isAmrap
-                        ? [{ label: "בכל סבב", value: assignment.is_time ? `${assignment.reps}"` : String(assignment.reps) }]
+                        ? [{ label: "בכל סבב", value: assignment.is_time ? `${assignment.reps}"` : formatRepTarget(assignment.reps, assignment.reps_max) }]
                         : [
                             { label: "סטים", value: String(assignment.sets) },
-                            { label: assignment.is_time ? "שניות" : "חזרות", value: String(assignment.reps) },
+                            { label: assignment.is_time ? "שניות" : "חזרות", value: assignment.is_time ? String(assignment.reps) : formatRepTarget(assignment.reps, assignment.reps_max) },
                             ...(!isSuperset && rest > 0 ? [{ label: "מנוחה", value: formatTime(rest) }] : []),
                           ];
                       return (

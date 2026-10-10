@@ -46,7 +46,7 @@ import AdminCoPilotDrawer from "@/app/components/admin/AdminCoPilotDrawer";
 import WorkoutBuilderTab from "@/app/components/admin/tabs/WorkoutBuilderTab";
 import ProgramLibraryTab from "@/app/components/admin/tabs/ProgramLibraryTab";
 import ExerciseLibraryTab from "@/app/components/admin/tabs/ExerciseLibraryTab";
-import { formatAdminDate, formatWeightKg, getExerciseName, parseWeightInput } from "@/app/utils/format";
+import { formatAdminDate, formatRepTarget, formatWeightKg, getExerciseName, parseRepInput, parseWeightInput } from "@/app/utils/format";
 import { getAIInsight } from "@/app/utils/scoring";
 import { generateResearchFacts, type ResearchInterpretation } from "@/app/actions/researchAgent";
 import type { AIAssistantContext, CuratedFact, PatientProgram, ResearchFinding } from "@/app/types";
@@ -389,7 +389,7 @@ export default function LegacyAdminApp() {
     setEditingAssignId(assign.id);
     setEditAssignForm({
       sets: assign.sets ? String(assign.sets) : "3",
-      reps: assign.reps ? String(assign.reps) : "10",
+      reps: assign.reps ? (assign.is_time ? String(assign.reps) : formatRepTarget(assign.reps, assign.reps_max)) : "10",
       rir: assign.rir ? String(assign.rir) : "",
       block: String(assign.block || "A"),
       notes: String(assign.notes || ""),
@@ -401,11 +401,16 @@ export default function LegacyAdminApp() {
   };
 
   const handleSaveEditAssign = async (assignId: string) => {
+    // Accepts a single number or a range ("8-12"); a timed exercise keeps
+    // only the low end.
+    const repTarget = parseRepInput(editAssignForm.reps, !editAssignForm.is_time);
+    if (!repTarget) return alert("יש להזין מספר חזרות תקין, או טווח כמו 8-12");
     const { error } = await supabase
       .from("patient_exercises")
       .update({
         sets: parseInt(editAssignForm.sets),
-        reps: parseInt(editAssignForm.reps),
+        reps: repTarget.reps,
+        reps_max: repTarget.reps_max,
         rir: editAssignForm.rir ? parseInt(editAssignForm.rir) : null,
         block: editAssignForm.block.toUpperCase(),
         notes: editAssignForm.notes,
@@ -1501,10 +1506,12 @@ export default function LegacyAdminApp() {
                                       </button>
                                     </label>
                                     <input
-                                      type="number"
+                                      type="text"
+                                      inputMode="numeric"
+                                      dir="ltr"
                                       value={editAssignForm.reps}
                                       onChange={(e) => setEditAssignForm({ ...editAssignForm, reps: String(e.target.value) })}
-                                      placeholder={editAssignForm.is_time ? "שניות" : "חזרות"}
+                                      placeholder={editAssignForm.is_time ? "שניות" : "10 / 8-12"}
                                       className="w-16 border-b border-line-input bg-transparent text-fg placeholder:text-muted p-1 text-center"
                                     />
                                   </div>
@@ -1571,7 +1578,7 @@ export default function LegacyAdminApp() {
                                     סטים: <strong className="text-fg">{assign.sets}</strong>
                                   </span>
                                   <span className="on-light bg-surface-alt px-3 py-1 rounded-lg border border-line inline-flex items-center gap-1.5">
-                                    {assign.is_time ? <Clock size={12} /> : <Repeat size={12} />} {assign.is_time ? "שניות:" : "חזרות:"} <strong className="text-fg">{assign.reps}</strong>
+                                    {assign.is_time ? <Clock size={12} /> : <Repeat size={12} />} {assign.is_time ? "שניות:" : "חזרות:"} <strong className="text-fg">{assign.is_time ? assign.reps : formatRepTarget(assign.reps, assign.reps_max)}</strong>
                                   </span>
                                   {assign.rir && (
                                     <span className="on-light bg-surface-alt px-3 py-1 rounded-lg border border-line">

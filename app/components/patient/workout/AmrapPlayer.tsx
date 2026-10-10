@@ -6,7 +6,7 @@ import { supabase } from "@/app/lib/supabase";
 import { useAuth } from "@/app/context/AuthContext";
 import RatingScale from "@/app/components/ui/RatingScale";
 import { getRPEColor } from "@/app/utils/scoring";
-import { getExerciseName } from "@/app/utils/format";
+import { formatRepTarget, getExerciseName } from "@/app/utils/format";
 import { ExerciseMediaPlayer } from "@/app/components/ExerciseMedia";
 import { SimulationBanner } from "@/app/components/patient/workout/WorkoutPlayer";
 import type { HapticType } from "@/app/hooks/useHaptics";
@@ -15,6 +15,7 @@ import type { Exercise } from "@/app/types";
 export interface AmrapStation {
   exercise: Exercise;
   reps: number; // per round; seconds when is_time
+  reps_max?: number | null; // upper bound of a rep range (reps = lower bound)
   is_time: boolean;
 }
 
@@ -270,7 +271,7 @@ export default function AmrapPlayer({ config, triggerHaptic, onClose, onLogged, 
                 <div className="p-2">
                   <div className="text-[12px] font-extrabold text-fg truncate">{getExerciseName(station.exercise, lang)}</div>
                   <div className="text-[11px] font-bold text-accent-fg tabular-nums">
-                    {station.reps} {station.is_time ? "שנ׳" : "חזרות"}
+                    {station.is_time ? station.reps : formatRepTarget(station.reps, station.reps_max)} {station.is_time ? "שנ׳" : "חזרות"}
                   </div>
                 </div>
               </div>

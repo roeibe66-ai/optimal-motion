@@ -6,7 +6,7 @@ import { AuthContext, useAuth, type AuthContextValue } from "@/app/context/AuthC
 import { TRANSLATIONS } from "@/app/constants/translations";
 import { useHaptics } from "@/app/hooks/useHaptics";
 import { useWorkoutSession, type SessionExercise } from "@/app/hooks/useWorkoutSession";
-import { getExerciseName } from "@/app/utils/format";
+import { formatRepTarget, getExerciseName } from "@/app/utils/format";
 import WorkoutPlayer from "@/app/components/patient/workout/WorkoutPlayer";
 import AmrapPlayer, { type AmrapStation } from "@/app/components/patient/workout/AmrapPlayer";
 import ExerciseInfoModal from "@/app/components/patient/workout/ExerciseInfoModal";
@@ -80,6 +80,7 @@ function SimulatorBody({ workout, exerciseCatalog }: { workout: Workout; exercis
         exercise,
         sets: item.sets ?? 3,
         reps: item.reps,
+        reps_max: item.reps_max ?? null,
         rir: item.rir ?? null,
         is_time: item.is_time,
         block: item.block || String.fromCharCode(65 + idx),
@@ -89,7 +90,7 @@ function SimulatorBody({ workout, exerciseCatalog }: { workout: Workout; exercis
     })
     .filter((se): se is SessionExercise => se !== null);
 
-  const stations: AmrapStation[] = sessionExercises.map((se) => ({ exercise: se.exercise, reps: se.reps, is_time: se.is_time }));
+  const stations: AmrapStation[] = sessionExercises.map((se) => ({ exercise: se.exercise, reps: se.reps, reps_max: se.reps_max ?? null, is_time: se.is_time }));
 
   const session = useWorkoutSession({
     patientExercises: [],
@@ -152,8 +153,8 @@ function SimulatorBody({ workout, exerciseCatalog }: { workout: Workout; exercis
                 <span className="font-bold text-fg">{getExerciseName(se.exercise, lang)}</span>
                 <span className="text-muted">
                   {isAmrap
-                    ? `${se.reps} ${se.is_time ? "שנ׳" : "חז׳"} בסבב`
-                    : `${se.sets} × ${se.reps} ${se.is_time ? "שנ׳" : "חז׳"} · מנוחה ${se.rest_time_seconds}s`}
+                    ? `${se.is_time ? se.reps : formatRepTarget(se.reps, se.reps_max)} ${se.is_time ? "שנ׳" : "חז׳"} בסבב`
+                    : `${se.sets} × ${se.is_time ? se.reps : formatRepTarget(se.reps, se.reps_max)} ${se.is_time ? "שנ׳" : "חז׳"} · מנוחה ${se.rest_time_seconds}s`}
                 </span>
               </div>
             ))}

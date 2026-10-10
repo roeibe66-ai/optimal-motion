@@ -5,7 +5,7 @@ import { Check, ClipboardCheck, Loader2, Minus, Plus } from "lucide-react";
 import Modal from "@/app/components/ui/Modal";
 import { useAuth } from "@/app/context/AuthContext";
 import { supabase } from "@/app/lib/supabase";
-import { formatWeightKg, getExerciseName, parseWeightInput } from "@/app/utils/format";
+import { formatRepTarget, formatWeightKg, getExerciseName, parseWeightInput } from "@/app/utils/format";
 import { getPainColor, getRPEColor } from "@/app/utils/scoring";
 import type { SessionPerformanceEntry } from "@/app/types";
 import type { SessionExercise } from "@/app/hooks/useWorkoutSession";
@@ -195,7 +195,7 @@ export default function QuickLogSheet({ title, blocksMap, blocksKeys, isAmrap, p
                   <div className="font-bold text-fg truncate">{getExerciseName(se.exercise, lang)}</div>
                   <div className="text-[11px] font-bold text-muted">
                     {isAmrap ? "בכל סבב: " : `יעד: ${se.sets} × `}
-                    {se.reps} {unit}
+                    {se.is_time ? se.reps : formatRepTarget(se.reps, se.reps_max)} {unit}
                     {prescribedWeight && ` · ${prescribedWeight}`}
                     {previousWeight && ` · פעם קודמת: ${previousWeight}`}
                   </div>

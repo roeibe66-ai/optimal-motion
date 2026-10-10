@@ -1,13 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ArrowDown, ArrowUp, CheckCircle2, Crown, Dumbbell, Edit3, Loader2, Play, Plus, Search, Send, Timer, Trash2, X } from "lucide-react";
+import { ArrowDown, ArrowUp, CheckCircle2, Crown, Dumbbell, Edit3, Loader2, Play, Plus, Search, Send, Sparkles, Timer, Trash2, X } from "lucide-react";
 import { supabase } from "@/app/lib/supabase";
-import { getExerciseName, parseWeightInput } from "@/app/utils/format";
+import { formatRepTarget, getExerciseName, parseRepInput, parseWeightInput } from "@/app/utils/format";
 import type { Exercise, Lang, Patient, Workout, WorkoutFormat, WorkoutItem } from "@/app/types";
 import WorkoutSimulatorModal from "@/app/components/admin/tabs/WorkoutSimulatorModal";
 import AssignToPatientsModal, { type AssignResult, type AssignSchedule } from "@/app/components/admin/AssignToPatientsModal";
 import { ExerciseThumb } from "@/app/components/ExerciseMedia";
+import WorkoutBuilderAssistant from "@/app/components/admin/WorkoutBuilderAssistant";
+import type { BuilderProposal } from "@/app/actions/workoutBuilderAssistant";
 
 interface WorkoutBuilderTabProps {
   exercises: Exercise[];
@@ -31,18 +33,26 @@ const EMPTY_DRAFT: Draft = { id: null, title: "", description: "", format: "stan
 const normalizeItems = (items: WorkoutItem[], format: WorkoutFormat): WorkoutItem[] =>
   items.map((it, idx) =>
     format === "amrap"
-      ? { exercise_id: it.exercise_id, reps: Math.max(1, Number(it.reps) || 1), is_time: it.is_time, ...weightOf(it) }
+      ? { exercise_id: it.exercise_id, reps: Math.max(1, Number(it.reps) || 1), ...repsMaxOf(it), is_time: it.is_time, ...weightOf(it) }
       : {
           exercise_id: it.exercise_id,
           block: (it.block || String.fromCharCode(65 + (idx % 26))).toUpperCase().slice(0, 1),
           sets: Math.max(1, Number(it.sets) || 1),
           reps: Math.max(1, Number(it.reps) || 1),
+          ...repsMaxOf(it),
           is_time: it.is_time,
           rir: it.rir === null || it.rir === undefined || String(it.rir) === "" ? null : Number(it.rir),
           rest_time_seconds: Math.max(0, Number(it.rest_time_seconds) || 0),
           ...weightOf(it),
         }
   );
+
+// reps_max (top of a rep range like 8-12) is stored only for counted reps
+// and only when it's above reps, so single-target items stay unchanged.
+function repsMaxOf(it: WorkoutItem): { reps_max?: number } {
+  const max = Number(it.reps_max);
+  return !it.is_time && Number.isFinite(max) && max > Math.max(1, Number(it.reps) || 1) ? { reps_max: max } : {};
+}
 
 // weight_kg is stored only when set (and never for timed exercises), so items
 // without one stay exactly as they were.
@@ -139,6 +149,7 @@ export default function WorkoutBuilderTab({ exercises, patients, lang }: Workout
         block: isAmrap ? "A" : item.block || String.fromCharCode(65 + (idx % 26)),
         sets: isAmrap ? 1 : (item.sets ?? 3),
         reps: item.reps,
+        reps_max: !item.is_time && item.reps_max && item.reps_max > item.reps ? item.reps_max : null,
         rir: item.rir ?? null,
         is_time: item.is_time,
         notes: "",
@@ -303,6 +314,38 @@ export default function WorkoutBuilderTab({ exercises, patients, lang }: Workout
   );
 }
 
+// Rep field that takes a single number or a range ("8-12"). Keeps its own
+// text while typing (so "8-" isn't rejected mid-entry) and commits on blur.
+function RepsField({ item, onCommit, className }: { item: WorkoutItem; onCommit: (patch: Partial<WorkoutItem>) => void; className: string }) {
+  const shown = item.is_time ? String(item.reps) : formatRepTarget(item.reps, item.reps_max);
+  const [text, setText] = useState(shown);
+  const [prevShown, setPrevShown] = useState(shown);
+  if (shown !== prevShown) {
+    // the item changed from outside (AI apply, is_time toggle) — follow it
+    setPrevShown(shown);
+    setText(shown);
+  }
+  const commit = () => {
+    const parsed = parseRepInput(text, !item.is_time);
+    if (!parsed) return setText(shown);
+    onCommit({ reps: parsed.reps, reps_max: parsed.reps_max });
+    setText(item.is_time ? String(parsed.reps) : formatRepTarget(parsed.reps, parsed.reps_max));
+  };
+  return (
+    <input
+      type="text"
+      inputMode="numeric"
+      dir="ltr"
+      value={text}
+      placeholder={item.is_time ? "30" : "10 / 8-12"}
+      onChange={(e) => setText(e.target.value)}
+      onBlur={commit}
+      onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
+      className={className}
+    />
+  );
+}
+
 function WorkoutEditor({
   draft,
   setDraft,
@@ -323,7 +366,10 @@ function WorkoutEditor({
   onSaved: () => void;
 }) {
   const [query, setQuery] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  // AI panel: always docked on wide screens; a toggleable overlay below xl.
+  const [isAssistantOpen, setIsAssistantOpen] = useState(false);
   const isAmrap = draft.format === "amrap";
 
   const set = (patch: Partial<Draft>) => setDraft({ ...draft, ...patch });
@@ -336,10 +382,35 @@ function WorkoutEditor({
     set({ items });
   };
 
+  const categories = Array.from(new Set(exercises.flatMap((e) => e.categories ?? []))).sort((a, b) => a.localeCompare(b, "he"));
   const normalized = query.trim().toLowerCase();
-  const searchResults = normalized
-    ? exercises.filter((e) => (e.name_he ?? "").toLowerCase().includes(normalized) || (e.name_en ?? "").toLowerCase().includes(normalized)).slice(0, 12)
-    : [];
+  const searchResults =
+    normalized || categoryFilter
+      ? exercises
+          .filter((e) => !categoryFilter || (e.categories ?? []).includes(categoryFilter))
+          .filter((e) => !normalized || (e.name_he ?? "").toLowerCase().includes(normalized) || (e.name_en ?? "").toLowerCase().includes(normalized))
+          .slice(0, 40)
+      : [];
+
+  const totalSets = isAmrap ? 0 : draft.items.reduce((acc, it) => acc + (Number(it.sets) || 0), 0);
+  const estimatedMinutes = isAmrap ? Number(draft.timeCapMinutes) || 0 : Math.max(draft.items.length ? 5 : 0, Math.round(totalSets * 1.5));
+
+  const applyProposal = (proposal: BuilderProposal) => {
+    const before = draft;
+    setDraft({
+      ...draft,
+      title: draft.title.trim() ? draft.title : proposal.title,
+      format: proposal.format,
+      timeCapMinutes: proposal.timeCapMinutes ? String(proposal.timeCapMinutes) : draft.timeCapMinutes,
+      items: proposal.items,
+    });
+    return () => setDraft(before);
+  };
+
+  const requestClose = () => {
+    if (draft.items.length > 0 && !confirm("לצאת בלי לשמור? השינויים באימון יאבדו.")) return;
+    onClose();
+  };
 
   const save = async (publish: boolean) => {
     const title = draft.title.trim();
@@ -368,223 +439,314 @@ function WorkoutEditor({
     onSaved();
   };
 
-  const inputClass = "on-light w-full bg-surface border border-line-input rounded-xl px-3 py-2 text-sm font-bold text-fg outline-none focus:border-focus focus:ring-2 focus:ring-focus";
-  const numClass = "on-light w-16 bg-surface border border-line-input rounded-lg px-2 py-1.5 text-center text-sm font-bold text-fg outline-none focus:border-focus focus:ring-2 focus:ring-focus";
+  const simulate = () => {
+    if (draft.items.length === 0) return alert("הוסף לפחות תרגיל אחד כדי להריץ");
+    const minutes = Number(draft.timeCapMinutes);
+    if (isAmrap && (!Number.isFinite(minutes) || minutes < 1)) return alert("ל-AMRAP צריך משך של דקה לפחות");
+    // Runs the draft as currently edited — nothing is saved.
+    const items = normalizeItems(draft.items, draft.format);
+    onSimulate({
+      id: draft.id ?? "draft",
+      title: draft.title.trim() || "אימון ללא שם",
+      description: draft.description,
+      format: draft.format,
+      time_cap_seconds: isAmrap ? Math.round(minutes * 60) : null,
+      status: "draft",
+      is_free: true,
+      items,
+      exercise_ids: items.map((it) => it.exercise_id),
+      created_at: new Date().toISOString(),
+    });
+  };
+
+  const inputClass = "on-light w-full bg-surface border border-line-input rounded-xl px-3.5 py-2.5 text-sm font-bold text-fg outline-none focus:border-focus focus:ring-2 focus:ring-focus";
+  const fieldClass = "on-light w-full h-10 bg-surface border border-line-input rounded-lg px-2 text-center text-sm font-bold text-fg tabular-nums outline-none focus:border-focus focus:ring-2 focus:ring-focus";
+
+  const assistant = (
+    <WorkoutBuilderAssistant
+      draft={draft}
+      exercises={exercises}
+      exerciseById={exerciseById}
+      lang={lang}
+      onApply={applyProposal}
+      onClose={() => setIsAssistantOpen(false)}
+    />
+  );
 
   return (
-    <div className="fixed inset-0 z-[60] bg-backdrop backdrop-blur-sm flex items-end sm:items-center justify-center" onClick={onClose}>
-      <div
-        className="bg-elevated border border-line w-full sm:max-w-3xl sm:rounded-[2rem] rounded-t-[2rem] max-h-[92vh] flex flex-col shadow-elevated"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between p-6 border-b border-line shrink-0">
-          <h2 className="text-lg font-extrabold text-fg">{draft.id ? "עריכת אימון" : "אימון חדש"}</h2>
-          <button onClick={onClose} className="p-2 text-muted hover:text-fg transition-colors" aria-label="סגור">
-            <X size={20} />
+    <div className="fixed inset-0 z-[60] bg-page flex flex-col">
+      {/* Top bar: title + live summary on one side, every action on the other. */}
+      <header className="shrink-0 bg-elevated border-b border-line px-4 md:px-6 py-3 flex flex-wrap items-center gap-3">
+        <button onClick={requestClose} className="p-2 -m-1 text-muted hover:text-fg transition-colors" aria-label="סגור">
+          <X size={22} />
+        </button>
+        <div className="min-w-0 flex-1">
+          <h2 className="text-lg font-black text-fg truncate">{draft.title.trim() || (draft.id ? "עריכת אימון" : "אימון חדש")}</h2>
+          <p className="text-[11px] font-bold text-muted">
+            {draft.items.length} תרגילים
+            {isAmrap ? ` · AMRAP ${draft.timeCapMinutes || "?"} דק׳` : totalSets > 0 ? ` · ${totalSets} סטים · ~${estimatedMinutes} דק׳` : ""}
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setIsAssistantOpen((v) => !v)}
+            className="xl:hidden flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-accent/15 text-accent-fg text-sm font-extrabold hover:bg-accent/25 transition-colors"
+          >
+            <Sparkles size={15} /> עוזר AI
+          </button>
+          <button type="button" onClick={simulate} className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-line text-fg text-sm font-bold hover:bg-line/70 transition-colors">
+            <Play size={14} fill="currentColor" /> הרץ / בדוק
+          </button>
+          <button
+            type="button"
+            onClick={() => save(false)}
+            disabled={isSaving}
+            className="px-4 py-2.5 rounded-xl border-[1.5px] border-btn-secondary text-accent-fg text-sm font-bold hover:bg-btn-secondary-hover transition-colors disabled:opacity-50"
+          >
+            {draft.id ? "שמור" : "שמור כטיוטה"}
+          </button>
+          <button
+            type="button"
+            onClick={() => save(true)}
+            disabled={isSaving}
+            className="px-5 py-2.5 rounded-xl bg-btn-primary text-btn-primary-fg text-sm font-black hover:bg-btn-primary-hover active:bg-btn-primary-active transition-colors disabled:bg-disabled disabled:text-disabled-fg"
+          >
+            {isSaving ? "שומר..." : "שמור ופרסם לגלה"}
           </button>
         </div>
+      </header>
 
-        <div className="on-light flex flex-col gap-6 p-6 md:p-8 overflow-y-auto bg-surface text-fg">
-          <div className="grid md:grid-cols-2 gap-4">
-            <label className="flex flex-col gap-1.5">
-              <span className="text-[11px] font-extrabold text-muted">שם האימון (מה שהמטופל יראה)</span>
-              <input value={draft.title} onChange={(e) => set({ title: e.target.value })} placeholder="למשל: גוף מלא 20 דקות" className={inputClass} />
-            </label>
-            <div className="flex flex-col gap-1.5">
-              <span className="text-[11px] font-extrabold text-muted">סוג האימון</span>
-              <div className="flex bg-surface-alt p-1 rounded-xl border border-line">
-                {(["standard", "amrap"] as const).map((fmt) => (
-                  <button
-                    key={fmt}
-                    type="button"
-                    onClick={() => set({ format: fmt })}
-                    className={`flex-1 py-2 rounded-lg text-sm font-bold transition-colors ${draft.format === fmt ? "bg-accent text-on-accent" : "text-muted hover:text-fg"}`}
-                  >
-                    {fmt === "standard" ? "רגיל (סטים וחזרות)" : "AMRAP (לפי זמן)"}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {isAmrap && (
-            <label className="flex items-center gap-3 bg-accent/5 border border-accent/20 rounded-2xl p-4">
-              <Timer size={18} className="text-accent-fg shrink-0" />
-              <span className="text-sm font-bold text-fg">משך האימון</span>
-              <input type="number" min={1} value={draft.timeCapMinutes} onChange={(e) => set({ timeCapMinutes: e.target.value })} className={numClass} />
-              <span className="text-sm font-bold text-muted">דקות — כמה שיותר סבבים של כל התרגילים ברשימה</span>
-            </label>
-          )}
-
-          <label className="flex flex-col gap-1.5">
-            <span className="text-[11px] font-extrabold text-muted">תיאור (אופציונלי)</span>
-            <textarea value={draft.description} onChange={(e) => set({ description: e.target.value })} rows={2} className={`${inputClass} font-medium resize-none`} />
-          </label>
-
-          <div className="flex flex-col gap-3">
-            <span className="text-[11px] font-extrabold text-muted">{isAmrap ? "התרגילים בכל סבב" : "התרגילים"}</span>
-            {draft.items.length === 0 && <p className="text-sm text-muted">חפש תרגיל למטה והוסף אותו לאימון.</p>}
-            {draft.items.map((item, idx) => {
-              const ex = exerciseById(item.exercise_id);
-              return (
-                <div key={`${item.exercise_id}-${idx}`} className="on-light flex flex-wrap items-center gap-3 bg-surface-alt border border-line rounded-2xl p-3">
-                  <span className="w-7 h-7 rounded-full bg-accent text-on-accent text-xs font-black flex items-center justify-center shrink-0">{idx + 1}</span>
-                  <span className="font-extrabold text-sm text-fg flex-1 min-w-[140px] truncate">{ex ? getExerciseName(ex, lang) : "תרגיל שנמחק"}</span>
-
-                  {!isAmrap && (
-                    <label className="flex items-center gap-1.5 text-xs font-bold text-muted">
-                      בלוק
-                      <input value={item.block ?? ""} maxLength={1} onChange={(e) => setItem(idx, { block: e.target.value.toUpperCase() })} className={`${numClass} w-10 uppercase`} />
-                    </label>
-                  )}
-                  {!isAmrap && (
-                    <label className="flex items-center gap-1.5 text-xs font-bold text-muted">
-                      סטים
-                      <input type="number" min={1} value={item.sets ?? 3} onChange={(e) => setItem(idx, { sets: Number(e.target.value) })} className={numClass} />
-                    </label>
-                  )}
-                  <label className="flex items-center gap-1.5 text-xs font-bold text-muted">
-                    <button type="button" onClick={() => setItem(idx, { is_time: !item.is_time })} className="underline decoration-dotted hover:text-accent-fg">
-                      {item.is_time ? "שניות" : "חזרות"}
-                    </button>
-                    <input type="number" min={1} value={item.reps} onChange={(e) => setItem(idx, { reps: Number(e.target.value) })} className={numClass} />
-                  </label>
-                  {!isAmrap && (
-                    <label className="flex items-center gap-1.5 text-xs font-bold text-muted">
-                      RIR
-                      <input
-                        type="number"
-                        min={0}
-                        value={item.rir ?? ""}
-                        placeholder="-"
-                        onChange={(e) => setItem(idx, { rir: e.target.value === "" ? null : Number(e.target.value) })}
-                        className={`${numClass} w-12`}
-                      />
-                    </label>
-                  )}
-                  {!isAmrap && (
-                    <label className="flex items-center gap-1.5 text-xs font-bold text-muted">
-                      מנוחה
-                      <input type="number" min={0} value={item.rest_time_seconds ?? 60} onChange={(e) => setItem(idx, { rest_time_seconds: Number(e.target.value) })} className={numClass} />
-                      שנ׳
-                    </label>
-                  )}
-                  {!item.is_time && (
-                    <label className="flex items-center gap-1.5 text-xs font-bold text-muted" title="לא חובה — אם ריק, לא יוצג למטופל">
-                      משקל
-                      <input
-                        type="number"
-                        min={0}
-                        step="0.5"
-                        value={item.weight_kg ?? ""}
-                        placeholder="-"
-                        onChange={(e) => setItem(idx, { weight_kg: parseWeightInput(e.target.value) })}
-                        className={`${numClass} w-14`}
-                      />
-                      ק״ג
-                    </label>
-                  )}
-
-                  <div className="flex items-center gap-1 mr-auto">
-                    <button type="button" onClick={() => moveItem(idx, -1)} disabled={idx === 0} aria-label="הזז למעלה" className="p-1.5 rounded-lg text-muted hover:text-fg hover:bg-line disabled:opacity-30">
-                      <ArrowUp size={15} />
-                    </button>
+      <div className="flex-1 min-h-0 flex">
+        <main className="on-light flex-1 min-w-0 overflow-y-auto bg-surface text-fg">
+          <div className="max-w-4xl mx-auto p-4 md:p-8 flex flex-col gap-8 pb-24">
+            {/* Details */}
+            <section className="flex flex-col gap-4">
+              <input
+                value={draft.title}
+                onChange={(e) => set({ title: e.target.value })}
+                placeholder="שם האימון (מה שהמטופל יראה)"
+                className="on-light w-full bg-transparent border-b-2 border-line-input focus:border-focus px-1 py-2 text-2xl md:text-3xl font-black text-fg placeholder:text-muted/60 outline-none"
+              />
+              <div className="grid md:grid-cols-[auto_1fr] gap-4 items-start">
+                <div className="flex bg-surface-alt p-1 rounded-xl border border-line">
+                  {(["standard", "amrap"] as const).map((fmt) => (
                     <button
+                      key={fmt}
                       type="button"
-                      onClick={() => moveItem(idx, 1)}
-                      disabled={idx === draft.items.length - 1}
-                      aria-label="הזז למטה"
-                      className="p-1.5 rounded-lg text-muted hover:text-fg hover:bg-line disabled:opacity-30"
+                      onClick={() => set({ format: fmt })}
+                      className={`px-4 py-2 rounded-lg text-sm font-bold transition-colors ${draft.format === fmt ? "bg-accent text-on-accent" : "text-muted hover:text-fg"}`}
                     >
-                      <ArrowDown size={15} />
+                      {fmt === "standard" ? "רגיל (סטים וחזרות)" : "AMRAP (לפי זמן)"}
                     </button>
-                    <button type="button" onClick={() => set({ items: draft.items.filter((_, i) => i !== idx) })} aria-label="הסר" className="p-1.5 rounded-lg text-danger-fg hover:bg-danger/10">
-                      <Trash2 size={15} />
-                    </button>
-                  </div>
+                  ))}
                 </div>
-              );
-            })}
+                {isAmrap ? (
+                  <label className="flex items-center gap-3 bg-accent/5 border border-accent/20 rounded-xl px-4 py-2">
+                    <Timer size={18} className="text-accent-fg shrink-0" />
+                    <span className="text-sm font-bold text-fg">משך</span>
+                    <input type="number" min={1} value={draft.timeCapMinutes} onChange={(e) => set({ timeCapMinutes: e.target.value })} className={`${fieldClass} w-20`} />
+                    <span className="text-sm font-bold text-muted">דקות, כמה שיותר סבבים</span>
+                  </label>
+                ) : (
+                  <p className="text-xs font-medium text-muted md:pt-2.5">תרגילים עם אותה אות בלוק מבוצעים ברצף (סופר-סט), והמנוחה היא אחרי האחרון בבלוק.</p>
+                )}
+              </div>
+              <textarea
+                value={draft.description}
+                onChange={(e) => set({ description: e.target.value })}
+                rows={2}
+                placeholder="תיאור (אופציונלי)"
+                className={`${inputClass} font-medium resize-none`}
+              />
+            </section>
 
-            <div className="relative">
-              <Search size={15} className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-muted" />
-              <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="חפש תרגיל להוספה (עברית או אנגלית)" className={`${inputClass} pr-9 font-medium`} />
-            </div>
-            {searchResults.length > 0 && (
-              <div className="on-light flex flex-col gap-1.5 bg-surface-alt border border-line rounded-2xl p-2 max-h-64 overflow-y-auto">
-                {searchResults.map((ex) => (
+            {/* Exercises */}
+            <section className="flex flex-col gap-3">
+              <h3 className="text-sm font-black text-fg">{isAmrap ? "התרגילים בכל סבב" : "התרגילים"}</h3>
+              {draft.items.length === 0 && (
+                <div className="on-light text-center text-sm text-muted bg-surface-alt border border-dashed border-line-input rounded-2xl p-8">
+                  חפש תרגיל למטה, או בקש מהעוזר לבנות לך אימון.
+                </div>
+              )}
+              {draft.items.map((item, idx) => {
+                const ex = exerciseById(item.exercise_id);
+                const prevBlock = draft.items[idx - 1]?.block;
+                const nextBlock = draft.items[idx + 1]?.block;
+                const inSuperset = !isAmrap && !!item.block && (item.block === prevBlock || item.block === nextBlock);
+                return (
+                  <div key={`${item.exercise_id}-${idx}`} className="on-light bg-surface-alt border border-line rounded-2xl p-3 md:p-4 flex flex-col gap-3">
+                    <div className="flex items-center gap-3">
+                      <span className="w-7 h-7 rounded-full bg-accent text-on-accent text-xs font-black flex items-center justify-center shrink-0">{idx + 1}</span>
+                      <ExerciseThumb
+                        exercise={ex}
+                        alt=""
+                        className="on-light w-12 h-12 rounded-xl bg-surface shrink-0"
+                        legacyFit="object-contain"
+                        fallback={
+                          <span className="on-light w-12 h-12 rounded-xl bg-surface flex items-center justify-center shrink-0">
+                            <Dumbbell size={16} className="text-muted" />
+                          </span>
+                        }
+                      />
+                      <div className="min-w-0 flex-1">
+                        <div className="font-extrabold text-fg truncate">{ex ? getExerciseName(ex, lang) : "תרגיל שנמחק"}</div>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          {(ex?.categories ?? []).slice(0, 2).map((c) => (
+                            <span key={c} className="text-[10px] font-bold text-muted">
+                              {c}
+                            </span>
+                          ))}
+                          {inSuperset && <span className="text-[10px] font-extrabold bg-accent/15 text-accent-fg px-1.5 py-0.5 rounded">סופר-סט {item.block}</span>}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-0.5 shrink-0">
+                        <button type="button" onClick={() => moveItem(idx, -1)} disabled={idx === 0} aria-label="הזז למעלה" className="p-2 rounded-lg text-muted hover:text-fg hover:bg-line disabled:opacity-30">
+                          <ArrowUp size={16} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => moveItem(idx, 1)}
+                          disabled={idx === draft.items.length - 1}
+                          aria-label="הזז למטה"
+                          className="p-2 rounded-lg text-muted hover:text-fg hover:bg-line disabled:opacity-30"
+                        >
+                          <ArrowDown size={16} />
+                        </button>
+                        <button type="button" onClick={() => set({ items: draft.items.filter((_, i) => i !== idx) })} aria-label="הסר" className="p-2 rounded-lg text-danger-fg hover:bg-danger/10">
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className={`grid gap-2 ${isAmrap ? "grid-cols-2 sm:grid-cols-3" : "grid-cols-3 sm:grid-cols-6"}`}>
+                      {!isAmrap && (
+                        <label className="flex flex-col gap-1">
+                          <span className="text-[10px] font-extrabold text-muted text-center">בלוק</span>
+                          <input value={item.block ?? ""} maxLength={1} onChange={(e) => setItem(idx, { block: e.target.value.toUpperCase() })} className={`${fieldClass} uppercase`} />
+                        </label>
+                      )}
+                      {!isAmrap && (
+                        <label className="flex flex-col gap-1">
+                          <span className="text-[10px] font-extrabold text-muted text-center">סטים</span>
+                          <input type="number" min={1} value={item.sets ?? 3} onChange={(e) => setItem(idx, { sets: Number(e.target.value) })} className={fieldClass} />
+                        </label>
+                      )}
+                      <label className="flex flex-col gap-1">
+                        <button
+                          type="button"
+                          onClick={() => setItem(idx, { is_time: !item.is_time, reps_max: null })}
+                          className="text-[10px] font-extrabold text-muted text-center underline decoration-dotted hover:text-accent-fg"
+                          title="לחץ להחלפה בין חזרות לשניות"
+                        >
+                          {item.is_time ? "שניות ⇄" : "חזרות ⇄"}
+                        </button>
+                        <RepsField item={item} onCommit={(patch) => setItem(idx, patch)} className={fieldClass} />
+                      </label>
+                      {!isAmrap && (
+                        <label className="flex flex-col gap-1">
+                          <span className="text-[10px] font-extrabold text-muted text-center">RIR</span>
+                          <input
+                            type="number"
+                            min={0}
+                            value={item.rir ?? ""}
+                            placeholder="-"
+                            onChange={(e) => setItem(idx, { rir: e.target.value === "" ? null : Number(e.target.value) })}
+                            className={fieldClass}
+                          />
+                        </label>
+                      )}
+                      {!isAmrap && (
+                        <label className="flex flex-col gap-1">
+                          <span className="text-[10px] font-extrabold text-muted text-center">מנוחה (שנ׳)</span>
+                          <input type="number" min={0} step={15} value={item.rest_time_seconds ?? 60} onChange={(e) => setItem(idx, { rest_time_seconds: Number(e.target.value) })} className={fieldClass} />
+                        </label>
+                      )}
+                      {!item.is_time && (
+                        <label className="flex flex-col gap-1" title="לא חובה — אם ריק, לא יוצג למטופל">
+                          <span className="text-[10px] font-extrabold text-muted text-center">משקל (ק״ג)</span>
+                          <input
+                            type="number"
+                            min={0}
+                            step="0.5"
+                            value={item.weight_kg ?? ""}
+                            placeholder="-"
+                            onChange={(e) => setItem(idx, { weight_kg: parseWeightInput(e.target.value) })}
+                            className={fieldClass}
+                          />
+                        </label>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </section>
+
+            {/* Add exercises: search by name, or browse a category. */}
+            <section className="flex flex-col gap-3">
+              <h3 className="text-sm font-black text-fg">הוספת תרגיל</h3>
+              <div className="relative">
+                <Search size={16} className="pointer-events-none absolute top-1/2 right-3.5 -translate-y-1/2 text-muted" />
+                <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="חפש תרגיל (עברית או אנגלית)" className={`${inputClass} pr-10 font-medium py-3`} />
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {categories.map((c) => (
                   <button
-                    key={ex.id}
+                    key={c}
                     type="button"
-                    onClick={() => {
-                      set({ items: [...draft.items, newItem(ex.id, draft.items.length, draft.format)] });
-                      setQuery("");
-                    }}
-                    className="flex items-center gap-3 rounded-xl p-2 hover:bg-line text-start transition-colors"
+                    onClick={() => setCategoryFilter((cur) => (cur === c ? null : c))}
+                    className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-colors ${
+                      categoryFilter === c ? "bg-accent text-on-accent border-accent" : "bg-surface-alt text-muted border-line hover:text-fg"
+                    }`}
                   >
-                    <ExerciseThumb
-                      exercise={ex}
-                      alt=""
-                      className="on-light w-9 h-9 rounded-lg bg-surface shrink-0"
-                      legacyFit="object-contain"
-                      fallback={
-                        <span className="on-light w-9 h-9 rounded-lg bg-surface flex items-center justify-center shrink-0">
-                          <Dumbbell size={14} className="text-muted" />
-                        </span>
-                      }
-                    />
-                    <span className="text-sm font-bold text-fg flex-1 truncate">{getExerciseName(ex, lang)}</span>
-                    <Plus size={16} className="text-accent-fg shrink-0" />
+                    {c}
                   </button>
                 ))}
               </div>
-            )}
+              {searchResults.length > 0 && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {searchResults.map((ex) => (
+                    <button
+                      key={ex.id}
+                      type="button"
+                      onClick={() => set({ items: [...draft.items, newItem(ex.id, draft.items.length, draft.format)] })}
+                      className="on-light flex items-center gap-3 rounded-xl p-2 bg-surface-alt border border-line hover:border-accent/50 text-start transition-colors"
+                    >
+                      <ExerciseThumb
+                        exercise={ex}
+                        alt=""
+                        className="on-light w-11 h-11 rounded-lg bg-surface shrink-0"
+                        legacyFit="object-contain"
+                        fallback={
+                          <span className="on-light w-11 h-11 rounded-lg bg-surface flex items-center justify-center shrink-0">
+                            <Dumbbell size={14} className="text-muted" />
+                          </span>
+                        }
+                      />
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-sm font-bold text-fg truncate">{getExerciseName(ex, lang)}</span>
+                        <span className="block text-[10px] font-bold text-muted truncate">{(ex.categories ?? []).join(" · ")}</span>
+                      </span>
+                      <Plus size={18} className="text-accent-fg shrink-0" />
+                    </button>
+                  ))}
+                </div>
+              )}
+              {(normalized || categoryFilter) && searchResults.length === 0 && <p className="text-sm text-muted">לא נמצאו תרגילים.</p>}
+            </section>
           </div>
+        </main>
 
-          <div className="flex flex-wrap gap-3 sticky bottom-0 -mx-6 md:-mx-8 -mb-6 md:-mb-8 px-6 md:px-8 py-5 bg-surface border-t border-line">
-            <button
-              onClick={() => save(true)}
-              disabled={isSaving}
-              className="flex-1 bg-btn-primary text-btn-primary-fg py-3.5 rounded-2xl font-black hover:bg-btn-primary-hover active:bg-btn-primary-active transition-colors disabled:bg-disabled disabled:text-disabled-fg"
-            >
-              {isSaving ? "שומר..." : "שמור ופרסם לגלה"}
-            </button>
-            <button
-              onClick={() => save(false)}
-              disabled={isSaving}
-              className="px-6 bg-transparent border-[1.5px] border-btn-secondary text-accent-fg py-3.5 rounded-2xl font-bold hover:bg-btn-secondary-hover transition-colors"
-            >
-              {draft.id ? "שמור בלי לשנות פרסום" : "שמור כטיוטה"}
-            </button>
-            <button
-              onClick={() => {
-                if (draft.items.length === 0) return alert("הוסף לפחות תרגיל אחד כדי להריץ");
-                const minutes = Number(draft.timeCapMinutes);
-                if (isAmrap && (!Number.isFinite(minutes) || minutes < 1)) return alert("ל-AMRAP צריך משך של דקה לפחות");
-                // Runs the draft as currently edited — nothing is saved.
-                const items = normalizeItems(draft.items, draft.format);
-                onSimulate({
-                  id: draft.id ?? "draft",
-                  title: draft.title.trim() || "אימון ללא שם",
-                  description: draft.description,
-                  format: draft.format,
-                  time_cap_seconds: isAmrap ? Math.round(minutes * 60) : null,
-                  status: "draft",
-                  is_free: true,
-                  items,
-                  exercise_ids: items.map((it) => it.exercise_id),
-                  created_at: new Date().toISOString(),
-                });
-              }}
-              className="px-6 bg-surface-alt text-fg py-3.5 rounded-2xl font-bold hover:bg-line transition-colors flex items-center gap-2"
-            >
-              <Play size={15} fill="currentColor" /> הרץ / בדוק
-            </button>
-            <button onClick={onClose} className="px-6 bg-surface-alt text-fg py-3.5 rounded-2xl font-bold hover:bg-line transition-colors">
-              ביטול
-            </button>
-          </div>
-        </div>
+        {/* AI co-pilot: one instance (so the chat survives closing it) —
+            docked beside the editor on xl screens, an overlay sheet below. */}
+        {isAssistantOpen && <div className="xl:hidden fixed inset-0 z-[70] bg-backdrop backdrop-blur-sm" onClick={() => setIsAssistantOpen(false)} />}
+        <aside
+          className={`${
+            isAssistantOpen ? "fixed inset-y-0 left-0 z-[71] flex w-full sm:w-[420px] shadow-elevated" : "hidden"
+          } xl:static xl:z-auto xl:flex xl:w-[400px] xl:shadow-none shrink-0 border-s border-line flex-col min-h-0`}
+        >
+          {assistant}
+        </aside>
       </div>
     </div>
   );

@@ -117,3 +117,24 @@ export const parseWeightInput = (value: string): number | null => {
   const n = Number(trimmed);
   return Number.isFinite(n) && n >= 0 ? Math.round(n * 100) / 100 : null;
 };
+
+// Target reps as shown to the patient: "8-12" for a range (reps = lower
+// bound, reps_max = upper), otherwise just the number. Timed exercises never
+// carry a range.
+export const formatRepTarget = (reps: number | string | null | undefined, repsMax?: number | string | null): string => {
+  const low = Number(reps) || 0;
+  const high = Number(repsMax);
+  return Number.isFinite(high) && high > low ? `${low}-${high}` : String(low);
+};
+
+// Parses an admin rep field: "10" → { reps: 10, reps_max: null }, "8-12" (or
+// "8–12", "12-8") → { reps: 8, reps_max: 12 }. A range only applies to
+// counted reps, so `allowRange: false` (timed exercises) keeps the low end.
+// Unparseable or < 1 → null.
+export const parseRepInput = (text: string, allowRange = true): { reps: number; reps_max: number | null } | null => {
+  const nums = (text.match(/\d+/g) ?? []).map(Number).filter((n) => n >= 1);
+  if (nums.length === 0) return null;
+  const low = Math.min(nums[0], nums[1] ?? nums[0]);
+  const high = Math.max(nums[0], nums[1] ?? nums[0]);
+  return { reps: low, reps_max: allowRange && high > low ? high : null };
+};

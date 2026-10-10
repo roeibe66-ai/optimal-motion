@@ -8,7 +8,7 @@ import { ExerciseMediaPlayer } from "@/app/components/ExerciseMedia";
 import PreWorkoutFlow from "@/app/components/patient/PreWorkoutFlow";
 import WorkoutFinishFlow from "@/app/components/patient/workout/WorkoutFinishFlow";
 import Toast from "@/app/components/ui/Toast";
-import { formatTime, formatWeightKg, getExerciseName } from "@/app/utils/format";
+import { formatRepTarget, formatTime, formatWeightKg, getExerciseName } from "@/app/utils/format";
 import type { HapticType } from "@/app/hooks/useHaptics";
 import type { useWorkoutSession } from "@/app/hooks/useWorkoutSession";
 
@@ -276,7 +276,13 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
             ) : (
               <div className="flex items-end justify-center gap-10">
                 <div className="flex flex-col items-center">
-                  <span className="text-7xl font-black text-fg tabular-nums leading-none">{session.effectiveTargetReps}</span>
+                  <span className="text-7xl font-black text-fg tabular-nums leading-none" dir="ltr">
+                    {/* A prescribed range ("8-12") shows as-is until the patient
+                        adjusts the target with easier/harder. */}
+                    {session.effectiveTargetReps === session.activeAssign?.reps
+                      ? formatRepTarget(session.activeAssign?.reps, session.activeAssign?.reps_max)
+                      : session.effectiveTargetReps}
+                  </span>
                   <span className="text-[11px] font-bold text-muted uppercase tracking-wide mt-2">חזרות</span>
                 </div>
                 {session.effectiveTargetRir !== null && (
