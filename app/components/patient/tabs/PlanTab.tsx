@@ -228,7 +228,7 @@ export default function PlanTab({
             the typographic contrast the redesign called for. */}
         <div className="pt-2 pb-10 md:pb-14">
           <p className="text-5xl md:text-6xl font-black uppercase tracking-tight text-fg leading-[0.95]">{firstName ? `היי ${firstName},` : "היי,"}</p>
-          <p className="text-4xl md:text-5xl font-light italic text-muted mt-1">מוכן להתחיל?</p>
+          <p className="text-4xl md:text-5xl font-light italic text-muted mt-1">שנתחיל?</p>
         </div>
 
         {/* Today hero card — full-bleed photo (placeholder, see note below)
