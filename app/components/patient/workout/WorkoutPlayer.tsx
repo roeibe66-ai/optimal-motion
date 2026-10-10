@@ -260,7 +260,7 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
           the old ring's !isSupersetCheck guard made. */}
       {isPostSet && !session.isSupersetCheck && (
         <div className="relative z-10 flex flex-col items-center pt-2">
-          <span className="text-[11px] font-bold tracking-[0.25em] uppercase text-muted mb-1">מנוחה</span>
+          <span className="text-[11px] font-bold text-muted mb-1">מנוחה</span>
           <span className="text-6xl font-black tabular-nums text-fg tracking-tighter" dir="ltr">
             {formatTime(session.restTimer)}
           </span>
@@ -289,7 +289,7 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
                       ? formatRepTarget(session.activeAssign?.reps, session.activeAssign?.reps_max)
                       : session.effectiveTargetReps}
                   </span>
-                  <span className="text-[11px] font-bold text-muted uppercase tracking-wide mt-2">חזרות</span>
+                  <span className="text-[11px] font-bold text-muted mt-2">חזרות</span>
                 </div>
                 {session.effectiveTargetRir !== null && (
                   <div className="flex flex-col items-center">
@@ -335,7 +335,7 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
                     className="flex flex-col items-center gap-1 text-muted hover:text-fg active:scale-90 transition-[scale,background-color,color,border-color] duration-150 ease-out"
                   >
                     <SkipForward size={20} />
-                    <span className="text-[10px] font-bold uppercase tracking-wide">דלג</span>
+                    <span className="text-[10px] font-bold">דלג</span>
                   </button>
                   <button
                     onClick={session.toggleExerciseTimer}
@@ -455,7 +455,7 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
             {/* Text hierarchy: eyebrow label, set count, exercise name. */}
             {isSameExerciseNext ? (
               <div className="flex flex-col items-center gap-1.5">
-                <span className="text-[11px] font-bold tracking-[0.2em] uppercase text-muted">הסט הבא</span>
+                <span className="text-[11px] font-bold text-muted">הסט הבא</span>
                 <span className="text-muted text-sm font-bold tabular-nums">
                   סט {session.currentBlockSet + 1} מתוך {session.maxSetsInBlock}
                 </span>
@@ -463,7 +463,7 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
               </div>
             ) : next ? (
               <div className="flex flex-col items-center gap-1.5">
-                <span className="text-[11px] font-bold tracking-[0.2em] uppercase text-muted">הבא בתור</span>
+                <span className="text-[11px] font-bold text-muted">הבא בתור</span>
                 <span className="text-muted text-sm font-bold tabular-nums">סט 1 מתוך {next.sets}</span>
                 <button
                   onClick={() => session.setViewingExInfo(next.exercise)}
@@ -499,7 +499,7 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
                   <span className="text-4xl font-black text-fg tabular-nums" dir="ltr">
                     {session.actualRepsLogged}
                   </span>
-                  <span className="text-[10px] font-bold text-muted uppercase tracking-wide mt-0.5">
+                  <span className="text-[10px] font-bold text-muted mt-0.5">
                     {session.activeAssign?.is_time ? "שניות שהוחזקו" : "חזרות שבוצעו"}
                   </span>
                 </div>
@@ -538,7 +538,7 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
               {/* Optional weight used — left empty, nothing is logged. */}
               {!session.activeAssign?.is_time && (
                 <label className="flex items-center gap-2">
-                  <span className="text-[11px] font-bold text-muted uppercase tracking-wide">משקל</span>
+                  <span className="text-[11px] font-bold text-muted">משקל</span>
                   <input
                     type="text"
                     inputMode="decimal"
@@ -575,7 +575,7 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
                     className="flex flex-col items-center gap-1 text-muted hover:text-fg active:scale-90 transition-[scale,background-color,color,border-color] duration-150 ease-out"
                   >
                     <span className="text-lg font-black">+15</span>
-                    <span className="text-[10px] font-bold uppercase tracking-wide">שניות</span>
+                    <span className="text-[10px] font-bold">שניות</span>
                   </button>
                   <button
                     onClick={session.handleEndRest}

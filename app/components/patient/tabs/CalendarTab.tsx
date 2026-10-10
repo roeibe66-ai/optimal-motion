@@ -6,6 +6,7 @@ import { isInWeek, planWeeksOf, programNameOf, type HydratedPatientExercise } fr
 import type { WorkoutLog } from "@/app/types";
 import { PROGRAM_TAG_STYLE } from "@/app/constants/catalog";
 import { getExerciseThumbUrl } from "@/app/utils/media";
+import { countLabel } from "@/app/utils/format";
 
 interface CalendarTabProps {
   patientExercises: HydratedPatientExercise[];
@@ -16,7 +17,12 @@ interface CalendarTabProps {
   // there's no explicit "program start date" in the schema (confirmed
   // with Roei: created_at is an accepted approximation).
   programStartDate: string;
-  onSelectDate: (week: number, dayId: string, date: Date) => void;
+  // programName: which card was tapped — the Plan tab opens that program,
+  // not just whichever one comes first on that day.
+  onSelectDate: (week: number, dayId: string, date: Date, programName: string) => void;
+  // Fitness patients only (Explore/builder exist for them): the empty state
+  // points there instead of a dead end.
+  onBrowsePrograms?: () => void;
 }
 
 const WEEKDAY_LABELS = ["א'", "ב'", "ג'", "ד'", "ה'", "ו'", "ש'"]; // Sunday first, matches DAYS_OF_WEEK/ProtocolBuilder convention
@@ -43,7 +49,7 @@ function isSameDay(a: Date, b: Date): boolean {
 // completed workout, then hands off to the existing Plan tab (via
 // onSelectDate) for the actual exercise list - no exercise-list rendering
 // duplicated here.
-export default function CalendarTab({ patientExercises, workoutLogs, patientId, programStartDate, onSelectDate }: CalendarTabProps) {
+export default function CalendarTab({ patientExercises, workoutLogs, patientId, programStartDate, onSelectDate, onBrowsePrograms }: CalendarTabProps) {
   const [viewedMonth, setViewedMonth] = useState(() => {
     const d = new Date();
     d.setDate(1);
@@ -137,7 +143,7 @@ export default function CalendarTab({ patientExercises, workoutLogs, patientId, 
         <button
           onClick={() => handleChangeMonth(-1)}
           aria-label="חודש קודם"
-          className="text-muted hover:text-fg active:scale-90 transition-all duration-150 ease-out p-2 -m-2"
+          className="text-muted hover:text-fg active:scale-90 transition-ui duration-150 ease-out p-2 -m-2"
         >
           <ChevronRight size={22} />
         </button>
@@ -145,7 +151,7 @@ export default function CalendarTab({ patientExercises, workoutLogs, patientId, 
         <button
           onClick={() => handleChangeMonth(1)}
           aria-label="חודש הבא"
-          className="text-muted hover:text-fg active:scale-90 transition-all duration-150 ease-out p-2 -m-2"
+          className="text-muted hover:text-fg active:scale-90 transition-ui duration-150 ease-out p-2 -m-2"
         >
           <ChevronLeft size={22} />
         </button>
@@ -153,7 +159,7 @@ export default function CalendarTab({ patientExercises, workoutLogs, patientId, 
 
       <div className="grid grid-cols-7 mb-4">
         {WEEKDAY_LABELS.map((label) => (
-          <div key={label} className="text-center text-[11px] font-bold text-muted tracking-wide">
+          <div key={label} className="text-center text-[11px] font-bold text-muted">
             {label}
           </div>
         ))}
@@ -180,7 +186,7 @@ export default function CalendarTab({ patientExercises, workoutLogs, patientId, 
               className="flex flex-col items-center gap-1.5 group"
             >
               <span
-                className={`relative w-9 h-9 rounded-full flex items-center justify-center text-[13px] font-bold tabular-nums transition-all duration-200 ease-out ${
+                className={`relative w-9 h-9 rounded-full flex items-center justify-center text-[13px] font-bold tabular-nums transition-ui duration-200 ease-out ${
                   isSelected
                     ? "bg-accent text-on-accent shadow-[0_4px_14px_-2px_color-mix(in_srgb,var(--accent)_50%,transparent)]"
                     : isClickable
@@ -192,6 +198,7 @@ export default function CalendarTab({ patientExercises, workoutLogs, patientId, 
                 {isCompleted && <CheckCircle2 size={11} className="absolute -top-1 -right-1 text-success bg-page rounded-full" />}
               </span>
               <div className="flex items-center gap-1 h-1.5">
+                {/* Up to 3 dots, then "+N" — more programs than dots used to read as exactly 3. */}
                 {scheduledCategories.slice(0, 3).map((cat) => (
                   <span
                     key={cat}
@@ -199,6 +206,11 @@ export default function CalendarTab({ patientExercises, workoutLogs, patientId, 
                     style={{ background: PROGRAM_TAG_STYLE.text }}
                   />
                 ))}
+                {scheduledCategories.length > 3 && (
+                  <span className="text-[9px] font-black leading-none" style={{ color: PROGRAM_TAG_STYLE.text }}>
+                    +{scheduledCategories.length - 3}
+                  </span>
+                )}
               </div>
             </button>
           );
@@ -227,7 +239,7 @@ export default function CalendarTab({ patientExercises, workoutLogs, patientId, 
 
         <div className="flex items-center justify-between mb-4">
           <h4 className="font-black text-fg text-base">
-            {selectedDayCategories.length} {selectedDayCategories.length === 1 ? "אימון" : "אימונים"}
+            {patientExercises.length === 0 ? "לוח האימונים שלך" : countLabel(selectedDayCategories.length, "אימון אחד", "אימונים")}
           </h4>
           {selectedDate && (
             <span className="text-[12px] font-bold text-muted">
@@ -236,7 +248,17 @@ export default function CalendarTab({ patientExercises, workoutLogs, patientId, 
           )}
         </div>
 
-        {!selectedDate ? (
+        {patientExercises.length === 0 ? (
+          // No program at all (not just a free day): say so, and where to get one.
+          <div className="text-center py-6 flex flex-col items-center gap-3">
+            <p className="text-muted text-sm">עדיין אין לך תוכנית אימון — כשתוסיף אחת, הימים שלה יופיעו כאן.</p>
+            {onBrowsePrograms && (
+              <button onClick={onBrowsePrograms} className="text-accent-fg font-bold text-sm px-4 py-2 rounded-full bg-accent/10 hover:bg-accent/15 active:scale-95 transition-ui duration-150 ease-out">
+                גלה תוכניות
+              </button>
+            )}
+          </div>
+        ) : !selectedDate ? (
           <p className="text-muted text-sm text-center py-6">בחר יום כדי לראות את האימונים שלו.</p>
         ) : selectedDayCategories.length === 0 ? (
           <p className="text-muted text-sm text-center py-6">אין אימונים מתוזמנים ביום הזה.</p>
@@ -250,17 +272,17 @@ export default function CalendarTab({ patientExercises, workoutLogs, patientId, 
               return (
                 <button
                   key={cat}
-                  onClick={() => selectedDate && selectedWeek !== null && selectedDayId !== null && onSelectDate(selectedWeek, selectedDayId, selectedDate)}
-                  className="w-full flex items-center gap-3.5 text-right hover:bg-surface-alt active:scale-[0.98] rounded-2xl p-1.5 transition-all duration-150 ease-out"
+                  onClick={() => selectedDate && selectedWeek !== null && selectedDayId !== null && onSelectDate(selectedWeek, selectedDayId, selectedDate, cat)}
+                  className="w-full flex items-center gap-3.5 text-right hover:bg-surface-alt active:scale-[0.98] rounded-2xl p-1.5 transition-ui duration-150 ease-out"
                 >
                   <div className="relative w-14 h-14 rounded-2xl overflow-hidden shrink-0" style={{ background: style.bg }}>
                     {thumbUrl && <img src={thumbUrl} alt="" className="w-full h-full object-cover" />}
                     <div className="absolute bottom-0 inset-x-0 h-[3px]" style={{ background: style.text }}></div>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h5 className="font-black text-fg text-[15px] truncate">{cat}</h5>
+                    <h5 className="font-black text-fg text-[15px] leading-snug line-clamp-2 [overflow-wrap:anywhere]">{cat}</h5>
                     <p className="text-muted text-[12px] font-semibold mt-0.5">
-                      שבוע {selectedWeek} · {catExercises.length} תרגילים
+                      שבוע {selectedWeek} · {countLabel(catExercises.length, "תרגיל אחד", "תרגילים")}
                     </p>
                   </div>
                 </button>

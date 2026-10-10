@@ -6,6 +6,7 @@ import { TRANSLATIONS } from "@/app/constants/translations";
 import { isInWeek, programNameOf, type SessionExercise } from "@/app/hooks/useWorkoutSession";
 import PlanTab from "@/app/components/patient/tabs/PlanTab";
 import DevDataToggle from "@/app/components/dev/DevDataToggle";
+import FeedbackHost from "@/app/components/ui/FeedbackHost";
 import { useDevDataMode } from "@/app/components/dev/devDataMode";
 import { planFixture } from "@/app/components/dev/planFixtures";
 
@@ -74,6 +75,7 @@ export default function PlanHarness() {
           />
         </main>
         <DevDataToggle />
+        <FeedbackHost />
       </div>
     </AuthContext.Provider>
   );

@@ -157,7 +157,7 @@ export default function ExerciseInfoModal({ exercise, historyData, onClose }: Ex
             <div className={hasHeatmapData ? "mb-6" : ""}>
               <div className="flex items-center gap-2 mb-4">
                 <ClipboardList size={15} className="text-accent-fg" />
-                <h4 className="font-bold text-[13px] tracking-wide text-muted uppercase">הנחיות</h4>
+                <h4 className="font-bold text-[13px] text-muted">הנחיות</h4>
               </div>
               <div>
                 {instructionLines.map((line, i) => (

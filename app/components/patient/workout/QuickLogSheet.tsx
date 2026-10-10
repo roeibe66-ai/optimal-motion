@@ -9,6 +9,7 @@ import { formatRepTarget, formatWeightKg, getExerciseName, parseWeightInput } fr
 import { getPainColor, getRPEColor } from "@/app/utils/scoring";
 import type { SessionPerformanceEntry } from "@/app/types";
 import type { SessionExercise } from "@/app/hooks/useWorkoutSession";
+import { notify } from "@/app/components/ui/feedback";
 
 interface QuickLogSheetProps {
   title: string; // program name — logged as workout_logs.category, same as the player
@@ -122,7 +123,7 @@ export default function QuickLogSheet({ title, blocksMap, blocksKeys, isAmrap, p
 
     if (error) {
       console.error(error);
-      alert(`שגיאה: ${error.message}`);
+      notify(`שגיאה: ${error.message}`, "error");
       return;
     }
     setIsDone(true);
@@ -276,7 +277,7 @@ export default function QuickLogSheet({ title, blocksMap, blocksKeys, isAmrap, p
               key={n}
               onClick={() => setRpe(n)}
               aria-pressed={rpe === n}
-              className={`h-11 rounded-xl text-base font-black transition-all ${getRPEColor(n)} ${rpe === n ? "ring-4 ring-focus scale-105" : rpe !== null ? "opacity-50" : ""}`}
+              className={`h-11 rounded-xl text-base font-black transition-ui ${getRPEColor(n)} ${rpe === n ? "ring-4 ring-focus scale-105" : rpe !== null ? "opacity-50" : ""}`}
             >
               {n}
             </button>
@@ -293,7 +294,7 @@ export default function QuickLogSheet({ title, blocksMap, blocksKeys, isAmrap, p
                 key={n}
                 onClick={() => setPainAfter(painAfter === n ? null : n)}
                 aria-pressed={painAfter === n}
-                className={`h-10 rounded-xl text-sm font-black transition-all ${getPainColor(n)} ${painAfter === n ? "ring-4 ring-focus scale-105" : painAfter !== null ? "opacity-50" : ""}`}
+                className={`h-10 rounded-xl text-sm font-black transition-ui ${getPainColor(n)} ${painAfter === n ? "ring-4 ring-focus scale-105" : painAfter !== null ? "opacity-50" : ""}`}
               >
                 {n}
               </button>

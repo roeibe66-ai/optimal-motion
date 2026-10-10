@@ -11,6 +11,7 @@ import { ExerciseThumb as SharedExerciseThumb } from "@/app/components/ExerciseM
 import { toDateKey } from "@/app/hooks/useWorkoutSession";
 import { useAuth } from "@/app/context/AuthContext";
 import type { Exercise, ExploreProgram, Workout } from "@/app/types";
+import { confirmAction, notify } from "@/app/components/ui/feedback";
 
 interface ExploreTabProps {
   freePrograms: ExploreProgram[];
@@ -86,7 +87,7 @@ function WorkoutCard({
   return (
     <button
       onClick={onOpen}
-      className="on-light min-w-[180px] w-[180px] shrink-0 rounded-3xl overflow-hidden bg-surface text-start shadow-card border border-line hover:-translate-y-0.5 hover:shadow-[0_16px_32px_-8px_color-mix(in_srgb,var(--shadow-ink)_12%,transparent)] active:scale-[0.97] transition-all duration-200 ease-out"
+      className="on-light min-w-[180px] w-[180px] shrink-0 rounded-3xl overflow-hidden bg-surface text-start shadow-card border border-line hover:-translate-y-0.5 hover:shadow-[0_16px_32px_-8px_color-mix(in_srgb,var(--shadow-ink)_12%,transparent)] active:scale-[0.97] transition-ui duration-200 ease-out"
     >
       <div className="on-light h-[110px] relative bg-surface-alt">
         <CardCover coverUrl={coverUrl} />
@@ -102,7 +103,7 @@ function WorkoutCard({
           <Heart size={15} className={isLiked ? "fill-accent-fg text-accent-fg" : "text-muted"} />
         </div>
         {!workout.is_free && (
-          <span className="absolute top-2.5 right-2.5 bg-warm text-on-accent text-[9px] font-black px-2 py-1 rounded-full uppercase tracking-wide">פרימיום</span>
+          <span className="absolute top-2.5 right-2.5 bg-warm text-on-accent text-[9px] font-black px-2 py-1 rounded-full">פרימיום</span>
         )}
       </div>
       <div className="p-3.5 flex flex-col gap-1.5">
@@ -159,7 +160,7 @@ function ProgramCard({
   return (
     <button
       onClick={onOpen}
-      className="on-light min-w-[180px] w-[180px] shrink-0 rounded-3xl overflow-hidden bg-surface text-start shadow-card border border-line hover:-translate-y-0.5 hover:shadow-[0_16px_32px_-8px_color-mix(in_srgb,var(--shadow-ink)_12%,transparent)] active:scale-[0.97] transition-all duration-200 ease-out"
+      className="on-light min-w-[180px] w-[180px] shrink-0 rounded-3xl overflow-hidden bg-surface text-start shadow-card border border-line hover:-translate-y-0.5 hover:shadow-[0_16px_32px_-8px_color-mix(in_srgb,var(--shadow-ink)_12%,transparent)] active:scale-[0.97] transition-ui duration-200 ease-out"
     >
       <div className="on-light h-[110px] relative bg-surface-alt">
         <CardCover coverUrl={coverUrl} />
@@ -177,7 +178,7 @@ function ProgramCard({
         </div>
 
         {!program.is_free && (
-          <span className="absolute top-2.5 right-2.5 bg-warm text-on-accent text-[9px] font-black px-2 py-1 rounded-full uppercase tracking-wide">
+          <span className="absolute top-2.5 right-2.5 bg-warm text-on-accent text-[9px] font-black px-2 py-1 rounded-full">
             פרימיום
           </span>
         )}
@@ -217,7 +218,7 @@ function ProgramCarousel<T = ExploreProgram>({
     <div className="mb-8">
       <div className="flex items-center gap-2 mb-3.5">
         {icon}
-        <h3 className="text-[13px] font-extrabold tracking-widest text-muted uppercase">{title}</h3>
+        <h3 className="text-[13px] font-extrabold text-muted">{title}</h3>
       </div>
       <div className="flex gap-3.5 overflow-x-auto no-scrollbar pb-1">{list.map(render)}</div>
     </div>
@@ -281,14 +282,14 @@ export default function ExploreTab({
     if (ok) {
       if (date) {
         const [y, m, d] = date.split("-").map(Number);
-        alert(`"${workoutPreview.title}" נוסף ללו"ז שלך ב-${new Date(y, m - 1, d).toLocaleDateString("he-IL", { weekday: "long", day: "numeric", month: "numeric" })}.`);
+        notify(`"${workoutPreview.title}" נוסף ללו"ז שלך ב-${new Date(y, m - 1, d).toLocaleDateString("he-IL", { weekday: "long", day: "numeric", month: "numeric" })}.`);
       } else {
         const dayLabels = dayId
           .split(",")
           .map((id) => DAYS_OF_WEEK.find((d) => d.id === id)?.label)
           .filter(Boolean)
           .join(", ");
-        alert(`"${workoutPreview.title}" נוסף לתוכנית שלך בכל שבוע בימים: ${dayLabels}.`);
+        notify(`"${workoutPreview.title}" נוסף לתוכנית שלך בכל שבוע בימים: ${dayLabels}.`);
       }
       setPickDayFor(null);
       setWorkoutPreview(null);
@@ -297,7 +298,7 @@ export default function ExploreTab({
 
   const contactForPremium = (title: string) => {
     if (!loggedInPatient?.email_verified) {
-      return alert("עליך לאמת את כתובת המייל שלך לפני שתוכל לרכוש תוכניות. בדוק את תיבת הדואר הנכנס שלך.");
+      return notify("עליך לאמת את כתובת המייל שלך לפני שתוכל לרכוש תוכניות. בדוק את תיבת הדואר הנכנס שלך.", "info");
     }
     window.open(`https://wa.me/972504441094?text=${encodeURIComponent(`היי רועי, אני באפליקציה ואשמח לפתוח את: ${title}.`)}`, "_blank");
   };
@@ -335,7 +336,14 @@ export default function ExploreTab({
   };
 
   const handleRemove = async () => {
-    if (!preview || !confirm(`להסיר את "${preview.title}" מהתוכניות שלך?`)) return;
+    if (!preview) return;
+    const confirmed = await confirmAction({
+      title: "להסיר את התוכנית?",
+      message: `"${preview.title}" תוסר מהתוכניות שלך. אפשר להוסיף אותה שוב מכאן בכל זמן.`,
+      confirmLabel: "הסר",
+      destructive: true,
+    });
+    if (!confirmed) return;
     setIsBusy(true);
     await onRemoveProgram(String(preview.id));
     setIsBusy(false);

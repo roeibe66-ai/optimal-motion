@@ -20,6 +20,8 @@ import { getExerciseName } from "@/app/utils/format";
 import { ExerciseThumb } from "@/app/components/ExerciseMedia";
 import type { Exercise } from "@/app/types";
 import { MAX_CATALOG_TITLE_LENGTH } from "@/app/utils/validation";
+import { countLabel } from "@/app/utils/format";
+import { confirmAction } from "@/app/components/ui/feedback";
 
 interface DiyBuilderTabProps {
   exerciseCatalog: Exercise[];
@@ -158,6 +160,32 @@ export default function DiyBuilderTab({
     return parts.find((p) => p !== "upper-body" && p !== "lower-body") ?? parts[0];
   };
 
+  // Removing a day / clearing it drops its exercises with no undo — ask
+  // first, but only when there's something to lose.
+  const removeDay = async (day: number) => {
+    const count = diyExercisesByDay[day]?.length ?? 0;
+    if (count > 0) {
+      const confirmed = await confirmAction({
+        title: `להסיר את יום ${day}?`,
+        message: count === 1 ? "גם התרגיל שבחרת ליום הזה יוסר." : `גם ${count} התרגילים שבחרת ליום הזה יוסרו.`,
+        confirmLabel: "הסר יום",
+        destructive: true,
+      });
+      if (!confirmed) return;
+    }
+    onRemoveDiyDay(day);
+  };
+
+  const clearActiveDay = async () => {
+    const confirmed = await confirmAction({
+      title: `לנקות את יום ${diyActiveDay}?`,
+      message: "כל התרגילים שבחרת ליום הזה יוסרו.",
+      confirmLabel: "נקה",
+      destructive: true,
+    });
+    if (confirmed) setDiyExercisesByDay((prev) => ({ ...prev, [diyActiveDay]: [] }));
+  };
+
   return (
     <div>
       {toastMessage && <Toast message={toastMessage} onDismiss={() => setToastMessage(null)} />}
@@ -198,12 +226,16 @@ export default function DiyBuilderTab({
                 )}
               </button>
               {dayNumbers.length > 1 && (
+                // 32px hit area around the 16px dot (was 16px, next to the
+                // day tab itself); asks first when the day has exercises.
                 <button
-                  onClick={() => onRemoveDiyDay(day)}
+                  onClick={() => removeDay(day)}
                   aria-label={`הסר יום ${day}`}
-                  className="absolute -top-1.5 -left-1.5 w-4 h-4 bg-line text-fg hover:bg-danger hover:text-on-danger rounded-full flex items-center justify-center shadow-md transition-colors"
+                  className="group absolute -top-3.5 -left-3.5 w-8 h-8 flex items-center justify-center"
                 >
-                  <X size={8} strokeWidth={3} />
+                  <span className="w-4 h-4 bg-line text-fg group-hover:bg-danger group-hover:text-on-danger rounded-full flex items-center justify-center shadow-md transition-colors">
+                    <X size={8} strokeWidth={3} />
+                  </span>
                 </button>
               )}
             </div>
@@ -241,7 +273,7 @@ export default function DiyBuilderTab({
         <div className="on-light bg-surface border border-line p-4 rounded-3xl mb-8 flex flex-col gap-3.5 sticky top-4 z-30 backdrop-blur-xl shadow-card">
           <div className="flex justify-between items-center">
             <h4 className="font-extrabold text-accent-fg text-[13px]">
-              יום {diyActiveDay} ({activeDayExercises.length} תרגילים)
+              יום {diyActiveDay} ({countLabel(activeDayExercises.length, "תרגיל אחד", "תרגילים")})
             </h4>
             <div className="flex items-center gap-3">
               {isEditingSavedProgram && (
@@ -250,10 +282,7 @@ export default function DiyBuilderTab({
                 </button>
               )}
               {activeDayExercises.length > 0 && (
-                <button
-                  onClick={() => setDiyExercisesByDay((prev) => ({ ...prev, [diyActiveDay]: [] }))}
-                  className="text-[11px] font-bold text-muted hover:text-fg"
-                >
+                <button onClick={clearActiveDay} className="text-[11px] font-bold text-muted hover:text-fg">
                   נקה יום זה
                 </button>
               )}
@@ -280,7 +309,7 @@ export default function DiyBuilderTab({
                     legacyFit="object-contain p-0.5"
                     fallback={<div className="on-light w-9 h-9 rounded-[10px] bg-surface-alt" />}
                   />
-                  <span className="text-[11px] font-bold text-fg truncate w-full">{getExerciseName(ex, lang)}</span>
+                  <span className="text-[11px] font-bold text-fg leading-tight line-clamp-2 w-full">{getExerciseName(ex, lang)}</span>
                 </div>
               ))}
             </div>
@@ -289,7 +318,7 @@ export default function DiyBuilderTab({
           )}
 
           <div>
-            <label htmlFor="diy-program-name" className="block text-[10px] font-extrabold text-accent-fg uppercase mb-1.5">
+            <label htmlFor="diy-program-name" className="block text-[10px] font-extrabold text-accent-fg mb-1.5">
               שם התוכנית
             </label>
             <input
@@ -341,12 +370,12 @@ export default function DiyBuilderTab({
                 {tabStyle && <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: tabStyle.solid }} />}
                 <span className="flex-1 font-black text-lg text-fg truncate">{tab.label}</span>
 
-                {/* Dynamic header image — grows in from 0 width with a fade,
-                    cropped cleanly inside its own rounded thumbnail rather
-                    than bleeding across the card. */}
+                {/* Header image for the open section — its 56px slot is always
+                    reserved (no width animation shoving the title over), it
+                    just fades/scales in. */}
                 <div
-                  className={`shrink-0 overflow-hidden rounded-2xl shadow-md transition-all duration-500 ease-out ${
-                    isExpanded ? "w-14 h-14 opacity-100" : "w-0 h-14 opacity-0"
+                  className={`shrink-0 w-14 h-14 overflow-hidden rounded-2xl shadow-md transition-[opacity,scale] duration-200 ease-out-strong ${
+                    isExpanded ? "opacity-100 scale-100" : "opacity-0 scale-95"
                   }`}
                 >
                   <img src={tab.image} alt="" className="w-14 h-14 object-cover" />
@@ -378,7 +407,7 @@ export default function DiyBuilderTab({
                               <span className="font-extrabold text-sm" style={{ color: regionStyle.text }}>
                                 {region.label}
                               </span>
-                              <span className="text-[11px] font-bold text-muted">{count} תרגילים</span>
+                              <span className="text-[11px] font-bold text-muted">{countLabel(count, "תרגיל אחד", "תרגילים")}</span>
                             </button>
                           );
                         })}
@@ -423,7 +452,9 @@ export default function DiyBuilderTab({
                                           className="text-[10px] font-extrabold px-2 py-0.5 rounded-full whitespace-nowrap"
                                           style={{ background: style.bg, color: style.text }}
                                         >
-                                          {ex.categories.join(" / ")}
+                                          {/* First category + "+N": a nowrap pill of all of them was clipped by the card. */}
+                                          {ex.categories[0]}
+                                          {ex.categories.length > 1 && ` +${ex.categories.length - 1}`}
                                         </span>
                                         {(() => {
                                           const bodyPartId = getPrimaryBodyPart(ex.target_muscle);

@@ -58,7 +58,7 @@ export default function PatientCoachSheet({ contextData }: PatientCoachSheetProp
         // own ~88px of button+padding) on the workout detail screen — this
         // component mounts on both, so it has to sit above whichever one is
         // actually present.
-        className={`fixed bottom-44 left-5 z-[100] w-16 h-16 rounded-full bg-gradient-to-br from-accent to-accent-active text-on-accent shadow-[0_16px_32px_-10px_color-mix(in_srgb,var(--accent)_55%,transparent)] flex items-center justify-center hover:scale-105 active:scale-95 transition-all duration-200 ease-out ${
+        className={`fixed bottom-44 left-5 z-[100] w-16 h-16 rounded-full bg-gradient-to-br from-accent to-accent-active text-on-accent shadow-[0_16px_32px_-10px_color-mix(in_srgb,var(--accent)_55%,transparent)] flex items-center justify-center hover:scale-105 active:scale-95 transition-ui duration-200 ease-out ${
           isOpen ? "opacity-0 pointer-events-none" : "opacity-100"
         }`}
         aria-label="פתח מאמן AI אישי"
@@ -87,7 +87,7 @@ export default function PatientCoachSheet({ contextData }: PatientCoachSheetProp
               <p className="text-[11px] text-muted font-semibold">כאן כדי לעזור להתאים את האימון שלך</p>
             </div>
           </div>
-          <button onClick={() => setIsOpen(false)} className="p-2 text-muted hover:text-fg active:scale-90 transition-all duration-150 ease-out" aria-label="סגור">
+          <button onClick={() => setIsOpen(false)} className="p-2 text-muted hover:text-fg active:scale-90 transition-ui duration-150 ease-out" aria-label="סגור">
             <X size={20} />
           </button>
         </div>

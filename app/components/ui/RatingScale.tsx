@@ -17,7 +17,7 @@ export default function RatingScale({ values, getColor, onSelect }: RatingScaleP
         <button
           key={num}
           onClick={() => onSelect(num)}
-          className={`w-14 h-14 md:w-16 md:h-16 rounded-2xl text-xl font-black transition-all transform hover:scale-110 shadow-lg ${getColor(num)}`}
+          className={`w-14 h-14 md:w-16 md:h-16 rounded-2xl text-xl font-black transition-ui transform hover:scale-110 shadow-lg ${getColor(num)}`}
         >
           {num}
         </button>

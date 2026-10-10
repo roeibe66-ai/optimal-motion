@@ -76,7 +76,7 @@ function CuratedFactCard({ fact }: { fact: CuratedFact }) {
     <div className="on-light w-full shrink-0 snap-center relative overflow-hidden bg-surface rounded-[2rem] shadow-card p-7 md:p-9 flex flex-col gap-4">
       <div className="absolute -top-12 -left-12 w-40 h-40 rounded-full bg-accent/15" aria-hidden="true"></div>
 
-      <span className="relative self-start inline-flex items-center gap-1.5 bg-accent text-on-accent text-[10px] font-extrabold tracking-wide px-3 py-1.5 rounded-full">
+      <span className="relative self-start inline-flex items-center gap-1.5 bg-accent text-on-accent text-[10px] font-extrabold px-3 py-1.5 rounded-full">
         <Sparkles size={12} /> הידעת?
       </span>
 
@@ -103,7 +103,7 @@ function CuratedFactCard({ fact }: { fact: CuratedFact }) {
         type="button"
         onClick={() => setIsExpanded((v) => !v)}
         aria-expanded={isExpanded}
-        className="relative self-start flex items-center gap-1 text-accent-fg text-[12px] font-bold hover:brightness-75 active:scale-95 transition-all duration-150 ease-out"
+        className="relative self-start flex items-center gap-1 text-accent-fg text-[12px] font-bold hover:brightness-75 active:scale-95 transition-ui duration-150 ease-out"
       >
         {isExpanded ? "הצג פחות" : "קרא עוד"}
         <ChevronDown size={14} className={`transition-transform duration-300 ease-out ${isExpanded ? "rotate-180" : ""}`} />
@@ -238,11 +238,12 @@ export default function PlanTab({
         {/* Premium hero greeting — dominates the top of the dashboard on its
             own, deliberately not folded into the compact sticky header
             above (PatientShell), which stays a slim nav bar. Massive/
-            uppercase name line against a light-weight italic CTA line for
+            name line against a light-weight muted CTA line (no italic:
+            Rubik ships none, so Hebrew got a faux slant) for
             the typographic contrast the redesign called for. */}
         <div className="pt-2 pb-10 md:pb-14">
-          <p className="text-5xl md:text-6xl font-black uppercase tracking-tight text-fg leading-[0.95]">{firstName ? `היי ${firstName},` : "היי,"}</p>
-          <p className="text-4xl md:text-5xl font-light italic text-muted mt-1">שנתחיל?</p>
+          <p className="text-5xl md:text-6xl font-black tracking-tight text-fg leading-[0.95]">{firstName ?`היי ${firstName},` :"היי,"}</p>
+          <p className="text-4xl md:text-5xl font-light text-muted mt-1">שנתחיל?</p>
         </div>
 
         {/* Today hero card — full-bleed photo (placeholder, see note below)
@@ -293,7 +294,7 @@ export default function PlanTab({
                   <button
                     key={day.id}
                     onClick={() => setSelectedDayFilter(day.id)}
-                    className={`flex-1 h-8 flex items-center justify-center rounded-full text-[11px] font-bold transition-all duration-200 ease-out active:scale-90 ${
+                    className={`flex-1 h-10 flex items-center justify-center rounded-full text-[11px] font-bold transition-ui duration-200 ease-out active:scale-90 ${
                       isActive ? "on-light bg-surface text-fg shadow-sm" : "text-fg/70 hover:text-fg"
                     }`}
                   >
@@ -304,7 +305,7 @@ export default function PlanTab({
             </div>
 
             {/* Floating status badge — names the selected day when it isn't today. */}
-            <div className="absolute top-[4.75rem] right-4 z-10 bg-fg/15 backdrop-blur-md border border-fg/20 text-fg text-[10px] font-bold tracking-wide px-3 py-1.5 rounded-full">
+            <div className="absolute top-[5.25rem] right-4 z-10 bg-fg/15 backdrop-blur-md border border-fg/20 text-fg text-[10px] font-bold px-3 py-1.5 rounded-full">
               {isTodaySelected ? "האימון של היום" : `יום ${selectedDayLabel}`}
             </div>
 
@@ -355,7 +356,7 @@ export default function PlanTab({
             {(todayCat || isDiyMode) && (
             <button
               onClick={() => setSelectedCategory(String(todayCat))}
-              className="absolute bottom-5 left-5 z-10 w-14 h-14 rounded-full bg-fg/15 border border-fg/25 backdrop-blur-md flex items-center justify-center hover:bg-fg/25 hover:scale-110 active:scale-95 transition-all duration-200 ease-out shadow-[0_8px_24px_-4px_color-mix(in_srgb,var(--shadow-ink)_50%,transparent)]"
+              className="absolute bottom-5 left-5 z-10 w-14 h-14 rounded-full bg-fg/15 border border-fg/25 backdrop-blur-md flex items-center justify-center hover:bg-fg/25 hover:scale-110 active:scale-95 transition-ui duration-200 ease-out shadow-[0_8px_24px_-4px_color-mix(in_srgb,var(--shadow-ink)_50%,transparent)]"
             >
               <Play size={20} className="fill-fg text-fg" />
             </button>
@@ -381,7 +382,7 @@ export default function PlanTab({
                 >
                   <div className="w-11 h-11 rounded-full bg-accent text-on-accent flex items-center justify-center font-black text-sm shrink-0">{idx + 1}</div>
                   <div className="flex-1 overflow-hidden">
-                    <div className="text-[10px] font-extrabold text-accent-fg uppercase tracking-wide mb-0.5">תוכנית חינמית</div>
+                    <div className="text-[10px] font-extrabold text-accent-fg mb-0.5">תוכנית חינמית</div>
                     <div className="font-bold text-fg line-clamp-2 [overflow-wrap:anywhere]">{w.title}</div>
                   </div>
                   <Plus size={16} className="text-muted shrink-0" />
@@ -407,7 +408,7 @@ export default function PlanTab({
         {curatedFacts.length > 0 && (
           <div className="mb-10">
             <div className="flex items-center justify-between mb-3.5">
-              <div className="text-[11px] font-extrabold tracking-widest text-muted uppercase">הידעת?</div>
+              <div className="text-[11px] font-extrabold text-muted">הידעת?</div>
               {curatedFacts.length > 1 && (
                 <div className="text-[11px] font-bold text-muted tabular-nums" dir="ltr">
                   {Math.min(factIndex + 1, curatedFacts.length)}/{curatedFacts.length}
@@ -426,7 +427,7 @@ export default function PlanTab({
             starter-program offer above; an empty box here only confused). */}
         {patientCategories.length > 0 && (
         <div className="mb-10">
-          <div className="text-[11px] font-extrabold tracking-widest text-muted uppercase mb-3.5">המסלולים שלך</div>
+          <div className="text-[11px] font-extrabold text-muted mb-3.5">המסלולים שלך</div>
           {(
             <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1">
               {patientCategories.map((cat, idx) => {
@@ -436,7 +437,7 @@ export default function PlanTab({
                   <button
                     key={idx}
                     onClick={() => setSelectedCategory(String(cat))}
-                    className="on-light w-[158px] rounded-3xl overflow-hidden bg-surface text-right shrink-0 shadow-card transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-[0_16px_32px_-8px_color-mix(in_srgb,var(--shadow-ink)_10%,transparent)] active:scale-[0.97] active:translate-y-0"
+                    className="on-light w-[158px] rounded-3xl overflow-hidden bg-surface text-right shrink-0 shadow-card transition-ui duration-300 ease-out hover:-translate-y-1 hover:shadow-[0_16px_32px_-8px_color-mix(in_srgb,var(--shadow-ink)_10%,transparent)] active:scale-[0.97] active:translate-y-0"
                   >
                     <div className="on-light h-[120px] relative bg-surface-alt">
                       <div
@@ -460,7 +461,7 @@ export default function PlanTab({
 
         {/* Recent trend */}
         <div>
-          <div className="text-[11px] font-extrabold tracking-widest text-muted uppercase mb-3.5">מגמה אחרונה</div>
+          <div className="text-[11px] font-extrabold text-muted mb-3.5">מגמה אחרונה</div>
           {recentLogs.length === 0 ? (
             <div className="on-light bg-surface p-10 rounded-[2rem] shadow-card text-center">
               <p className="text-muted text-sm">הנתונים יופיעו כאן ברגע שתסיים את האימון הראשון.</p>
@@ -513,12 +514,12 @@ export default function PlanTab({
         <button
           onClick={() => setSelectedCategory(null)}
           aria-label="חזור"
-          className="p-2 bg-elevated shadow-card rounded-full hover:bg-line active:scale-90 transition-all duration-150 ease-out text-fg"
+          className="p-2 bg-elevated shadow-card rounded-full hover:bg-line active:scale-90 transition-ui duration-150 ease-out text-fg"
         >
           <ChevronLeft size={24} />
         </button>
-        <span className="text-xs font-bold uppercase tracking-widest text-muted">פרטים</span>
-        <button aria-label="עוד אפשרויות" className="p-2 text-muted hover:text-fg active:scale-90 transition-all duration-150 ease-out">
+        <span className="text-xs font-bold text-muted">פרטים</span>
+        <button aria-label="עוד אפשרויות" className="p-2 text-muted hover:text-fg active:scale-90 transition-ui duration-150 ease-out">
           <MoreHorizontal size={24} />
         </button>
       </div>
@@ -542,7 +543,7 @@ export default function PlanTab({
           return (
             <>
               <div className="mb-8">
-                <span className="bg-fg/10 text-muted font-bold px-2.5 py-1 rounded-md text-[10px] uppercase tracking-widest mb-3 inline-block">
+                <span className="bg-fg/10 text-muted font-bold px-2.5 py-1 rounded-md text-[10px] mb-3 inline-block">
                   {displayedExercises[0]?.program_format === "amrap"
                     ? `AMRAP · ${Math.round((displayedExercises[0].program_time_cap_seconds ?? 0) / 60)} דק׳`
                     : "קלאסי"}
@@ -600,7 +601,7 @@ export default function PlanTab({
                   const blockRest = Number(block[block.length - 1]?.rest_time_seconds) || 0;
                   return (
                   <div key={blockKey} className="space-y-3">
-                    {isSuperset && <div className="text-xs font-bold text-accent-fg uppercase tracking-widest mt-6 mb-1">בלוק {blockKey} (סופר-סט)</div>}
+                    {isSuperset && <div className="text-xs font-bold text-accent-fg mt-6 mb-1">בלוק {blockKey} (סופר-סט)</div>}
 
                     {block.map((assignment, idx) => {
                       const name = getExerciseName(assignment.exercise, lang);
@@ -621,7 +622,7 @@ export default function PlanTab({
                       return (
                       <div key={assignment.id}>
                         <div
-                          className="on-light flex items-stretch gap-4 group cursor-pointer bg-surface hover:bg-surface-alt active:scale-[0.98] p-3 rounded-2xl shadow-sm border border-line transition-all duration-150 ease-out"
+                          className="on-light flex items-stretch gap-4 group cursor-pointer bg-surface hover:bg-surface-alt active:scale-[0.98] p-3 rounded-2xl shadow-sm border border-line transition-ui duration-150 ease-out"
                           onClick={() => onViewExerciseInfo(assignment.exercise)}
                         >
                           <div className="on-light w-28 h-32 rounded-xl overflow-hidden bg-surface-alt shrink-0">
@@ -687,7 +688,7 @@ export default function PlanTab({
                   <div className="w-full max-w-lg mx-auto flex flex-col gap-2">
                   <button
                     onClick={onStartWorkout}
-                    className="w-full flex items-center justify-center bg-btn-primary hover:bg-btn-primary-hover active:bg-btn-primary-active text-btn-primary-fg active:scale-[0.98] transition-all duration-150 ease-out font-black text-lg py-4 rounded-full tracking-widest shadow-[0_8px_24px_-4px_color-mix(in_srgb,var(--accent)_45%,transparent)]"
+                    className="w-full flex items-center justify-center bg-btn-primary hover:bg-btn-primary-hover active:bg-btn-primary-active text-btn-primary-fg active:scale-[0.98] transition-ui duration-150 ease-out font-black text-lg py-4 rounded-full shadow-[0_8px_24px_-4px_color-mix(in_srgb,var(--accent)_45%,transparent)]"
                   >
                     התחל אימון
                   </button>
@@ -695,7 +696,7 @@ export default function PlanTab({
                       log reps (and optional weights) straight to tracking. */}
                   <button
                     onClick={() => setIsQuickLogOpen(true)}
-                    className="w-full flex items-center justify-center gap-2 text-fg font-bold text-sm py-2 rounded-full hover:bg-line active:scale-[0.98] transition-all duration-150 ease-out"
+                    className="w-full flex items-center justify-center gap-2 text-fg font-bold text-sm py-2 rounded-full hover:bg-line active:scale-[0.98] transition-ui duration-150 ease-out"
                   >
                     <ClipboardCheck size={16} /> כבר התאמנתי — תיעוד מהיר
                   </button>

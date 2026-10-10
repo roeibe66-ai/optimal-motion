@@ -3,6 +3,7 @@
 import { ArrowLeft, Check, Crown, Lock } from "lucide-react";
 import { useAuth } from "@/app/context/AuthContext";
 import { ADMIN_TAGS, DEFAULT_TRACK_GLOW, TRACK_GLOW_TINTS } from "@/app/constants/catalog";
+import { notify } from "@/app/components/ui/feedback";
 
 interface PremiumStoreTabProps {
   onGoToPlan: () => void;
@@ -32,7 +33,7 @@ export default function PremiumStoreTab({ onGoToPlan }: PremiumStoreTabProps) {
                 <div className="absolute inset-0" style={{ background: `radial-gradient(circle at 70% 20%, ${glowTint}, transparent 55%)` }}></div>
 
                 <span
-                  className={`absolute top-3.5 right-3.5 text-[10px] font-black px-2.5 py-1 rounded-full flex items-center gap-1 uppercase tracking-widest ${
+                  className={`absolute top-3.5 right-3.5 text-[10px] font-black px-2.5 py-1 rounded-full flex items-center gap-1 ${
                     userOwnsTrack ? "bg-accent text-on-accent" : "bg-warm text-on-accent"
                   }`}
                 >
@@ -66,7 +67,7 @@ export default function PremiumStoreTab({ onGoToPlan }: PremiumStoreTabProps) {
                   <button
                     onClick={() => {
                       if (!loggedInPatient?.email_verified) {
-                        return alert("עליך לאמת את כתובת המייל שלך לפני שתוכל לרכוש תוכניות. בדוק את תיבת הדואר הנכנס שלך.");
+                        return notify("עליך לאמת את כתובת המייל שלך לפני שתוכל לרכוש תוכניות. בדוק את תיבת הדואר הנכנס שלך.", "info");
                       }
                       window.open(
                         `https://wa.me/972504441094?text=${encodeURIComponent(`היי רועי, אני באפליקציה ואשמח לפתוח את המסלול: ${track.label}.`)}`,

@@ -5,6 +5,7 @@ import { AuthProvider } from "@/app/context/AuthContext";
 import { supabase } from "@/app/lib/supabase";
 import { useExplorePrograms } from "@/app/hooks/useExplorePrograms";
 import ExploreTab from "@/app/components/patient/tabs/ExploreTab";
+import FeedbackHost from "@/app/components/ui/FeedbackHost";
 import type { Exercise } from "@/app/types";
 
 // Renders ExploreTab the way PatientShell does (same <main> width and
@@ -44,6 +45,7 @@ function Harness() {
           onAddWorkoutToDay={inert}
         />
       </main>
+      <FeedbackHost />
     </div>
   );
 }

@@ -4,6 +4,8 @@ import { ChevronRight, Dumbbell, Play, Plus, Trash2 } from "lucide-react";
 import { DEFAULT_DIY_CATEGORY_STYLE, DIY_CATEGORY_STYLES } from "@/app/constants/catalog";
 import ExportPdfButton from "@/app/components/patient/ExportPdfButton";
 import type { Exercise, SavedProgram } from "@/app/types";
+import { confirmAction } from "@/app/components/ui/feedback";
+import { countLabel } from "@/app/utils/format";
 
 interface MyWorkoutsScreenProps {
   savedPrograms: SavedProgram[];
@@ -36,10 +38,14 @@ function relativeCreatedLabel(createdAt: string): string {
 // "start" is a row of day pills rather than one button — picking a pill
 // starts that specific day's exercises as a live session.
 export default function MyWorkoutsScreen({ savedPrograms, exerciseCatalog, onBack, onStartProgramDay, onEditProgram, onDeleteProgram }: MyWorkoutsScreenProps) {
-  const handleDelete = (program: SavedProgram) => {
-    if (confirm(`למחוק את "${program.name}"? לא ניתן לשחזר את הפעולה.`)) {
-      onDeleteProgram(program.id);
-    }
+  const handleDelete = async (program: SavedProgram) => {
+    const confirmed = await confirmAction({
+      title: "למחוק את האימון?",
+      message: `"${program.name}" יימחק. לא ניתן לשחזר את הפעולה.`,
+      confirmLabel: "מחק",
+      destructive: true,
+    });
+    if (confirmed) onDeleteProgram(program.id);
   };
 
   return (
@@ -51,14 +57,15 @@ export default function MyWorkoutsScreen({ savedPrograms, exerciseCatalog, onBac
       <div className="flex items-center gap-3 mb-6">
         <button
           onClick={onBack}
-          className="w-[38px] h-[38px] rounded-full bg-elevated shadow-card flex items-center justify-center shrink-0 hover:bg-line active:scale-90 transition-all duration-150 ease-out"
+          aria-label="חזרה"
+          className="w-[38px] h-[38px] rounded-full bg-elevated shadow-card flex items-center justify-center shrink-0 hover:bg-line active:scale-90 transition-ui duration-150 ease-out"
         >
           {/* ChevronRight, not Left: this is a "back" action, and in RTL that points right */}
           <ChevronRight size={16} className="text-fg" />
         </button>
         <div>
           <h2 className="text-xl md:text-2xl font-black text-fg tracking-tight">התוכניות שלי</h2>
-          <p className="text-xs text-muted mt-0.5">{savedPrograms.length} תוכניות שבועיות שמורות</p>
+          <p className="text-xs text-muted mt-0.5">{countLabel(savedPrograms.length, "תוכנית שבועית אחת שמורה", "תוכניות שבועיות שמורות")}</p>
         </div>
       </div>
 
@@ -87,6 +94,10 @@ export default function MyWorkoutsScreen({ savedPrograms, exerciseCatalog, onBac
                 exercises: d.exercise_ids.map((id) => exerciseCatalog.find((ex) => ex.id === id)).filter((ex): ex is Exercise => !!ex),
               }));
               const totalExerciseCount = hydratedByDay.reduce((acc, d) => acc + d.exercises.length, 0);
+              // Ids that no longer resolve: exercises deleted from the catalog
+              // since this program was saved. Said out loud instead of silently
+              // shrinking the day (and a day left with none can't be started).
+              const missingCount = days.reduce((acc, d) => acc + d.exercise_ids.length, 0) - totalExerciseCount;
 
               const categoryCounts = hydratedByDay
                 .flatMap((d) => d.exercises)
@@ -103,8 +114,13 @@ export default function MyWorkoutsScreen({ savedPrograms, exerciseCatalog, onBac
                     <div>
                       <div className="text-base font-black text-fg">{program.name}</div>
                       <div className="text-[11px] text-muted mt-0.5">
-                        {days.length} ימים · {totalExerciseCount} תרגילים · {relativeCreatedLabel(program.created_at)}
+                        {countLabel(days.length, "יום אחד", "ימים")} · {countLabel(totalExerciseCount, "תרגיל אחד", "תרגילים")} · {relativeCreatedLabel(program.created_at)}
                       </div>
+                      {missingCount > 0 && (
+                        <div className="text-[11px] font-bold text-warm-fg mt-1">
+                          {countLabel(missingCount, "תרגיל אחד הוסר", `תרגילים הוסרו`)} מהמאגר מאז שנשמרה התוכנית
+                        </div>
+                      )}
                     </div>
                     <button
                       onClick={() => handleDelete(program)}
@@ -141,7 +157,9 @@ export default function MyWorkoutsScreen({ savedPrograms, exerciseCatalog, onBac
                       <button
                         key={d.day_number}
                         onClick={() => onStartProgramDay(program, d.day_number)}
-                        className="flex items-center gap-1.5 bg-btn-primary text-btn-primary-fg font-black text-[12px] py-2.5 px-3.5 rounded-2xl hover:bg-btn-primary-hover active:bg-btn-primary-active transition-colors"
+                        disabled={d.exercises.length === 0}
+                        title={d.exercises.length === 0 ? "כל התרגילים של היום הזה הוסרו מהמאגר" : undefined}
+                        className="flex items-center gap-1.5 bg-btn-primary text-btn-primary-fg font-black text-[12px] py-2.5 px-3.5 rounded-2xl hover:bg-btn-primary-hover active:bg-btn-primary-active transition-colors disabled:bg-disabled disabled:text-disabled-fg disabled:pointer-events-none"
                       >
                         <Play size={12} fill="currentColor" />
                         יום {d.day_number} ({d.exercises.length})

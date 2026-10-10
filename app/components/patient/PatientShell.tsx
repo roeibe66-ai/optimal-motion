@@ -110,13 +110,17 @@ export default function PatientShell() {
 
   // Calendar tab hands off to the existing Plan tab day view rather than
   // rendering its own exercise list - jump to the matching week/day there.
-  const handleSelectCalendarDate = (week: number, dayId: string, date: Date) => {
+  const handleSelectCalendarDate = (week: number, dayId: string, date: Date, programName: string) => {
     planSelection.setPatientSelectedWeek(week);
     planSelection.setSelectedDayFilter(dayId);
     switchTab("plan");
     // After switchTab (which resets it to today): one-time workouts are
     // matched against the week of the picked date.
     planSelection.setReferenceDate(date);
+    // Open the tapped program's day directly — without this the Plan tab
+    // showed whichever program came first that day, so a second program's
+    // card opened the first one.
+    planSelection.setSelectedCategory(programName);
   };
 
   // Hydrates a saved program day's ordered exercise_ids against the live
@@ -449,6 +453,7 @@ export default function PatientShell() {
               patientId={loggedInPatient.id}
               programStartDate={loggedInPatient.created_at || new Date().toISOString()}
               onSelectDate={handleSelectCalendarDate}
+              onBrowsePrograms={loggedInPatient.patient_type === "fitness" ? () => switchTab("explore") : undefined}
             />
           )}
         </main>

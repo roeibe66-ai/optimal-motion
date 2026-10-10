@@ -1,6 +1,6 @@
 "use client";
 
-import type { Dispatch, SetStateAction } from "react";
+import type { CSSProperties, Dispatch, SetStateAction } from "react";
 import { Activity, Bell, ChevronLeft, CheckCircle, Crown, Flame, Globe, LogOut, Medal, Receipt, SunMoon } from "lucide-react";
 import { useTheme } from "@/app/components/ThemeProvider";
 import type { ThemeSetting } from "@/app/lib/theme";
@@ -9,6 +9,8 @@ import { DAYS_OF_WEEK } from "@/app/constants/catalog";
 import { getUserRank } from "@/app/utils/scoring";
 import type { HapticType } from "@/app/hooks/useHaptics";
 import type { WorkoutLog } from "@/app/types";
+import { toDateKey } from "@/app/hooks/useWorkoutSession";
+import { countLabel } from "@/app/utils/format";
 
 interface ProfileTabProps {
   workoutLogs: WorkoutLog[];
@@ -50,12 +52,17 @@ export default function ProfileTab({
   const totalWorkouts = userLogs.length;
   const rank = getUserRank(totalWorkouts);
 
+  // Consecutive calendar days with a logged workout, counting back from
+  // today — or from yesterday, so the streak doesn't read 0 before today's
+  // workout. (It used to be min(total workouts, 14) whenever the last log
+  // was within two days: 9 workouts over six months showed "9".)
+  const loggedDays = new Set(userLogs.map((l) => toDateKey(new Date(l.created_at))));
   let streak = 0;
-  if (userLogs.length > 0) {
-    const lastLogDate = new Date(userLogs[0].created_at);
-    const now = new Date();
-    const diffDays = Math.floor((now.getTime() - lastLogDate.getTime()) / (1000 * 3600 * 24));
-    if (diffDays <= 2) streak = Math.min(totalWorkouts, 14);
+  const cursor = new Date();
+  if (!loggedDays.has(toDateKey(cursor))) cursor.setDate(cursor.getDate() - 1);
+  while (loggedDays.has(toDateKey(cursor))) {
+    streak++;
+    cursor.setDate(cursor.getDate() - 1);
   }
 
   const toggleHaptics = () => {
@@ -65,22 +72,19 @@ export default function ProfileTab({
     triggerHaptic("light");
   };
 
-  // Real two-letter initials (first letter of first + last name) instead of
-  // the first two characters of the raw string, so a Hebrew "First Last"
-  // name reads as two meaningful initials on the avatar, matching the mockup.
-  const initials = loggedInPatient?.full_name
-    ? loggedInPatient.full_name
-        .trim()
-        .split(/\s+/)
-        .map((part) => part.charAt(0))
-        .slice(0, 2)
-        .join("")
-        .toUpperCase()
-    : "";
+  // Initials: first name + surname. first_name is stored as typed at signup
+  // ("בת שבע"), so the surname is whatever full_name has after it; older
+  // accounts fall back to first + last word. Array.from takes a whole code
+  // point, so a name starting with an emoji isn't cut to half a surrogate.
+  const fullName = loggedInPatient?.full_name?.trim() ?? "";
+  const firstName = loggedInPatient?.first_name?.trim() || fullName.split(/\s+/)[0] || "";
+  const surnameWords = (fullName.startsWith(firstName) ? fullName.slice(firstName.length) : fullName.split(/\s+/).slice(1).join(" ")).trim().split(/\s+/).filter(Boolean);
+  const initial = (word: string | undefined) => (word ? Array.from(word)[0] ?? "" : "");
+  const initials = (initial(firstName) + initial(surnameWords[surnameWords.length - 1])).toUpperCase();
 
   return (
     <div>
-      <h1 className="text-4xl font-black italic text-fg tracking-tight mb-6">פרופיל</h1>
+      <h1 className="text-4xl font-black text-fg tracking-tight mb-6">פרופיל</h1>
 
       {/* Avatar + name row — avatar first (renders on the right under RTL),
           name + a static "manage account" subtitle beside it. No chevron
@@ -99,7 +103,7 @@ export default function ProfileTab({
       {/* הישגים — Achievements, as plain list rows instead of the old
           boxed stat cards. Label on the right, value on the far left. */}
       <div className="mb-8">
-        <h3 className="text-xs font-bold uppercase tracking-widest text-muted px-1 mb-2">הישגים</h3>
+        <h3 className="text-xs font-bold text-muted px-1 mb-2">הישגים</h3>
         <div className="on-light bg-surface rounded-2xl shadow-card overflow-hidden">
           <div className="flex items-center justify-between px-5 py-4 border-b border-line">
             <div className="flex items-center gap-3">
@@ -129,11 +133,16 @@ export default function ProfileTab({
         {rank.next && (
           <div className="mt-3 px-1">
             <div className="flex justify-between items-center mb-1.5 text-xs font-bold text-muted">
-              <span>עוד {rank.max - totalWorkouts} אימונים ל-{rank.next}</span>
+              <span>עוד {countLabel(rank.max - totalWorkouts, "אימון אחד", "אימונים")} לדרגת {rank.next}</span>
               <span className="tabular-nums">{Math.round(rank.percent)}%</span>
             </div>
             <div className="h-1.5 w-full bg-line rounded-full overflow-hidden">
-              <div className={`h-full ${rank.bg} transition-all duration-1000`} style={{ width: `${rank.percent}%` }}></div>
+              {/* scaleX (not width) from the start edge; fills once on entry
+                  (starting:scale-x-0), a small reward on a rarely-visited screen. */}
+              <div
+                className={`h-full w-full ${rank.bg} origin-right ltr:origin-left transition-[scale] duration-[600ms] ease-out-strong scale-x-(--rank-progress) starting:scale-x-0`}
+                style={{ "--rank-progress": rank.percent / 100 } as CSSProperties}
+              ></div>
             </div>
           </div>
         )}
@@ -145,7 +154,7 @@ export default function ProfileTab({
           scheduling (its own real inputs, inline within the row), haptics
           toggle, language, logout. */}
       <div className="mb-8">
-        <h3 className="text-xs font-bold uppercase tracking-widest text-muted px-1 mb-2">הגדרות</h3>
+        <h3 className="text-xs font-bold text-muted px-1 mb-2">הגדרות</h3>
         <div className="on-light bg-surface rounded-2xl shadow-card overflow-hidden">
           <div className="flex items-center justify-between px-5 py-4 border-b border-line opacity-50 cursor-default">
             <div className="flex items-center gap-3">
@@ -196,7 +205,7 @@ export default function ProfileTab({
                       key={day.id}
                       type="button"
                       onClick={() => setReminderDays((prev) => (isSelected ? prev.filter((d) => d !== day.id) : [...prev, day.id]))}
-                      className={`w-8 h-8 rounded-lg font-bold text-xs transition-all duration-150 ease-out active:scale-90 ${
+                      className={`w-8 h-8 rounded-lg font-bold text-xs transition-ui duration-150 ease-out active:scale-90 ${
                         isSelected ? "bg-accent text-on-accent shadow-sm scale-105" : "bg-surface text-muted hover:bg-surface-alt border border-line-input"
                       }`}
                     >
@@ -207,7 +216,7 @@ export default function ProfileTab({
               </div>
               <button
                 onClick={onSaveSettings}
-                className="bg-btn-primary hover:bg-btn-primary-hover active:bg-btn-primary-active text-btn-primary-fg px-4 py-2 rounded-lg text-sm font-bold active:scale-95 transition-all duration-150 ease-out w-full md:w-auto"
+                className="bg-btn-primary hover:bg-btn-primary-hover active:bg-btn-primary-active text-btn-primary-fg px-4 py-2 rounded-lg text-sm font-bold active:scale-95 transition-ui duration-150 ease-out w-full md:w-auto"
               >
                 שמור
               </button>
@@ -223,13 +232,23 @@ export default function ProfileTab({
               </div>
             </div>
             {/* Size tuned to the mockup; the enabled/disabled positioning classes below are untouched per the brief — don't change that logic, only confirm the visuals match it */}
+            {/* The knob slides with a transform (it used to swap left-1/right-1,
+                which transition-transform can't animate, so it jumped). On =
+                knob at the end edge, i.e. the left in RTL. */}
             <button
               onClick={toggleHaptics}
-              className={`w-[46px] h-[26px] rounded-full transition-all duration-300 ease-out relative flex items-center active:scale-95 ${
+              role="switch"
+              aria-checked={hapticsEnabled}
+              aria-label="רטט"
+              className={`w-[46px] h-[26px] rounded-full transition-[background-color,scale] duration-200 ease-out relative flex items-center active:scale-95 ${
                 hapticsEnabled ? "bg-accent" : "bg-line-input"
               }`}
             >
-              <div className={`on-light w-5 h-5 bg-surface rounded-full absolute shadow-sm transition-transform duration-300 ease-out ${hapticsEnabled ? "left-1" : "right-1"}`}></div>
+              <div
+                className={`on-light w-5 h-5 bg-surface rounded-full absolute right-1 shadow-sm transition-transform duration-200 ease-out-strong ${
+                  hapticsEnabled ? "-translate-x-[18px]" : "translate-x-0"
+                }`}
+              ></div>
             </button>
           </div>
 
@@ -261,7 +280,7 @@ export default function ProfileTab({
 
           <button
             onClick={() => setLang(lang === "he" ? "en" : "he")}
-            className="w-full flex items-center justify-between px-5 py-4 border-b border-line hover:bg-surface-alt active:scale-[0.99] transition-all duration-150 ease-out group"
+            className="w-full flex items-center justify-between px-5 py-4 border-b border-line hover:bg-surface-alt active:scale-[0.99] transition-ui duration-150 ease-out group"
           >
             <div className="flex items-center gap-3">
               <Globe size={18} className="text-muted" />
@@ -273,7 +292,7 @@ export default function ProfileTab({
             <ChevronLeft size={18} className="text-muted group-hover:text-fg" />
           </button>
 
-          <button onClick={handleLogout} className="w-full flex items-center gap-3 px-5 py-4 hover:bg-danger/10 active:scale-[0.99] transition-all duration-150 ease-out">
+          <button onClick={handleLogout} className="w-full flex items-center gap-3 px-5 py-4 hover:bg-danger/10 active:scale-[0.99] transition-ui duration-150 ease-out">
             <LogOut size={18} className="text-danger-fg" />
             <h4 className="font-bold text-danger-fg text-sm">התנתק מהמערכת</h4>
           </button>

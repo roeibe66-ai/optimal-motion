@@ -245,3 +245,28 @@ Saturday, "אימון 0" on Sunday) next to today's date even when another day w
 Found with the `/dev/plan?data=one` fixture (break-ui), not with the demo data.
 **Rule:** anything labelled "today" / "this day" filters by the selected day; ids
 (`DAYS_OF_WEEK` "0"–"6") are never rendered — map them to `DAYS_OF_WEEK[].label`.
+
+## 2026-10-10 — A `*/` inside a CSS comment took down every page in dev
+
+**What happened:** a comment in `app/globals.css` mentioned Tailwind's `scale-*/translate-*`
+utilities. The `*/` in that text closed the comment early, the rest of the sentence was
+parsed as CSS, and Turbopack failed to compile globals.css — every route returned a 500.
+**Why:** typecheck and ESLint don't read CSS, so the pre-commit checks passed; only
+loading a page showed it. Caught before commit.
+**Rule:** never write `*/` (e.g. `foo-*/bar-*` globs) inside a CSS comment. After editing
+`globals.css`, compile it — load a page, or `npx @tailwindcss/cli -i app/globals.css -o /tmp/x.css`
+— not just `tsc`/`eslint`.
+
+## 2026-10-10 — Profile streak, Calendar cards and saved-program days showed the wrong thing
+
+**What happened (all found with the `/dev/tabs` fixtures, none with demo data):**
+- Profile "ימי רצף" was `min(total workouts, 14)` whenever the last log was within two
+  days — 9 workouts over six months read as a 9-day streak; 300 straight days read as 14.
+- Calendar: tapping the second program's card on a day opened the first program, because
+  only week + day were handed to the Plan tab, which shows the first program that day.
+- My workouts: a saved day whose exercises had been deleted from the catalog still had an
+  active "יום 2 (0)" start button (an empty session), and missing exercises vanished silently.
+**Rule:** a stat's name is its spec — "streak" means consecutive days, computed from the
+dates. A navigation handoff passes everything that identifies the target (here the program
+name), not just enough to land nearby. Hydrating saved ids against the catalog must surface
+what didn't resolve.

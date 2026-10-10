@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/app/lib/supabase";
 import { useAuth } from "@/app/context/AuthContext";
 import type { HapticType } from "@/app/hooks/useHaptics";
+import { notify } from "@/app/components/ui/feedback";
 
 // Reminder time/days are derived from `loggedInPatient` (re-synced whenever
 // it changes — login, session hydration, or a save below replacing it with a
@@ -69,7 +70,7 @@ export function useReminders(triggerHaptic: (type: HapticType) => void) {
       .single();
 
     if (error) {
-      alert("שגיאה בשמירת ההגדרות: " + error.message);
+      notify("שגיאה בשמירת ההגדרות: " + error.message, "error");
       return;
     }
     if (!data) return;
@@ -77,7 +78,7 @@ export function useReminders(triggerHaptic: (type: HapticType) => void) {
     setLoggedInPatient(data);
     localStorage.setItem("optimalMotionUser", JSON.stringify(data));
     triggerHaptic("success");
-    alert("ההגדרות עודכנו! נשמרו העדפות ההתראה והרטט.");
+    notify("ההגדרות נשמרו");
   };
 
   return { reminderTime, setReminderTime, reminderDays, setReminderDays, handleSaveSettings };

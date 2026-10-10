@@ -6,11 +6,12 @@ import { supabase } from "@/app/lib/supabase";
 import { useAuth } from "@/app/context/AuthContext";
 import RatingScale from "@/app/components/ui/RatingScale";
 import { getRPEColor } from "@/app/utils/scoring";
-import { formatRepTarget, getExerciseName } from "@/app/utils/format";
+import { countLabel, formatRepTarget, getExerciseName } from "@/app/utils/format";
 import { ExerciseMediaPlayer } from "@/app/components/ExerciseMedia";
 import { SimulationBanner } from "@/app/components/patient/workout/WorkoutPlayer";
 import type { HapticType } from "@/app/hooks/useHaptics";
 import type { Exercise } from "@/app/types";
+import { confirmAction, notify } from "@/app/components/ui/feedback";
 
 export interface AmrapStation {
   exercise: Exercise;
@@ -92,14 +93,20 @@ export default function AmrapPlayer({ config, triggerHaptic, onClose, onLogged, 
     setPhase("paused");
   };
 
-  const finishEarly = () => {
-    if (!confirm("לסיים את האימון עכשיו?")) return;
+  // The clock runs on wall time (endAtRef), so it keeps counting while a
+  // confirm sheet is open — same as under the old native confirm dialog.
+  const finishEarly = async () => {
+    if (!(await confirmAction({ title: "לסיים את האימון עכשיו?", confirmLabel: "סיים ורשום תוצאה", cancelLabel: "המשך להתאמן" }))) return;
     pause();
     setPhase("result");
   };
 
-  const requestClose = () => {
-    if ((phase === "running" || phase === "paused") && !confirm("לצאת מהאימון? התוצאה לא תישמר.")) return;
+  const requestClose = async () => {
+    if (
+      (phase === "running" || phase === "paused") &&
+      !(await confirmAction({ title: "לצאת מהאימון?", message: "התוצאה לא תישמר.", confirmLabel: "צא", cancelLabel: "המשך להתאמן", destructive: true }))
+    )
+      return;
     onClose();
   };
 
@@ -129,7 +136,7 @@ export default function AmrapPlayer({ config, triggerHaptic, onClose, onLogged, 
     ]);
     setIsSaving(false);
     if (error) {
-      alert(`שגיאה בשמירה: ${error.message}`);
+      notify(`שגיאה בשמירה: ${error.message}`, "error");
       return;
     }
     triggerHaptic("success");
@@ -178,15 +185,20 @@ export default function AmrapPlayer({ config, triggerHaptic, onClose, onLogged, 
   if (phase === "done") {
     return (
       <div className={`${shell} items-center justify-center p-6 text-center`} dir={dir}>
-        <Trophy size={80} className="text-warm-fg mb-8 animate-bounce" />
-        <h2 className="text-4xl font-black mb-4">כל הכבוד!</h2>
-        <p className="text-xl text-muted mb-10">
-          {rounds} סבבים{extraReps > 0 ? ` + ${extraReps} חזרות` : ""} ב-{Math.round(config.timeCapSeconds / 60)} דקות —{" "}
+        {/* Same one-shot celebration as WorkoutFinishFlow's done screen
+            (trophy pop, then text rises in) — not an endless bounce. */}
+        <Trophy size={80} className="text-warm-fg mb-8 animate-celebrate-pop" />
+        <h2 className="text-4xl font-black mb-4 animate-celebrate-rise" style={{ animationDelay: "100ms" }}>
+          כל הכבוד!
+        </h2>
+        <p className="text-xl text-muted mb-10 animate-celebrate-rise" style={{ animationDelay: "160ms" }}>
+          {countLabel(rounds, "סבב אחד", "סבבים")}{extraReps > 0 ? ` + ${extraReps} חזרות` : ""} ב-{Math.round(config.timeCapSeconds / 60)} דקות —{" "}
           {isSimulation ? "סימולציה, לא נשמר." : "נשמר ביומן שלך."}
         </p>
         <button
           onClick={onClose}
-          className="bg-btn-primary text-btn-primary-fg px-10 py-4 rounded-full font-bold text-lg hover:bg-btn-primary-hover active:bg-btn-primary-active transition"
+          style={{ animationDelay: "220ms" }}
+          className="animate-celebrate-rise bg-btn-primary text-btn-primary-fg px-10 py-4 rounded-full font-bold text-lg hover:bg-btn-primary-hover active:bg-btn-primary-active transition"
         >
           חזרה למסך הראשי
         </button>
@@ -206,7 +218,7 @@ export default function AmrapPlayer({ config, triggerHaptic, onClose, onLogged, 
           <X size={18} />
         </button>
         <div className="text-center min-w-0">
-          <div className="text-[11px] font-extrabold tracking-[0.2em] text-accent-fg">AMRAP · {Math.round(config.timeCapSeconds / 60)} דק׳</div>
+          <div className="text-[11px] font-extrabold text-accent-fg">AMRAP · {Math.round(config.timeCapSeconds / 60)} דק׳</div>
           <h1 className="font-black text-lg truncate">{config.title}</h1>
         </div>
         <div className="w-10" />
@@ -305,11 +317,11 @@ function Stepper({ label, value, onChange }: { label: string; value: number; onC
     <div className="flex items-center justify-between gap-4 bg-elevated border border-line rounded-2xl px-4 py-3">
       <span className="text-sm font-bold text-muted text-start">{label}</span>
       <div className="flex items-center gap-3">
-        <button onClick={() => onChange(Math.max(0, value - 1))} aria-label="הפחת" className="w-9 h-9 rounded-full bg-line flex items-center justify-center text-fg">
+        <button onClick={() => onChange(Math.max(0, value - 1))} aria-label="הפחת" className="w-11 h-11 rounded-full bg-line flex items-center justify-center text-fg active:scale-90 transition-transform duration-150 ease-out">
           <Minus size={16} />
         </button>
         <span className="text-2xl font-black tabular-nums w-10 text-center">{value}</span>
-        <button onClick={() => onChange(value + 1)} aria-label="הוסף" className="w-9 h-9 rounded-full bg-accent text-on-accent flex items-center justify-center">
+        <button onClick={() => onChange(value + 1)} aria-label="הוסף" className="w-11 h-11 rounded-full bg-accent text-on-accent flex items-center justify-center active:scale-90 transition-transform duration-150 ease-out">
           <Plus size={16} />
         </button>
       </div>

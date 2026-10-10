@@ -7,6 +7,7 @@ import RegisterPage from "@/app/components/marketing/RegisterPage";
 import ResetPasswordPage from "@/app/components/marketing/ResetPasswordPage";
 import PatientShell from "@/app/components/patient/PatientShell";
 import LegacyAdminApp from "@/app/components/admin/LegacyAdminApp";
+import FeedbackHost from "@/app/components/ui/FeedbackHost";
 
 function AppRouter() {
   const { currentView } = useAuth();
@@ -33,6 +34,8 @@ export default function Home() {
   return (
     <AuthProvider>
       <AppRouter />
+      {/* Toasts and confirm sheets from notify()/confirmAction(), for every view. */}
+      <FeedbackHost />
     </AuthProvider>
   );
 }

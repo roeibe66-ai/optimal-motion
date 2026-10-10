@@ -15,11 +15,11 @@ export interface RankInfo {
 // has no per-tier metal colors, so tiers share the accent/warm tokens —
 // the tier name itself carries the distinction.
 export const getUserRank = (totalWorkouts: number): RankInfo => {
-  if (totalWorkouts >= 100) return { name: "Diamond", current: totalWorkouts, max: 100, percent: 100, color: "text-accent-fg", bg: "bg-accent" };
-  if (totalWorkouts >= 50) return { name: "Platinum", current: totalWorkouts, max: 100, percent: (totalWorkouts / 100) * 100, color: "text-accent-fg", bg: "bg-accent-active", next: "Diamond" };
-  if (totalWorkouts >= 25) return { name: "Gold", current: totalWorkouts, max: 50, percent: (totalWorkouts / 50) * 100, color: "text-warm-fg", bg: "bg-warm", next: "Platinum" };
-  if (totalWorkouts >= 10) return { name: "Silver", current: totalWorkouts, max: 25, percent: (totalWorkouts / 25) * 100, color: "text-muted", bg: "bg-muted", next: "Gold" };
-  return { name: "Bronze", current: totalWorkouts, max: 10, percent: (totalWorkouts / 10) * 100, color: "text-warm-fg", bg: "bg-warm-strong", next: "Silver" };
+  if (totalWorkouts >= 100) return { name: "יהלום", current: totalWorkouts, max: 100, percent: 100, color: "text-accent-fg", bg: "bg-accent" };
+  if (totalWorkouts >= 50) return { name: "פלטינה", current: totalWorkouts, max: 100, percent: (totalWorkouts / 100) * 100, color: "text-accent-fg", bg: "bg-accent-active", next: "יהלום" };
+  if (totalWorkouts >= 25) return { name: "זהב", current: totalWorkouts, max: 50, percent: (totalWorkouts / 50) * 100, color: "text-warm-fg", bg: "bg-warm", next: "פלטינה" };
+  if (totalWorkouts >= 10) return { name: "כסף", current: totalWorkouts, max: 25, percent: (totalWorkouts / 25) * 100, color: "text-muted", bg: "bg-muted", next: "זהב" };
+  return { name: "ארד", current: totalWorkouts, max: 10, percent: (totalWorkouts / 10) * 100, color: "text-warm-fg", bg: "bg-warm-strong", next: "כסף" };
 };
 
 // High effort/pain uses the warm (warning) family, not --danger: danger is

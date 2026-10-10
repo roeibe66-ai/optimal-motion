@@ -6,6 +6,7 @@ import { supabase } from "@/app/lib/supabase";
 import { useAuth } from "@/app/context/AuthContext";
 import { isPasswordConfirmed, isStrongPassword } from "@/app/utils/validation";
 import { generatePasskeyAuthenticationOptions, verifyPasskeyAuthentication } from "@/app/actions/passkeyAuth";
+import { confirmAction, notify } from "@/app/components/ui/feedback";
 
 // Login + registration business logic, now backed by real Supabase Auth
 // instead of a plaintext password column. This hook only triggers the auth
@@ -51,7 +52,7 @@ export function useAuthSession() {
     const { error } = await supabase.auth.signInWithPassword({ email: loginIdentifier, password: loginPassword });
 
     if (error) {
-      alert("פרטי התחברות שגויים, או שהחשבון עדיין לא אומת במייל.");
+      notify("פרטי התחברות שגויים, או שהחשבון עדיין לא אומת במייל.", "error");
       return;
     }
 
@@ -71,7 +72,7 @@ export function useAuthSession() {
   const handleGoogleSignIn = async () => {
     const { error } = await supabase.auth.signInWithOAuth({ provider: "google", options: { redirectTo: window.location.origin } });
     if (error) {
-      alert("שגיאה בהתחברות עם Google: " + error.message);
+      notify("שגיאה בהתחברות עם Google: " + error.message, "error");
     }
   };
 
@@ -135,7 +136,7 @@ export function useAuthSession() {
     });
 
     if (error) {
-      alert("שגיאה בהרשמה: " + error.message);
+      notify("שגיאה בהרשמה: " + error.message, "error");
       return;
     }
     if (!data.user) return;
@@ -145,7 +146,7 @@ export function useAuthSession() {
     // identities array is the documented signal that this is a repeat
     // signup, not a genuinely new auth user.
     if (data.user.identities && data.user.identities.length === 0) {
-      alert("כתובת האימייל הזו כבר רשומה במערכת. אנא התחבר לחשבונך.");
+      notify("כתובת האימייל הזו כבר רשומה במערכת. אנא התחבר לחשבונך.", "info");
       return;
     }
 
@@ -156,7 +157,14 @@ export function useAuthSession() {
 
     // No active session yet — email confirmation is required, so there's
     // nothing to route into until the patient confirms and logs in for real.
-    alert("נרשמת בהצלחה! שלחנו לך מייל אימות — יש ללחוץ על הקישור במייל ואז להתחבר.");
+    // The one message here that must not be missed — a sheet the patient
+    // acknowledges, not a toast that fades on its own.
+    void confirmAction({
+      title: "נרשמת בהצלחה!",
+      message: "שלחנו לך מייל אימות — יש ללחוץ על הקישור במייל ואז להתחבר.",
+      confirmLabel: "הבנתי",
+      cancelLabel: null,
+    });
     setCurrentView("login");
     setRegFirstName("");
     setRegLastName("");
@@ -172,7 +180,7 @@ export function useAuthSession() {
     const { error } = await supabase.auth.resetPasswordForEmail(forgotEmail, { redirectTo: window.location.origin });
 
     if (error) {
-      alert("שגיאה בשליחת קישור לאיפוס: " + error.message);
+      notify("שגיאה בשליחת קישור לאיפוס: " + error.message, "error");
       return;
     }
 
@@ -196,7 +204,7 @@ export function useAuthSession() {
     const { error } = await supabase.auth.updateUser({ password: newPassword });
 
     if (error) {
-      alert("שגיאה בעדכון הסיסמה: " + error.message);
+      notify("שגיאה בעדכון הסיסמה: " + error.message, "error");
       return;
     }
 

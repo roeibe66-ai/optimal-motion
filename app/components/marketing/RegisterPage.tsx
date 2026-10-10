@@ -104,12 +104,12 @@ export default function RegisterPage() {
           <PasswordFieldsWithStrength password={regPass} setPassword={setRegPass} confirmPassword={regConfirmPass} setConfirmPassword={setRegConfirmPass} />
 
           <div>
-            <label className="block text-xs font-bold text-muted mb-2 uppercase">מסלול</label>
+            <label className="block text-xs font-bold text-muted mb-2">מסלול</label>
             <div className="flex gap-3">
               <button
                 type="button"
                 onClick={() => setRegPatientType("clinical")}
-                className={`flex-1 py-3 rounded-xl text-sm font-bold flex flex-col items-center gap-2 border-2 transition-all ${
+                className={`flex-1 py-3 rounded-xl text-sm font-bold flex flex-col items-center gap-2 border-2 transition-ui ${
                   regPatientType === "clinical" ? "border-accent bg-accent/15 text-accent-fg" : "border-line bg-surface text-muted hover:border-line-input"
                 }`}
               >
@@ -118,7 +118,7 @@ export default function RegisterPage() {
               <button
                 type="button"
                 onClick={() => setRegPatientType("fitness")}
-                className={`flex-1 py-3 rounded-xl text-sm font-bold flex flex-col items-center gap-2 border-2 transition-all ${
+                className={`flex-1 py-3 rounded-xl text-sm font-bold flex flex-col items-center gap-2 border-2 transition-ui ${
                   regPatientType === "fitness" ? "border-accent bg-accent/15 text-accent-fg" : "border-line bg-surface text-muted hover:border-line-input"
                 }`}
               >

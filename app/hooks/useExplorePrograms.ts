@@ -6,6 +6,7 @@ import { useAuth } from "@/app/context/AuthContext";
 import { useDevDataMode } from "@/app/components/dev/devDataMode";
 import { exploreFixture } from "@/app/components/dev/exploreFixtures";
 import type { ExploreProgram, Package, PackageExercise, Workout } from "@/app/types";
+import { notify } from "@/app/components/ui/feedback";
 
 // The Explore tab's catalog: every program template (packages) and single
 // workout (workouts, from the admin workout builder) the admin has
@@ -107,7 +108,7 @@ export function useExplorePrograms() {
   const addWorkoutToDay = useCallback(async (workoutId: string, dayId: string, date?: string): Promise<boolean> => {
     const { error } = await supabase.rpc("add_published_workout_to_my_programs", { p_workout_id: workoutId, p_day: dayId, p_date: date ?? null });
     if (error) {
-      alert(error.message.includes("premium") ? "זה אימון פרימיום — צור קשר כדי לפתוח אותו." : "לא הצלחנו להוסיף את האימון. נסה שוב.");
+      notify(error.message.includes("premium") ? "זה אימון פרימיום — צור קשר כדי לפתוח אותו." : "לא הצלחנו להוסיף את האימון. נסה שוב.", error.message.includes("premium") ? "info" : "error");
       return false;
     }
     return true;
@@ -119,7 +120,7 @@ export function useExplorePrograms() {
     async (programId: string): Promise<boolean> => {
       const { error } = await supabase.rpc("add_published_package_to_my_programs", { p_package_id: Number(programId) });
       if (error) {
-        alert(error.message.includes("premium") ? "זו תוכנית פרימיום — צור קשר כדי לפתוח אותה." : "לא הצלחנו להוסיף את התוכנית. נסה שוב.");
+        notify(error.message.includes("premium") ? "זו תוכנית פרימיום — צור קשר כדי לפתוח אותה." : "לא הצלחנו להוסיף את התוכנית. נסה שוב.", error.message.includes("premium") ? "info" : "error");
         return false;
       }
       await fetchPatientState();
@@ -135,7 +136,7 @@ export function useExplorePrograms() {
       if (!added?.isSelfAdded) return false;
       const { error } = await supabase.from("patient_programs").delete().eq("id", added.programId);
       if (error) {
-        alert("לא הצלחנו להסיר את התוכנית. נסה שוב.");
+        notify("לא הצלחנו להסיר את התוכנית. נסה שוב.", "error");
         return false;
       }
       await fetchPatientState();

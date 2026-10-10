@@ -7,6 +7,7 @@ import type { HapticType } from "@/app/hooks/useHaptics";
 import { getExerciseName, parseWeightInput } from "@/app/utils/format";
 import { getLastUsedWeights, parsePerformance } from "@/app/utils/history";
 import type { Exercise, PatientExercise, SessionPerformanceEntry, WorkoutFormat, WorkoutLog } from "@/app/types";
+import { confirmAction, notify } from "@/app/components/ui/feedback";
 
 // A PatientExercise as it's actually consumed here: already joined with its
 // Exercise (that join happens in usePatientData, which filters out any
@@ -684,7 +685,13 @@ export function useWorkoutSession({
     }
 
     if (isDiyMode && !adHocSession) {
-      if (confirm("האם לשמור את האימון שבנית כחלק קבוע מהתוכנית השבועית שלך?")) {
+      const keep = await confirmAction({
+        title: "לשמור את האימון?",
+        message: "האימון שבנית יישמר כחלק קבוע מהתוכנית השבועית שלך.",
+        confirmLabel: "שמור בתוכנית",
+        cancelLabel: "לא עכשיו",
+      });
+      if (keep) {
         const inserts = diySelectedExercises.map((ex, idx) => ({
           patient_id: loggedInPatient.id,
           exercise_id: ex.id,
@@ -713,7 +720,7 @@ export function useWorkoutSession({
 
     if (error) {
       console.error(error);
-      alert(`שגיאה: ${error.message}`);
+      notify(`שגיאה: ${error.message}`, "error");
       return;
     }
 
@@ -736,7 +743,7 @@ export function useWorkoutSession({
     if (!activeAssign) return;
     const currentEx = swappedExercises[activeAssign.id] || activeAssign.exercise;
     if (!currentEx.target_muscle) {
-      alert("לתרגיל זה לא מוגדר שריר מטרה מרכזי, ולכן המערכת לא יודעת מה להציע במקומו.");
+      notify("לתרגיל זה לא מוגדר שריר מטרה מרכזי, ולכן המערכת לא יודעת מה להציע במקומו.", "info");
       return;
     }
     const alternatives = exerciseCatalog.filter((e) => e.target_muscle === currentEx.target_muscle && e.id !== currentEx.id);
@@ -744,7 +751,7 @@ export function useWorkoutSession({
       const pick = alternatives[Math.floor(Math.random() * alternatives.length)];
       setSwappedExercises((prev) => ({ ...prev, [activeAssign.id]: pick }));
     } else {
-      alert("לא נמצאו במאגר תרגילים חלופיים לאותו שריר מרכזי.");
+      notify("לא נמצאו במאגר תרגילים חלופיים לאותו שריר מרכזי.", "info");
     }
   };
 

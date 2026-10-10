@@ -400,3 +400,15 @@ html {
     display: none;
   }
 }
+
+/* The interactive-UI transition: what pressable/hoverable elements actually
+   change (press scale, hover lift, shadow, colors, opacity), named instead
+   of `transition-all`, which also animates layout by accident. Lists `scale`
+   and `translate` explicitly: Tailwind v4's scale and translate utilities set
+   those CSS properties, not `transform`. Takes the duration and ease
+   utilities like the built-in transition utilities do. */
+@utility transition-ui {
+  transition-property: scale, translate, transform, box-shadow, background-color, color, border-color, opacity;
+  transition-timing-function: var(--tw-ease, var(--default-transition-timing-function));
+  transition-duration: var(--tw-duration, var(--default-transition-duration));
+}

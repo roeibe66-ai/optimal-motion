@@ -217,6 +217,12 @@ export default function ExerciseFormModal({ exercise, exercises, internalNotes, 
       alert("חובה להזין שם תרגיל בעברית או באנגלית (לפחות אחד)");
       return;
     }
+    // The patient builder files exercises by body region, derived from the
+    // target muscle — one without it can never be found or added there.
+    if (!form.target_muscle) {
+      alert("חובה לבחור שריר מטרה — בלעדיו התרגיל לא יופיע בבונה האימונים של המטופלים");
+      return;
+    }
     setIsSaving(true);
 
     const payload = {
@@ -418,6 +424,7 @@ export default function ExerciseFormModal({ exercise, exercises, internalNotes, 
               <select
                 value={form.target_muscle}
                 onChange={(e) => set("target_muscle", e.target.value)}
+                required
                 className="w-full border-b-2 border-accent/30 p-2 bg-transparent focus:border-focus focus:ring-2 focus:ring-focus outline-none text-fg font-bold"
               >
                 <option value="" className="on-light bg-surface">
