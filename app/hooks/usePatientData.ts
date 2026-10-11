@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/app/lib/supabase";
 import { useAuth } from "@/app/context/AuthContext";
 import type { HydratedPatientExercise } from "@/app/hooks/useWorkoutSession";
-import type { Exercise, PatientExercise, WorkoutFormat, WorkoutLog } from "@/app/types";
+import type { Exercise, PatientExercise, PatientProgram, WorkoutFormat, WorkoutLog } from "@/app/types";
 
 // Fetches everything the patient side needs: this patient's assigned
 // exercises (joined with the exercise catalog client-side, matching the
@@ -16,6 +16,7 @@ export function usePatientData() {
   const [patientExercises, setPatientExercises] = useState<HydratedPatientExercise[]>([]);
   const [exerciseCatalog, setExerciseCatalog] = useState<Exercise[]>([]);
   const [workoutLogs, setWorkoutLogs] = useState<WorkoutLog[]>([]);
+  const [programs, setPrograms] = useState<PatientProgram[]>([]);
   // False until the first fetch settles — lets screens show a skeleton
   // instead of their empty state ("no plan", "no data yet") for the second
   // before the real data lands.
@@ -43,7 +44,11 @@ export function usePatientData() {
       // exercise in the plan/catalog carries it — see getExerciseMediaItems.
       supabase.from("exercises").select("*, media:exercise_media(*)"),
       supabase.from("workout_logs").select("*").eq("patient_id", loggedInPatient.id).order("created_at", { ascending: false }),
-      supabase.from("patient_programs").select("id, name, format, time_cap_seconds").eq("patient_id", loggedInPatient.id),
+      supabase
+        .from("patient_programs")
+        .select("id, patient_id, name, format, time_cap_seconds, weekly_target, patient_edited_at, is_self_added, created_at")
+        .eq("patient_id", loggedInPatient.id)
+        .order("created_at", { ascending: true }),
     ]);
     const programById = new Map((programs.data ?? []).map((p) => [p.id as string, p as { name: string; format: WorkoutFormat; time_cap_seconds: number | null }]));
 
@@ -69,6 +74,7 @@ export function usePatientData() {
     }
     if (exs.data) setExerciseCatalog(exerciseRows);
     if (logs.data) setWorkoutLogs(logs.data as WorkoutLog[]);
+    if (programs.data) setPrograms(programs.data as PatientProgram[]);
     setHasLoaded(true);
     // Depend on the id, not the whole object: AuthContext calls
     // setLoggedInPatient() with a brand-new object on every auth event that
@@ -86,5 +92,5 @@ export function usePatientData() {
     fetchPatientData();
   }, [fetchPatientData]);
 
-  return { patientExercises, exerciseCatalog, workoutLogs, hasLoaded, refetch: fetchPatientData };
+  return { patientExercises, exerciseCatalog, workoutLogs, programs, hasLoaded, refetch: fetchPatientData };
 }

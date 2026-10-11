@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState, type SetStateAction } from "react";
 import { AlertCircle, CalendarDays, Compass, Crown, Dumbbell, Home as HomeIcon } from "lucide-react";
 import { useAuth } from "@/app/context/AuthContext";
 import { useHaptics } from "@/app/hooks/useHaptics";
@@ -28,6 +28,9 @@ import { getDiyPrescription } from "@/app/utils/diy";
 import type { SessionExercise } from "@/app/hooks/useWorkoutSession";
 import AmrapPlayer, { type AmrapSessionConfig, type AmrapStation } from "@/app/components/patient/workout/AmrapPlayer";
 import { notify } from "@/app/components/ui/feedback";
+import { supabase } from "@/app/lib/supabase";
+import { buildWeekPlan, DAY_NAMES, type PlannedWorkout, type ProgramQueueEntry } from "@/app/utils/programQueue";
+import { assignedEntryToDraft, draftToSessionsPayload, type AssignedProgramDraft } from "@/app/utils/assignedProgramEdit";
 
 type PatientTab = "plan" | "calendar" | "diy" | "explore" | "premium" | "profile";
 
@@ -49,6 +52,9 @@ export default function PatientShell() {
   // the hub), with diyNav as the direction of the last push for the slide.
   const [showMyWorkouts, setShowMyWorkouts] = useState(false);
   const [diyNav, setDiyNav] = useState<"forward" | "back" | null>(null);
+  // An assigned program open in the builder for the patient to edit — kept
+  // apart from the DIY draft so editing one never overwrites the other.
+  const [assignedDraft, setAssignedDraft] = useState<AssignedProgramDraft | null>(null);
   const [editingSavedProgramId, setEditingSavedProgramId] = useState<string | null>(null);
   // A regular Explore workout running through the player with its own
   // blocks/sets/reps (see useWorkoutSession's adHocSession).
@@ -89,6 +95,12 @@ export default function PatientShell() {
     onWorkoutLogged: patientData.refetch,
   });
 
+  // This week's plan: every program's planned workouts with done/open status.
+  const queue = useMemo(
+    () => buildWeekPlan(patientData.patientExercises, patientData.programs, patientData.workoutLogs),
+    [patientData.patientExercises, patientData.programs, patientData.workoutLogs]
+  );
+
   if (!loggedInPatient) return null;
 
   // Bottom-nav tab switches always exit DIY mode; the header avatar button
@@ -117,21 +129,14 @@ export default function PatientShell() {
     setBuilderOpen(false);
     setShowMyWorkouts(false);
     setDiyNav(null);
+    setAssignedDraft(null);
   };
 
-  // Calendar tab hands off to the existing Plan tab day view rather than
-  // rendering its own exercise list - jump to the matching week/day there.
-  const handleSelectCalendarDate = (week: number, dayId: string, date: Date, programName: string) => {
-    planSelection.setPatientSelectedWeek(week);
-    planSelection.setSelectedDayFilter(dayId);
+  // Calendar -> Plan tab, opened on that planned workout. (Called from a
+  // tap, after handleOpenProgram below is defined.)
+  const handleOpenPlannedFromCalendar = (entry: ProgramQueueEntry, item: PlannedWorkout) => {
     switchTab("plan");
-    // After switchTab (which resets it to today): one-time workouts are
-    // matched against the week of the picked date.
-    planSelection.setReferenceDate(date);
-    // Open the tapped program's day directly — without this the Plan tab
-    // showed whichever program came first that day, so a second program's
-    // card opened the first one.
-    planSelection.setSelectedCategory(programName);
+    handleOpenProgram(entry, item);
   };
 
   // Hydrates a saved program day's ordered exercise_ids (and their
@@ -286,10 +291,73 @@ export default function PatientShell() {
         title: amrapRow.program_name ?? "AMRAP",
         timeCapSeconds: amrapRow.program_time_cap_seconds,
         stations: rows.map((pe) => ({ exercise: pe.exercise, reps: Number(pe.reps) || 0, reps_max: pe.reps_max ?? null, is_time: pe.is_time })),
+        queueLogRef: session.queueLogRef,
       });
       return;
     }
     session.handleStartClick();
+  };
+
+  // Opening a planned workout on the Plan tab: its program, program week
+  // and day (selectedDayFilter = its slot, which its log is recorded under —
+  // so doing Sunday's workout on Monday still completes Sunday).
+  const handleOpenProgram = (entry: ProgramQueueEntry, item: PlannedWorkout) => {
+    planSelection.setSelectedCategory(entry.name);
+    planSelection.setSelectedDayFilter(item.slotKey);
+    if (entry.currentWeek != null) planSelection.setPatientSelectedWeek(entry.currentWeek);
+    // A dated workout is matched against the week its date falls in.
+    planSelection.setReferenceDate(entry.scheduledDate ? new Date(`${entry.scheduledDate}T00:00:00`) : new Date());
+  };
+
+  const handleEditAssignedProgram = (entry: ProgramQueueEntry) => {
+    const draft = assignedEntryToDraft(entry);
+    if (draft) setAssignedDraft(draft);
+  };
+
+  const setAssignedByDay = (action: SetStateAction<Record<number, DiyExercise[]>>) =>
+    setAssignedDraft((prev) => (prev ? { ...prev, byDay: typeof action === "function" ? action(prev.byDay) : action } : prev));
+
+  const addAssignedDay = () =>
+    setAssignedDraft((prev) => {
+      if (!prev) return prev;
+      const next = Math.max(0, ...Object.keys(prev.byDay).map(Number)) + 1;
+      return { ...prev, byDay: { ...prev.byDay, [next]: [] }, activeDay: next };
+    });
+
+  const removeAssignedDay = (day: number) =>
+    setAssignedDraft((prev) => {
+      if (!prev) return prev;
+      const remaining = Object.keys(prev.byDay).map(Number).filter((d) => d !== day);
+      if (remaining.length === 0) return prev;
+      const byDay = { ...prev.byDay };
+      delete byDay[day];
+      return { ...prev, byDay, activeDay: prev.activeDay === day ? Math.min(...remaining) : prev.activeDay };
+    });
+
+  // Saving replaces the program's current week (patient_save_program_week);
+  // the therapist then sees it as edited by the patient.
+  const handleSaveAssignedProgram = async () => {
+    if (!assignedDraft) return;
+    const sessions = draftToSessionsPayload(assignedDraft);
+    if (sessions.length === 0) {
+      notify("צריך לפחות אימון אחד עם תרגילים.", "info");
+      throw new Error("empty");
+    }
+    const { error } = await supabase.rpc("patient_save_program_week", {
+      p_program_id: assignedDraft.programId,
+      p_week: assignedDraft.week,
+      p_name: assignedDraft.name,
+      p_sessions: sessions,
+    });
+    if (error) {
+      notify(`שגיאה בשמירה: ${error.message}`, "error");
+      throw error;
+    }
+    await patientData.refetch();
+    planSelection.setSelectedCategory(assignedDraft.name.trim() || planSelection.selectedCategory);
+    planSelection.setSelectedDayFilter(sessions[0].days?.split(",")[0] ?? "all");
+    setAssignedDraft(null);
+    notify("השינויים נשמרו — התוכנית עכשיו שלך");
   };
 
   const handleRemoveExploreProgram = async (programId: string) => {
@@ -305,6 +373,44 @@ export default function PatientShell() {
         <AmrapPlayer config={amrapConfig} triggerHaptic={triggerHaptic} onClose={() => setAmrapConfig(null)} onLogged={patientData.refetch} />
       )}
       <PasskeyPrompt />
+      {assignedDraft && (
+        <DiyBuilderTab
+          variant="assigned"
+          maxDays={7}
+          labelForDay={(day) => {
+            const slots = assignedDraft.slotKeysByDay[day] ?? [];
+            if (slots.length === 0) return Object.keys(assignedDraft.byDay).length > 1 ? `אימון ${day}` : "האימון";
+            return slots.length === 7 ? "כל יום" : slots.map((d) => DAY_NAMES[Number(d)]).join(" + ");
+          }}
+          assignedNote={[
+            assignedDraft.week != null ? `השינויים חלים על שבוע ${assignedDraft.week} בתוכנית.` : null,
+            "המטפל שלך יראה שערכת את התוכנית.",
+          ]
+            .filter(Boolean)
+            .join(" ")}
+          exerciseCatalog={patientData.exerciseCatalog}
+          onViewExerciseInfo={(exercise) => session.setViewingExInfo(exercise)}
+          diyEquipFilter={planSelection.diyEquipFilter}
+          setDiyEquipFilter={planSelection.setDiyEquipFilter}
+          diyCategoryFilter={planSelection.diyCategoryFilter}
+          setDiyCategoryFilter={planSelection.setDiyCategoryFilter}
+          diyBodyPartFilter={planSelection.diyBodyPartFilter}
+          setDiyBodyPartFilter={planSelection.setDiyBodyPartFilter}
+          diyExercisesByDay={assignedDraft.byDay}
+          setDiyExercisesByDay={setAssignedByDay}
+          diyActiveDay={assignedDraft.activeDay}
+          setDiyActiveDay={(day) => setAssignedDraft((prev) => (prev ? { ...prev, activeDay: day } : prev))}
+          onAddDiyDay={addAssignedDay}
+          onRemoveDiyDay={removeAssignedDay}
+          diyProgramName={assignedDraft.name}
+          setDiyProgramName={(name) => setAssignedDraft((prev) => (prev ? { ...prev, name } : prev))}
+          onStartDiyWorkoutNow={() => {}}
+          onSaveDiyProgram={handleSaveAssignedProgram}
+          isEditingSavedProgram={false}
+          onCancelEditSavedProgram={() => {}}
+          onClose={() => setAssignedDraft(null)}
+        />
+      )}
       {patientTab === "diy" && builderOpen && (
         <DiyBuilderTab
           exerciseCatalog={patientData.exerciseCatalog}
@@ -491,10 +597,8 @@ export default function PatientShell() {
           {patientTab === "profile" && (
             <ProfileTab
               workoutLogs={patientData.workoutLogs}
-              reminderTime={reminders.reminderTime}
-              setReminderTime={reminders.setReminderTime}
-              reminderDays={reminders.reminderDays}
-              setReminderDays={reminders.setReminderDays}
+              reminderSchedule={reminders.reminderSchedule}
+              setReminderDayTime={reminders.setReminderDayTime}
               onSaveSettings={reminders.handleSaveSettings}
               hapticsEnabled={hapticsEnabled}
               setHapticsEnabled={setHapticsEnabled}
@@ -511,11 +615,9 @@ export default function PatientShell() {
               selectedCategory={planSelection.selectedCategory}
               setSelectedCategory={planSelection.setSelectedCategory}
               selectedDayFilter={planSelection.selectedDayFilter}
-              setSelectedDayFilter={planSelection.setSelectedDayFilter}
               activePatientWeek={planSelection.activePatientWeek}
               isDiyMode={planSelection.isDiyMode}
               diyProgramName={planSelection.diyProgramName}
-              patientCategories={session.patientCategories}
               weekFilteredExercises={session.weekFilteredPatientExercises}
               displayedExercises={session.displayedExercises}
               blocksMap={session.blocksMap}
@@ -527,16 +629,21 @@ export default function PatientShell() {
               hasAnyAssignedExercises={patientData.patientExercises.length > 0}
               starterPrograms={explore.freePrograms.slice(0, 3)}
               onAddStarterProgram={handleAddExploreProgram}
+              queue={queue}
+              onOpenProgram={handleOpenProgram}
+              onEditProgram={handleEditAssignedProgram}
+              queueLogRef={session.queueLogRef}
             />
           )}
 
           {patientTab === "calendar" && (
             <CalendarTab
               patientExercises={patientData.patientExercises}
+              programs={patientData.programs}
               workoutLogs={patientData.workoutLogs}
               patientId={loggedInPatient.id}
-              programStartDate={loggedInPatient.created_at || new Date().toISOString()}
-              onSelectDate={handleSelectCalendarDate}
+              onOpenPlanned={handleOpenPlannedFromCalendar}
+              onLogged={patientData.refetch}
               onBrowsePrograms={loggedInPatient.patient_type === "fitness" ? () => switchTab("explore") : undefined}
             />
           )}

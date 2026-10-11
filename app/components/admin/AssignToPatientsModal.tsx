@@ -8,9 +8,10 @@ import type { Patient } from "@/app/types";
 import { MAX_CATALOG_TITLE_LENGTH } from "@/app/utils/validation";
 
 // When an assigned single workout shows up in the patient's plan: on fixed
-// weekdays every week, or once on a specific date. Program templates carry
+// weekdays every week (marking it done on another day still counts), every
+// week with a weekly goal and no fixed days, or once on a specific date. Program templates carry
 // their own week/day layout, so they don't ask for this.
-export type AssignSchedule = { kind: "weekdays"; days: string[] } | { kind: "date"; date: string };
+export type AssignSchedule = { kind: "weekdays"; days: string[] } | { kind: "weekly"; timesPerWeek: number } | { kind: "date"; date: string };
 
 export interface AssignResult {
   failed: { patientName: string; message: string }[];
@@ -34,8 +35,9 @@ export default function AssignToPatientsModal({ heading, subtitle, defaultProgra
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [query, setQuery] = useState("");
   const [programName, setProgramName] = useState(defaultProgramName);
-  const [scheduleKind, setScheduleKind] = useState<"weekdays" | "date">("weekdays");
+  const [scheduleKind, setScheduleKind] = useState<"weekdays" | "weekly" | "date">("weekdays");
   const [days, setDays] = useState<string[]>([String(new Date().getDay())]);
+  const [timesPerWeek, setTimesPerWeek] = useState(2);
   const [date, setDate] = useState(toDateKey(new Date()));
   const [isSaving, setIsSaving] = useState(false);
 
@@ -51,14 +53,15 @@ export default function AssignToPatientsModal({ heading, subtitle, defaultProgra
     const ids = visible.map((p) => String(p.id));
     setSelectedIds((prev) => (allVisibleSelected ? prev.filter((id) => !ids.includes(id)) : Array.from(new Set([...prev, ...ids]))));
   };
+
   const toggleDay = (id: string) => setDays((prev) => (prev.includes(id) ? prev.filter((d) => d !== id) : [...prev, id].sort()));
 
-  const scheduleValid = !askSchedule || (scheduleKind === "weekdays" ? days.length > 0 : Boolean(date));
+  const scheduleValid = !askSchedule || (scheduleKind === "weekdays" ? days.length > 0 : scheduleKind === "weekly" || Boolean(date));
   const canSubmit = selectedIds.length > 0 && programName.trim() !== "" && scheduleValid && !isSaving;
 
   const submit = async () => {
     if (!canSubmit) return;
-    const schedule: AssignSchedule | null = askSchedule ? (scheduleKind === "weekdays" ? { kind: "weekdays", days } : { kind: "date", date }) : null;
+    const schedule: AssignSchedule | null = askSchedule ? (scheduleKind === "weekdays" ? { kind: "weekdays", days } : scheduleKind === "weekly" ? { kind: "weekly", timesPerWeek } : { kind: "date", date }) : null;
     setIsSaving(true);
     const { failed } = await onAssign(selectedIds, programName.trim(), schedule);
     setIsSaving(false);
@@ -145,8 +148,9 @@ export default function AssignToPatientsModal({ heading, subtitle, defaultProgra
               <div className="flex bg-surface-alt p-1 rounded-xl border border-line mb-3">
                 {(
                   [
-                    ["weekdays", "ימים קבועים בכל שבוע"],
-                    ["date", "פעם אחת בתאריך"],
+                    ["weekdays", "ימים קבועים"],
+                    ["weekly", "X פעמים בשבוע"],
+                    ["date", "תאריך אחד"],
                   ] as const
                 ).map(([kind, label]) => (
                   <button
@@ -170,6 +174,22 @@ export default function AssignToPatientsModal({ heading, subtitle, defaultProgra
                       className={`px-3 py-1.5 rounded-lg font-bold text-xs transition-colors ${days.includes(day.id) ? "bg-accent text-on-accent" : "bg-surface-alt text-muted border border-line"}`}
                     >
                       {day.label}
+                    </button>
+                  ))}
+                </div>
+              ) : scheduleKind === "weekly" ? (
+                // No fixed days: the patient does it whenever suits them;
+                // this is only their weekly goal.
+                <div className="flex flex-wrap gap-1.5">
+                  {[1, 2, 3, 4, 5, 6, 7].map((n) => (
+                    <button
+                      key={n}
+                      type="button"
+                      onClick={() => setTimesPerWeek(n)}
+                      aria-pressed={timesPerWeek === n}
+                      className={`px-3 py-1.5 rounded-lg font-bold text-xs transition-colors ${timesPerWeek === n ? "bg-accent text-on-accent" : "bg-surface-alt text-muted border border-line"}`}
+                    >
+                      {n === 1 ? "פעם בשבוע" : `${n}× בשבוע`}
                     </button>
                   ))}
                 </div>

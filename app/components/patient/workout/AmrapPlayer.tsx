@@ -10,7 +10,7 @@ import { countLabel, formatRepTarget, getExerciseName } from "@/app/utils/format
 import { ExerciseMediaPlayer } from "@/app/components/ExerciseMedia";
 import { SimulationBanner } from "@/app/components/patient/workout/WorkoutPlayer";
 import type { HapticType } from "@/app/hooks/useHaptics";
-import type { Exercise } from "@/app/types";
+import type { Exercise, QueueLogRef } from "@/app/types";
 import { confirmAction, notify } from "@/app/components/ui/feedback";
 
 export interface AmrapStation {
@@ -24,6 +24,7 @@ export interface AmrapSessionConfig {
   title: string;
   timeCapSeconds: number;
   stations: AmrapStation[];
+  queueLogRef?: QueueLogRef | null; // an assigned program's AMRAP: which workout it was
 }
 
 interface AmrapPlayerProps {
@@ -127,6 +128,7 @@ export default function AmrapPlayer({ config, triggerHaptic, onClose, onLogged, 
       {
         patient_id: loggedInPatient.id,
         category: config.title,
+        ...(config.queueLogRef ?? {}),
         rpe,
         pain_before: null,
         pain_after: null,

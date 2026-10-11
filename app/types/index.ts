@@ -24,8 +24,9 @@ export interface Patient {
   // (PatientShell.tsx, PremiumStoreTab.tsx, PlanTab.tsx) are out of scope
   // for this pass and still reference it, so it's left in place for now.
   email_verified?: boolean;
-  reminder_time?: string; // "HH:MM"
-  reminder_days?: string; // comma-separated DAYS_OF_WEEK ids
+  reminder_time?: string; // legacy: one time for every reminder day (superseded by reminder_schedule)
+  reminder_days?: string; // legacy: comma-separated DAYS_OF_WEEK ids
+  reminder_schedule?: Record<string, string> | null; // DAYS_OF_WEEK id -> "HH:MM", a time per day
   onboarding_completed_at?: string | null; // null = hasn't finished the onboarding wizard yet
   created_at?: string;
 }
@@ -190,6 +191,9 @@ export interface PatientProgram {
   is_self_added?: boolean; // added by the patient from Explore (they may remove it)
   format?: WorkoutFormat; // "amrap" programs run in the AMRAP player
   time_cap_seconds?: number | null;
+  weekly_target?: number | null; // weekly goal for a program with no fixed days ("3 times a week"); null = every day
+  patient_edited_at?: string | null; // set once the patient has edited it (see patient_save_program_week)
+  original_rows?: Record<string, unknown>[] | null; // the rows as assigned, captured at the patient's first edit
   created_at: string;
 }
 
@@ -213,6 +217,15 @@ export interface PatientExercise {
   weight_kg?: number | null; // optional prescribed weight; null = nothing shown to the patient
 }
 
+// Which planned workout a log is for — written alongside every workout_logs
+// row from an assigned program, so a workout done on another day still
+// completes its own planned day (app/utils/programQueue.ts).
+export interface QueueLogRef {
+  program_id: string;
+  program_week: number | null;
+  session_key: string;
+}
+
 export interface SessionPerformanceEntry {
   exercise_id: string;
   set_number: number;
@@ -233,6 +246,10 @@ export interface WorkoutLog {
   result_rounds?: number | null; // AMRAP: completed rounds
   result_extra_reps?: number | null; // AMRAP: reps into the unfinished round
   is_quick_log?: boolean; // logged afterwards from the plan screen, not run in the player
+  // Which planned workout this was (see QueueLogRef).
+  program_id?: string | null;
+  program_week?: number | null;
+  session_key?: string | null;
   created_at: string;
 }
 
@@ -262,8 +279,11 @@ export interface DiyPrescription {
 }
 
 // A DIY builder draft entry: the catalog exercise plus its prescription.
+// `assigned` carries the fields of an assigned program's row that the
+// builder doesn't edit, so editing a therapist's program keeps them.
 export interface DiyExercise extends Exercise {
   prescription?: DiyPrescription;
+  assigned?: { block: string; reps: number; reps_max: number | null; rir: number | null; weight_kg: number | null; notes: string };
 }
 
 // One ordinal day (Day 1, Day 2, ...) within a saved weekly program — not

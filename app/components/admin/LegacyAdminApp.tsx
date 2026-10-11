@@ -45,6 +45,8 @@ import AdminSidebar from "@/app/components/admin/AdminSidebar";
 import AdminCoPilotDrawer from "@/app/components/admin/AdminCoPilotDrawer";
 import WorkoutBuilderTab from "@/app/components/admin/tabs/WorkoutBuilderTab";
 import ProgramLibraryTab from "@/app/components/admin/tabs/ProgramLibraryTab";
+import PatientProgramMeta from "@/app/components/admin/PatientProgramMeta";
+import PatientBuiltProgramsPanel from "@/app/components/admin/PatientBuiltProgramsPanel";
 import ExerciseLibraryTab from "@/app/components/admin/tabs/ExerciseLibraryTab";
 import { formatAdminDate, formatRepTarget, formatWeightKg, getExerciseName, parseRepInput, parseWeightInput } from "@/app/utils/format";
 import { getAIInsight } from "@/app/utils/scoring";
@@ -1455,6 +1457,15 @@ export default function LegacyAdminApp() {
                           <p className="text-xs font-bold text-muted mt-0.5">
                             {group.program ? "תוכנית משויכת" : "נשמר ע״י המטופל מבונה האימונים"} · {group.items.length} תרגילים
                           </p>
+                          {group.program && (
+                            <PatientProgramMeta
+                              program={group.program}
+                              hasFixedDays={group.items.some((a) => !!a.scheduled_days)}
+                              exercises={exercises}
+                              lang={lang}
+                              onChanged={() => fetchManagePatientExercises(managePatientId)}
+                            />
+                          )}
                         </div>
                         {group.program && (
                           <div className="flex gap-2">
@@ -1638,6 +1649,12 @@ export default function LegacyAdminApp() {
                       ))}
                     </section>
                   ))}
+                </div>
+              )}
+
+              {managePatientId && (
+                <div className="mt-12">
+                  <PatientBuiltProgramsPanel key={managePatientId} patientId={managePatientId} exercises={exercises} lang={lang} />
                 </div>
               )}
             </div>

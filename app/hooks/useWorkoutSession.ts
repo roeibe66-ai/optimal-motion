@@ -6,7 +6,7 @@ import { useAuth } from "@/app/context/AuthContext";
 import type { HapticType } from "@/app/hooks/useHaptics";
 import { getExerciseName, parseWeightInput } from "@/app/utils/format";
 import { getLastUsedWeights, parsePerformance } from "@/app/utils/history";
-import type { DiyExercise, Exercise, PatientExercise, SessionPerformanceEntry, WorkoutFormat, WorkoutLog } from "@/app/types";
+import type { DiyExercise, Exercise, PatientExercise, QueueLogRef, SessionPerformanceEntry, WorkoutFormat, WorkoutLog } from "@/app/types";
 import { confirmAction, notify } from "@/app/components/ui/feedback";
 import { getDiyPrescription } from "@/app/utils/diy";
 
@@ -213,6 +213,18 @@ export function useWorkoutSession({
     if (!pe.scheduled_days || pe.scheduled_days.trim() === "") return true;
     return pe.scheduled_days.split(",").includes(selectedDayFilter);
   });
+
+  // The planned workout on screen (selectedDayFilter = its planned day),
+  // recorded with its log so doing it on another day still completes that
+  // day (app/utils/programQueue.ts).
+  const queueLogRef: QueueLogRef | null =
+    !isDiyMode && displayedExercises[0]?.program_id
+      ? {
+          program_id: displayedExercises[0].program_id,
+          program_week: displayedExercises.some((pe) => pe.week != null) ? activePatientWeek : null,
+          session_key: selectedDayFilter,
+        }
+      : null;
 
   const blocksMap: Record<string, SessionExercise[]> = {};
 
@@ -713,6 +725,7 @@ export function useWorkoutSession({
         pain_after: loggedInPatient.patient_type === "fitness" ? null : postPain,
         pain_areas: selectedPainAreas.length > 0 ? selectedPainAreas.join(",") : null,
         performance_data: sessionPerformance.length > 0 ? JSON.stringify(sessionPerformance) : null,
+        ...(queueLogRef ?? {}),
       },
     ]);
 
@@ -779,6 +792,8 @@ export function useWorkoutSession({
     setSelectedPainAreas,
     confirmPainAreas,
     confirmPreWorkout,
+
+    queueLogRef,
 
     // session entry/exit
     isWorkoutMode,

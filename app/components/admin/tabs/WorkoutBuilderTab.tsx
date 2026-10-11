@@ -116,14 +116,23 @@ export default function WorkoutBuilderTab({ exercises, patients, lang }: Workout
 
   // Mirrors add_published_workout_to_my_programs (the patient's own "add to
   // my plan" RPC), but admin-side and for any workout, published or not:
-  // week null = recurs every week on the chosen weekdays; a one-time date
-  // pins it to that date's weekday.
+  // week null = recurs every week (on fixed weekdays, or flexible with a
+  // weekly goal); a one-time date pins it to that date.
   const handleAssign = async (workout: Workout, patientIds: string[], programName: string, schedule: AssignSchedule | null): Promise<AssignResult> => {
     const failed: AssignResult["failed"] = [];
     const isAmrap = workout.format === "amrap";
     const scheduledDate = schedule?.kind === "date" ? schedule.date : null;
+    // Fixed weekdays pin it to those days; "X times a week" has no slot of
+    // its own, only the program's weekly goal.
     const scheduledDays =
-      schedule?.kind === "date" ? String(new Date(`${schedule.date}T00:00:00`).getDay()) : schedule?.kind === "weekdays" ? schedule.days.join(",") : String(new Date().getDay());
+      schedule?.kind === "date"
+        ? String(new Date(`${schedule.date}T00:00:00`).getDay())
+        : schedule?.kind === "weekdays"
+          ? schedule.days.join(",")
+          : schedule?.kind === "weekly"
+            ? null
+            : String(new Date().getDay());
+    const weeklyTarget = schedule?.kind === "weekly" ? schedule.timesPerWeek : null;
 
     for (const patientId of patientIds) {
       const { data: program, error: programErr } = await supabase
@@ -135,6 +144,7 @@ export default function WorkoutBuilderTab({ exercises, patients, lang }: Workout
             source_workout_id: workout.id,
             format: workout.format,
             time_cap_seconds: workout.time_cap_seconds ?? null,
+            weekly_target: weeklyTarget,
           },
         ])
         .select()

@@ -14,10 +14,8 @@ import { countLabel } from "@/app/utils/format";
 
 interface ProfileTabProps {
   workoutLogs: WorkoutLog[];
-  reminderTime: string;
-  setReminderTime: (value: string) => void;
-  reminderDays: string[];
-  setReminderDays: Dispatch<SetStateAction<string[]>>;
+  reminderSchedule: Record<string, string>; // DAYS_OF_WEEK id -> "HH:MM"
+  setReminderDayTime: (day: string, time: string | null) => void; // null = no reminder that day
   onSaveSettings: () => void;
   hapticsEnabled: boolean;
   setHapticsEnabled: Dispatch<SetStateAction<boolean>>;
@@ -36,10 +34,8 @@ const THEME_OPTIONS: { id: ThemeSetting; label: string }[] = [
 
 export default function ProfileTab({
   workoutLogs,
-  reminderTime,
-  setReminderTime,
-  reminderDays,
-  setReminderDays,
+  reminderSchedule,
+  setReminderDayTime,
   onSaveSettings,
   hapticsEnabled,
   setHapticsEnabled,
@@ -185,40 +181,53 @@ export default function ProfileTab({
             <div className="flex items-center gap-3">
               <Bell size={18} className="text-muted" />
               <div className="text-right">
-                <h4 className="font-bold text-fg text-sm">התראות אימון (Push)</h4>
-                <p className="text-xs text-muted">בחר שעה וימים לקבלת תזכורת</p>
+                <h4 className="font-bold text-fg text-sm">תזכורות אימון</h4>
+                <p className="text-xs text-muted">שעה נפרדת לכל יום. התזכורת מופיעה כשהאפליקציה פתוחה.</p>
               </div>
             </div>
 
-            <div className="on-light bg-surface-alt p-4 rounded-xl flex flex-col md:flex-row gap-4 items-center">
-              <input
-                type="time"
-                value={reminderTime}
-                onChange={(e) => setReminderTime(e.target.value)}
-                className="on-light text-center font-black text-fg border border-line-input rounded-lg p-2 focus:border-focus focus:ring-2 focus:ring-focus outline-none bg-surface"
-              />
-              <div className="flex flex-wrap justify-center gap-1">
-                {DAYS_OF_WEEK.map((day) => {
-                  const isSelected = reminderDays.includes(day.id);
-                  return (
+            {/* A time per day: Monday at 17:00 and Wednesday at 08:00 is
+                fine. Tapping a day turns it on with the last time used. */}
+            <div className="on-light bg-surface-alt p-3 rounded-xl flex flex-col gap-1">
+              {DAYS_OF_WEEK.map((day) => {
+                const time = reminderSchedule[day.id];
+                const isOn = time !== undefined;
+                const fallbackTime = Object.values(reminderSchedule)[0] ?? "18:00";
+                return (
+                  <div key={day.id} className="flex items-center justify-between gap-3 min-h-11">
                     <button
-                      key={day.id}
                       type="button"
-                      onClick={() => setReminderDays((prev) => (isSelected ? prev.filter((d) => d !== day.id) : [...prev, day.id]))}
-                      className={`w-8 h-8 rounded-lg font-bold text-xs transition-ui duration-150 ease-out active:scale-90 ${
-                        isSelected ? "bg-accent text-on-accent shadow-sm scale-105" : "bg-surface text-muted hover:bg-surface-alt border border-line-input"
-                      }`}
+                      role="switch"
+                      aria-checked={isOn}
+                      onClick={() => setReminderDayTime(day.id, isOn ? null : fallbackTime)}
+                      className="flex items-center gap-2.5 flex-1 text-start py-1.5 active:scale-[0.98] transition-ui duration-150 ease-out"
                     >
-                      {lang === "he" ? day.he_short : day.short}
+                      <span
+                        className={`w-5 h-5 rounded-md flex items-center justify-center shrink-0 transition-colors ${
+                          isOn ? "bg-accent text-on-accent" : "bg-surface border border-line-input"
+                        }`}
+                      >
+                        {isOn && <CheckCircle size={13} />}
+                      </span>
+                      <span className={`text-sm font-bold ${isOn ? "text-fg" : "text-muted"}`}>{lang === "he" ? day.label : day.short}</span>
                     </button>
-                  );
-                })}
-              </div>
+                    {isOn && (
+                      <input
+                        type="time"
+                        value={time}
+                        aria-label={`שעת תזכורת ביום ${day.label}`}
+                        onChange={(e) => setReminderDayTime(day.id, e.target.value)}
+                        className="on-light text-center font-black text-fg text-base border border-line-input rounded-lg px-2 py-1.5 focus:border-focus focus:ring-2 focus:ring-focus outline-none bg-surface tabular-nums"
+                      />
+                    )}
+                  </div>
+                );
+              })}
               <button
                 onClick={onSaveSettings}
-                className="bg-btn-primary hover:bg-btn-primary-hover active:bg-btn-primary-active text-btn-primary-fg px-4 py-2 rounded-lg text-sm font-bold active:scale-95 transition-ui duration-150 ease-out w-full md:w-auto"
+                className="mt-2 bg-btn-primary hover:bg-btn-primary-hover active:bg-btn-primary-active text-btn-primary-fg px-4 py-2.5 rounded-lg text-sm font-bold active:scale-95 transition-ui duration-150 ease-out"
               >
-                שמור
+                שמור תזכורות
               </button>
             </div>
           </div>

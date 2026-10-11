@@ -34,8 +34,7 @@ function TabBody({ tab, fixture }: { tab: TabId; fixture: TabsFixture }) {
   const [days, setDays] = useState<Record<number, DiyExercise[]>>(fixture.diyDays);
   const [activeDay, setActiveDay] = useState(Number(Object.keys(fixture.diyDays)[0] ?? 1));
   const [programName, setProgramName] = useState("");
-  const [reminderTime, setReminderTime] = useState("18:00");
-  const [reminderDays, setReminderDays] = useState<string[]>(["0", "2", "4"]);
+  const [reminderSchedule, setReminderSchedule] = useState<Record<string, string>>({ "1": "17:00", "3": "08:00" });
   const [haptics, setHaptics] = useState(true);
   const [builderOpen, setBuilderOpen] = useState(true);
 
@@ -45,8 +44,9 @@ function TabBody({ tab, fixture }: { tab: TabId; fixture: TabsFixture }) {
         patientExercises={fixture.patientExercises}
         workoutLogs={fixture.workoutLogs}
         patientId="-1"
-        programStartDate={fixture.programStartDate}
-        onSelectDate={() => {}}
+        programs={[]}
+        onOpenPlanned={() => {}}
+        onLogged={() => {}}
         onBrowsePrograms={() => {}}
       />
     );
@@ -114,10 +114,15 @@ function TabBody({ tab, fixture }: { tab: TabId; fixture: TabsFixture }) {
   return (
     <ProfileTab
       workoutLogs={fixture.workoutLogs}
-      reminderTime={reminderTime}
-      setReminderTime={setReminderTime}
-      reminderDays={reminderDays}
-      setReminderDays={setReminderDays}
+      reminderSchedule={reminderSchedule}
+      setReminderDayTime={(day, time) =>
+        setReminderSchedule((prev) => {
+          const next = { ...prev };
+          if (time === null) delete next[day];
+          else next[day] = time;
+          return next;
+        })
+      }
       onSaveSettings={() => {}}
       hapticsEnabled={haptics}
       setHapticsEnabled={setHaptics}

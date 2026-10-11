@@ -3,12 +3,15 @@
 import { useState, type UIEvent } from "react";
 import {
   ArrowDown,
+  Check,
+  CheckCircle2,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
   ClipboardCheck,
   Dumbbell,
   Play,
+  Pencil,
   Plus,
   Sparkles,
   Timer,
@@ -18,10 +21,11 @@ import {
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip as RechartsTooltip, XAxis, YAxis } from "recharts";
 import { useAuth } from "@/app/context/AuthContext";
 import { countLabel, formatRepTarget, formatTime, formatWeightKg, getExerciseName, getWorkoutMuscleAggregation, type WorkoutMuscleAggregation } from "@/app/utils/format";
-import { AVAILABLE_MUSCLES, DAYS_OF_WEEK, DEFAULT_TRACK_GLOW, EQUIPMENT_LIST, TRACK_GLOW_TINTS } from "@/app/constants/catalog";
-import type { AIAssistantContext, CuratedFact, Exercise, ExploreProgram, WorkoutLog } from "@/app/types";
+import { AVAILABLE_MUSCLES, DEFAULT_TRACK_GLOW, EQUIPMENT_LIST, TRACK_GLOW_TINTS } from "@/app/constants/catalog";
+import type { AIAssistantContext, CuratedFact, Exercise, ExploreProgram, QueueLogRef, WorkoutLog } from "@/app/types";
+import { blocksOf, DAY_NAMES, dayNameOfKey, plannedLabel, queueRefFor, type PlannedWorkout, type ProgramQueueEntry } from "@/app/utils/programQueue";
 import { dailyWorkoutImage, dominantWorkoutCategory, programWorkoutImage } from "@/app/utils/workoutImages";
-import { programNameOf, type HydratedPatientExercise, type SessionExercise } from "@/app/hooks/useWorkoutSession";
+import { toDateKey, type HydratedPatientExercise, type SessionExercise } from "@/app/hooks/useWorkoutSession";
 import PatientCoachSheet from "@/app/components/patient/PatientCoachSheet";
 import { FEATURES } from "@/app/constants/features";
 import AnatomyHeatmap from "@/app/components/AnatomyHeatmap";
@@ -35,11 +39,9 @@ interface PlanTabProps {
   selectedCategory: string | null;
   setSelectedCategory: (category: string | null) => void;
   selectedDayFilter: string;
-  setSelectedDayFilter: (day: string) => void;
   activePatientWeek: number;
   isDiyMode: boolean;
   diyProgramName: string;
-  patientCategories: string[];
   weekFilteredExercises: HydratedPatientExercise[];
   displayedExercises: HydratedPatientExercise[];
   blocksMap: Record<string, SessionExercise[]>;
@@ -51,18 +53,61 @@ interface PlanTabProps {
   hasAnyAssignedExercises: boolean;
   starterPrograms: ExploreProgram[];
   onAddStarterProgram: (programId: string) => Promise<boolean>;
+  // This week's plan per program (app/utils/programQueue.ts): planned
+  // workouts on their days with done/open status. Opening one selects its
+  // program (selectedCategory), week and day (selectedDayFilter = slot).
+  queue: ProgramQueueEntry[];
+  onOpenProgram: (entry: ProgramQueueEntry, item: PlannedWorkout) => void;
+  onEditProgram: (entry: ProgramQueueEntry) => void;
+  queueLogRef: QueueLogRef | null;
 }
 
 
-const DAYS_OF_WEEK_SHORT = [
-  { id: "0", short: "א׳" },
-  { id: "1", short: "ב׳" },
-  { id: "2", short: "ג׳" },
-  { id: "3", short: "ד׳" },
-  { id: "4", short: "ה׳" },
-  { id: "5", short: "ו׳" },
-  { id: "6", short: "ש׳" },
-];
+const DAY_SHORT = ["א׳", "ב׳", "ג׳", "ד׳", "ה׳", "ו׳", "ש׳"];
+
+// The week at a glance on the hero's glass bar: each day with what's
+// planned on it — done (check), still open from an earlier day (hollow
+// warm ring), or upcoming (dot). Tapping a day opens its workout.
+function WeekStrip({ queue, onPick }: { queue: ProgramQueueEntry[]; onPick: (entry: ProgramQueueEntry, item: PlannedWorkout) => void }) {
+  const today = new Date();
+  const todayKey = toDateKey(today);
+  const sunday = new Date(today.getFullYear(), today.getMonth(), today.getDate() - today.getDay());
+  return (
+    <div className="flex justify-between items-center">
+      {DAY_SHORT.map((label, i) => {
+        const key = toDateKey(new Date(sunday.getFullYear(), sunday.getMonth(), sunday.getDate() + i));
+        const items = queue.flatMap((entry) => entry.planned.filter((p) => p.date === key).map((item) => ({ entry, item })));
+        const open = items.filter(({ item }) => !item.doneLog);
+        const allDone = items.length > 0 && open.length === 0;
+        const isToday = key === todayKey;
+        const pick = open[0] ?? items[0];
+        return (
+          <button
+            key={key}
+            type="button"
+            disabled={!pick}
+            onClick={() => pick && onPick(pick.entry, pick.item)}
+            aria-label={`יום ${DAY_NAMES[i]}${items.length === 0 ? " — אין אימון" : allDone ? " — בוצע" : key < todayKey ? " — לא בוצע" : ""}`}
+            className={`flex-1 h-12 flex flex-col items-center justify-center gap-1 rounded-full text-[0.6875rem] font-bold transition-ui duration-200 ease-out active:scale-90 ${
+              isToday ? "on-light bg-surface text-fg shadow-sm" : "text-fg/75"
+            }`}
+          >
+            {label}
+            <span className="h-2 flex items-center" aria-hidden="true">
+              {allDone ? (
+                <Check size={10} strokeWidth={4} className={isToday ? "text-accent-fg" : "text-fg"} />
+              ) : open.length > 0 && key < todayKey ? (
+                <span className="w-2 h-2 rounded-full border-2 border-warm" />
+              ) : items.length > 0 ? (
+                <span className={`w-1.5 h-1.5 rounded-full ${isToday ? "bg-accent-fg" : "bg-fg/70"}`} />
+              ) : null}
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
 
 // One "Did you know?" card — full width, matching the hero card exactly
 // (same rounded-[2rem] corner radius and shadow token), collapsed to just
@@ -118,11 +163,9 @@ export default function PlanTab({
   selectedCategory,
   setSelectedCategory,
   selectedDayFilter,
-  setSelectedDayFilter,
   activePatientWeek,
   isDiyMode,
   diyProgramName,
-  patientCategories,
   weekFilteredExercises,
   displayedExercises,
   blocksMap,
@@ -134,6 +177,10 @@ export default function PlanTab({
   hasAnyAssignedExercises,
   starterPrograms,
   onAddStarterProgram,
+  queue,
+  onOpenProgram,
+  onEditProgram,
+  queueLogRef,
 }: PlanTabProps) {
   const { loggedInPatient, lang } = useAuth();
   const [isQuickLogOpen, setIsQuickLogOpen] = useState(false);
@@ -141,10 +188,14 @@ export default function PlanTab({
   // animation. null when the detail was opened from outside (e.g. Calendar):
   // that arrives via a tab switch, which stays instant.
   const [navDir, setNavDir] = useState<"forward" | "back" | null>(null);
-  const openProgram = (name: string) => {
+  const openProgram = (entry: ProgramQueueEntry, item: PlannedWorkout | null = entry.focus ?? entry.planned[0] ?? null) => {
+    if (!item) return;
     setNavDir("forward");
-    setSelectedCategory(name);
+    onOpenProgram(entry, item);
   };
+  // "Mark as done" from the home screen: the quick log for one planned
+  // workout, logged under its own day even when done on another.
+  const [quickLogFor, setQuickLogFor] = useState<{ entry: ProgramQueueEntry; item: PlannedWorkout } | null>(null);
   const closeProgram = () => {
     setNavDir("back");
     setSelectedCategory(null);
@@ -183,50 +234,37 @@ export default function PlanTab({
 
   // ----- Overview screen -----
   if (!selectedCategory) {
-    // The program shown in the hero: the first one with exercises on the
-    // selected day. It used to be patientCategories[0] regardless of day, so
-    // a rest day showed "0 תרגילים" with a play button into an empty list
-    // (and a second program training that day was never offered).
-    const isOnSelectedDay = (pe: HydratedPatientExercise) =>
-      selectedDayFilter === "all" || !pe.scheduled_days || pe.scheduled_days.trim() === "" || pe.scheduled_days.split(",").includes(selectedDayFilter);
-    const todayCat = patientCategories.find((cat) => weekFilteredExercises.some((pe) => programNameOf(pe) === cat && isOnSelectedDay(pe))) ?? null;
-    const isTodaySelected = selectedDayFilter === String(new Date().getDay());
-    const selectedDayLabel = DAYS_OF_WEEK.find((d) => d.id === selectedDayFilter)?.label;
-
-    // Real stats for today's hero card (replacing the original's hardcoded
-    // "45 Minutes" / "For All Levels") — mirrors the same category+day
-    // filter useWorkoutSession applies for displayedExercises, and the same
-    // sets->minutes estimate the Detail screen already uses, just computed
-    // here for todayCat specifically since that data isn't scoped to a
-    // selected category yet on this screen.
-    let todayExerciseCount = 0;
-    let todayBlockCount = 0;
-    let todayEstimatedMinutes = 0;
-    // Combined prime_movers/synergists across every exercise in today's
-    // workout, fed to the hero's heatmap overlay below — not decorative,
-    // drawn from the same filtered list as the counts above.
-    let todayMuscleAggregation: WorkoutMuscleAggregation = { primeMovers: [], synergists: [] };
-    let todayHeroImage = dailyWorkoutImage(null);
-    if (todayCat) {
-      const todayCategoryExercises = weekFilteredExercises.filter((pe) => programNameOf(pe) === todayCat && isOnSelectedDay(pe));
-      todayExerciseCount = todayCategoryExercises.length;
-      todayBlockCount = new Set(todayCategoryExercises.map((pe) => pe.block || "A")).size;
-      // Number(...): pe.sets is patient_exercises.sets, a text column (the
-      // TS type says number, but the live DB column is text) — summing the
-      // raw strings with + string-concatenates instead of adding (e.g.
-      // "3" + "4" === "34"), producing wildly wrong duration estimates.
-      const todayTotalSets = todayCategoryExercises.reduce((acc, pe) => acc + (Number(pe.sets) || 0), 0);
-      todayEstimatedMinutes = Math.max(10, Math.round(todayTotalSets * 1.5));
-
-      const todayBlocksMap: Record<string, typeof todayCategoryExercises> = {};
-      todayCategoryExercises.forEach((pe) => {
-        const b = pe.block || "A";
-        if (!todayBlocksMap[b]) todayBlocksMap[b] = [];
-        todayBlocksMap[b].push(pe);
-      });
-      todayMuscleAggregation = getWorkoutMuscleAggregation(todayBlocksMap);
-      todayHeroImage = dailyWorkoutImage(dominantWorkoutCategory(todayCategoryExercises.map((pe) => pe.exercise?.categories ?? [])));
-    }
+    // The hero: the first program with something to do — today's workout,
+    // else one still open from earlier this week, else a flexible one, else
+    // the next upcoming day. With nothing open, the week is complete.
+    const todayKey = toDateKey(new Date());
+    const heroEntry = queue.find((e) => e.focus) ?? null;
+    const heroItem = heroEntry?.focus ?? null;
+    const weekComplete = queue.length > 0 && !heroEntry;
+    const heroRows = heroItem?.session.rows ?? [];
+    const heroExerciseCount = heroRows.length;
+    const heroBlockCount = new Set(heroRows.map((pe) => pe.block || "A")).size;
+    // Number(...): pe.sets has been a text column in the past; summing raw
+    // strings with + string-concatenates instead of adding.
+    const heroEstimatedMinutes = Math.max(10, Math.round(heroRows.reduce((acc, pe) => acc + (Number(pe.sets) || 0), 0) * 1.5));
+    // Combined prime_movers/synergists across the workout, for the hero's heatmap.
+    const heroMuscleAggregation: WorkoutMuscleAggregation = heroItem ? getWorkoutMuscleAggregation(blocksOf(heroRows).blocksMap) : { primeMovers: [], synergists: [] };
+    const heroImage = dailyWorkoutImage(heroItem ? dominantWorkoutCategory(heroRows.map((pe) => pe.exercise?.categories ?? [])) : null);
+    const heroBadge = !heroEntry || !heroItem
+      ? ""
+      : heroItem.date === null
+        ? `השבוע ${heroEntry.doneThisWeek}/${heroEntry.weeklyTarget} · בימים שנוחים לך`
+        : heroItem.date === todayKey
+          ? "האימון של היום"
+          : heroItem.date < todayKey
+            ? `של יום ${dayNameOfKey(heroItem.date)} — עוד לא בוצע`
+            : `הבא: יום ${dayNameOfKey(heroItem.date)}`;
+    // Everything else still open this week that's due already: earlier
+    // days not done yet, and flexible workouts — each can be done (or
+    // marked done) today.
+    const openItems = queue.flatMap((entry) =>
+      entry.planned.filter((p) => !p.doneLog && p !== heroItem && (p.date === null || p.date <= todayKey)).map((item) => ({ entry, item }))
+    );
 
     // RPE trend: the last 20 logged workouts that have an RPE (rpe is
     // nullable), oldest first, plus their average.
@@ -269,115 +307,63 @@ export default function PlanTab({
             is gone (week navigation now lives only in the Calendar tab), so
             the hero expands upward into that freed space instead of just
             leaving a gap. */}
-        {isLoading && patientCategories.length === 0 && !isDiyMode ? (
+        {isLoading && queue.length === 0 ? (
           // Same footprint as the hero card, so nothing jumps when it lands.
           <div aria-hidden="true" className="h-[480px] -mx-4 md:-mx-8 rounded-[2rem] mb-10 bg-surface-alt animate-pulse motion-reduce:animate-none" />
-        ) : patientCategories.length > 0 || isDiyMode ? (
+        ) : heroEntry && heroItem ? (
           // -mx-4 md:-mx-8 cancels out `main`'s own side padding
-          // (PatientShell) so this hero bleeds to the actual viewport edges
-          // instead of sitting inside the page's normal content gutter —
-          // "wide, full-width hero card" only reads as such edge-to-edge.
-          <div className="scheme-dark relative h-[480px] -mx-4 md:-mx-8 rounded-[2rem] overflow-hidden shadow-card mb-10">
-            {/* Ecco artwork for the workout's dominant category, a different
-                one each day (app/utils/workoutImages.ts). The dark gradient
-                scrim over it stays even in light mode — that's legibility
-                for the white text, not a dark-theme leftover. */}
-            {/* The artwork is portrait (~4:5): shown whole (contain) over a
-                blurred, cover-cropped copy of itself, so the wide desktop
-                card doesn't slice a band out of the character's middle. On
-                phones the card is ~4:5 too and the two layers coincide. */}
-            <img
-              src={todayHeroImage}
-              alt=""
-              aria-hidden="true"
-              className="absolute inset-0 w-full h-full object-cover scale-110 blur-2xl"
-            />
-            <img
-              src={todayHeroImage}
-              alt=""
-              className="absolute inset-0 w-full h-full object-contain"
-            />
-            {/* Warm color-grade tying the photo to this hero's established
-                amber palette, plus the bottom scrim for text legibility. */}
+          // (PatientShell) so this hero bleeds to the actual viewport edges.
+          <div className="scheme-dark relative h-[480px] -mx-4 md:-mx-8 rounded-[2rem] overflow-hidden shadow-card mb-6">
+            {/* Ecco artwork for the workout's dominant category
+                (app/utils/workoutImages.ts), portrait, shown whole (contain)
+                over a blurred cover-cropped copy of itself. The dark scrim
+                stays in light mode too — it's legibility for the white text. */}
+            <img src={heroImage} alt="" aria-hidden="true" className="absolute inset-0 w-full h-full object-cover scale-110 blur-2xl" />
+            <img src={heroImage} alt="" className="absolute inset-0 w-full h-full object-contain" />
             <div className="absolute inset-0" style={{ background: "linear-gradient(160deg, color-mix(in srgb, var(--bg-elevated) 55%, transparent), color-mix(in srgb, var(--scrim) 55%, transparent) 60%)" }}></div>
             <div className="absolute inset-0" style={{ background: "radial-gradient(circle at 75% 20%, color-mix(in srgb, var(--accent) 28%, transparent), transparent 55%)" }}></div>
             <div className="absolute inset-0 bg-gradient-to-t from-scrim via-scrim/50 to-transparent"></div>
 
-            {/* Floating glassmorphic day-selector */}
-            <div className="absolute top-4 inset-x-4 z-10 flex justify-between items-center bg-fg/10 backdrop-blur-md border border-fg/15 p-1.5 rounded-full">
-              {DAYS_OF_WEEK_SHORT.map((day) => {
-                const isActive = selectedDayFilter === day.id;
-                return (
-                  <button
-                    key={day.id}
-                    onClick={() => setSelectedDayFilter(day.id)}
-                    className={`flex-1 h-10 flex items-center justify-center rounded-full text-[0.6875rem] font-bold transition-ui duration-200 ease-out active:scale-90 ${
-                      isActive ? "on-light bg-surface text-fg shadow-sm" : "text-fg/70 hover:text-fg"
-                    }`}
-                  >
-                    {day.short}
-                  </button>
-                );
-              })}
+            <div className="absolute top-4 inset-x-4 z-10 bg-fg/10 backdrop-blur-md border border-fg/15 p-1.5 rounded-full">
+              <WeekStrip queue={queue} onPick={(entry, item) => openProgram(entry, item)} />
             </div>
 
-            {/* Floating status badge — names the selected day when it isn't today. */}
-            <div className="absolute top-[5.25rem] right-4 z-10 bg-fg/15 backdrop-blur-md border border-fg/20 text-fg text-[0.6875rem] font-bold px-3 py-1.5 rounded-full">
-              {isTodaySelected ? "האימון של היום" : `יום ${selectedDayLabel}`}
+            <div className="absolute top-[5.5rem] right-4 z-10 bg-fg/15 backdrop-blur-md border border-fg/20 text-fg text-[0.6875rem] font-bold px-3 py-1.5 rounded-full">
+              {heroBadge}
             </div>
 
-            {/* Muscle-engagement overlay, left side (RTL: text lives on the
-                right) — same AnatomyHeatmap as the exercise-info sheet, fed
-                the whole day's combined prime_movers/synergists
-                (getWorkoutMuscleAggregation) rather than one exercise's, so
-                it lights up total engagement for the session. No card/
-                border behind it any more — a plain drop-shadow filter
-                (not a background) keeps the outline legible against
-                whatever's directly behind it in the photo without boxing
-                it in. Fixed width (AnatomyHeatmap sizes itself via
-                aspect-ratio off that width) is what keeps this a clean
-                thumbnail instead of stretching to fill the overlay. */}
-            {todayCat && (todayMuscleAggregation.primeMovers.length > 0 || todayMuscleAggregation.synergists.length > 0) && (
+            {(heroMuscleAggregation.primeMovers.length > 0 || heroMuscleAggregation.synergists.length > 0) && (
               <div className="absolute top-1/2 left-4 -translate-y-1/2 z-10 w-28" style={{ filter: "drop-shadow(0 6px 16px color-mix(in srgb, var(--shadow-ink) 45%, transparent))" }}>
-                <AnatomyHeatmap primeMovers={todayMuscleAggregation.primeMovers} synergists={todayMuscleAggregation.synergists} />
+                <AnatomyHeatmap primeMovers={heroMuscleAggregation.primeMovers} synergists={heroMuscleAggregation.synergists} />
               </div>
             )}
 
-            {/* Title + meta, bottom-right (RTL). Nothing on the selected day
-                -> the rest state, in the same card so the day selector
-                above stays reachable. */}
-            {!todayCat && !isDiyMode ? (
-              <div className="absolute bottom-5 inset-x-5 z-10 flex flex-col gap-1.5">
-                <h3 className="text-[1.625rem] font-black tracking-tight leading-tight text-fg flex items-center gap-2">
-                  <Wind size={24} /> מנוחה פעילה
-                </h3>
-                <p className="text-fg/80 text-[0.8125rem] font-semibold">אין אימון מתוכנן ביום הזה. מומלץ לבצע רוטינת תנועתיות בסיסית.</p>
-              </div>
-            ) : (
             <div className="absolute bottom-5 right-5 left-24 z-10 flex flex-col gap-2">
-              <h3 className="text-[1.625rem] font-black tracking-tight leading-tight text-fg line-clamp-2 [overflow-wrap:anywhere]">{isDiyMode ? diyProgramName : todayCat}</h3>
+              <h3 className="text-[1.625rem] font-black tracking-tight leading-tight text-fg line-clamp-2 [overflow-wrap:anywhere]">{heroEntry.name}</h3>
               <div className="flex flex-wrap items-center gap-x-3.5 gap-y-1 text-fg text-[0.8125rem] font-semibold">
                 <span className="flex items-center gap-1.5">
-                  <Timer size={14} /> כ-{todayEstimatedMinutes} דק&apos;
+                  <Timer size={14} /> כ-{heroEstimatedMinutes} דק&apos;
                 </span>
                 <span className="flex items-center gap-1.5">
                   <Dumbbell size={14} />
-                  {countLabel(todayExerciseCount, "תרגיל אחד", "תרגילים")} · {countLabel(todayBlockCount, "בלוק אחד", "בלוקים")}
+                  {countLabel(heroExerciseCount, "תרגיל אחד", "תרגילים")} · {countLabel(heroBlockCount, "בלוק אחד", "בלוקים")}
                 </span>
               </div>
             </div>
-            )}
 
-            {/* Primary action, bottom-left — mirrors the reference's
-                bottom-right button for RTL. */}
-            {(todayCat || isDiyMode) && (
             <button
-              onClick={() => openProgram(String(todayCat))}
+              onClick={() => openProgram(heroEntry, heroItem)}
+              aria-label={`פתח את ${heroEntry.name}`}
               className="absolute bottom-5 left-5 z-10 w-14 h-14 rounded-full bg-fg/15 border border-fg/25 backdrop-blur-md flex items-center justify-center hover:bg-fg/25 hover:scale-[1.04] active:scale-95 transition-ui duration-200 ease-out shadow-[0_8px_24px_-4px_color-mix(in_srgb,var(--shadow-ink)_50%,transparent)]"
             >
               <Play size={20} className="fill-fg text-fg" />
             </button>
-            )}
+          </div>
+        ) : weekComplete ? (
+          <div className="on-light rounded-[2rem] p-10 text-center flex flex-col items-center justify-center mb-6 bg-surface shadow-card">
+            <CheckCircle2 size={44} className="text-accent-fg mb-4" />
+            <h3 className="text-xl font-black text-fg mb-2">כל האימונים של השבוע בוצעו</h3>
+            <p className="text-muted text-sm">כל הכבוד! התוכנית של השבוע הבא תופיע כאן ביום ראשון.</p>
           </div>
         ) : !isDiyMode && !hasAnyAssignedExercises && starterPrograms.length > 0 ? (
           // No program at all yet (never just "nothing scheduled today" —
@@ -410,9 +396,48 @@ export default function PlanTab({
         ) : (
           <div className="on-light rounded-[2rem] p-10 text-center h-[280px] flex flex-col items-center justify-center relative overflow-hidden mb-10 bg-surface shadow-card">
             <Wind size={44} className="text-accent-fg mb-4" />
-            <h3 className="text-xl font-black text-fg mb-2">מנוחה פעילה</h3>
-            <p className="text-muted text-sm">אין אימוני כוח מתוכננים להיום. מומלץ לבצע רוטינת תנועתיות בסיסית.</p>
+            <h3 className="text-xl font-black text-fg mb-2">אין תוכנית פעילה</h3>
+            <p className="text-muted text-sm">כשתשויך לך תוכנית אימון, האימון הבא שלך יופיע כאן.</p>
           </div>
+        )}
+
+        {/* Still open this week — earlier days not done yet and flexible
+            workouts. Each can be done now, or marked done if it was done
+            already (the log completes its own planned day). */}
+        {openItems.length > 0 && (
+          <div className="mb-10">
+            <div className="text-[0.6875rem] font-extrabold text-muted mb-3.5">עוד להשלים השבוע</div>
+            <div className="on-light bg-surface rounded-[1.75rem] shadow-card divide-y divide-line">
+              {openItems.map(({ entry, item }) => (
+                <div key={item.id} className="flex items-center gap-3 p-4">
+                  <button onClick={() => openProgram(entry, item)} className="flex-1 min-w-0 text-start active:scale-[0.98] transition-ui duration-150 ease-out">
+                    <div className="font-black text-fg text-sm leading-snug line-clamp-1 [overflow-wrap:anywhere]">{entry.name}</div>
+                    <div className={`text-[0.6875rem] font-bold mt-0.5 ${item.date ? "text-warm-fg" : "text-muted"}`}>
+                      {item.date ? `${plannedLabel(item, entry)} — עוד לא בוצע` : `${plannedLabel(item, entry)} · השבוע ${entry.doneThisWeek}/${entry.weeklyTarget}`}
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => setQuickLogFor({ entry, item })}
+                    className="shrink-0 flex items-center gap-1.5 text-xs font-bold text-accent-fg bg-accent/10 hover:bg-accent/15 px-3 py-2 rounded-full active:scale-95 transition-ui duration-150 ease-out"
+                  >
+                    <ClipboardCheck size={14} /> סמן כבוצע
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {quickLogFor && (
+          <QuickLogSheet
+            title={quickLogFor.entry.name}
+            {...blocksOf(quickLogFor.item.session.rows)}
+            isAmrap={quickLogFor.entry.isAmrap}
+            previousWeights={getLastUsedWeights(workoutLogs)}
+            onClose={() => setQuickLogFor(null)}
+            onLogged={onWorkoutLogged}
+            queueLogRef={queueRefFor(quickLogFor.entry, quickLogFor.item)}
+          />
         )}
 
         {/* "Did you know?" — admin-curated research facts (curated_facts,
@@ -440,49 +465,44 @@ export default function PlanTab({
           </div>
         )}
 
-        {/* Tracks — hidden with no programs (a new patient already gets the
-            starter-program offer above; an empty box here only confused). */}
-        {patientCategories.length > 0 && (
-        <div className="mb-10">
-          <div className="text-[0.6875rem] font-extrabold text-muted mb-3.5">המסלולים שלך</div>
-          {(
+        {/* Every program with this week's progress — tapping one opens the
+            workout due next in it. Hidden with no programs (a new patient
+            already gets the starter-program offer above). */}
+        {queue.length > 0 && (
+          <div className="mb-10">
+            <div className="text-[0.6875rem] font-extrabold text-muted mb-3.5">המסלולים שלך</div>
             <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1">
-              {patientCategories.map((cat, idx) => {
-                const glowTint = TRACK_GLOW_TINTS[cat] ?? DEFAULT_TRACK_GLOW;
-
+              {queue.map((entry) => {
+                const glowTint = TRACK_GLOW_TINTS[entry.name] ?? DEFAULT_TRACK_GLOW;
+                const done = !entry.isOneTime && entry.doneThisWeek >= entry.weeklyTarget;
                 return (
                   <button
-                    key={idx}
-                    onClick={() => openProgram(String(cat))}
+                    key={entry.key}
+                    onClick={() => openProgram(entry)}
                     className="on-light w-[158px] rounded-3xl overflow-hidden bg-surface text-right shrink-0 shadow-card transition-ui duration-300 ease-out hover:-translate-y-1 hover:shadow-[0_16px_32px_-8px_color-mix(in_srgb,var(--shadow-ink)_10%,transparent)] active:scale-[0.97] active:translate-y-0"
                   >
-                    {/* The program's own artwork (its dominant exercise category, same
-                        set as the hero), over the old accent glow as a fallback —
-                        the card used to be an empty 120px gradient block. */}
+                    {/* The program's own artwork (its dominant exercise category,
+                        same set as the hero), over an accent glow as a fallback. */}
                     <div className="on-light h-[120px] relative bg-surface-alt overflow-hidden">
-                      <div
-                        className="absolute inset-0"
-                        style={{ background: `radial-gradient(circle at 70% 25%, ${glowTint}, transparent 55%)` }}
-                      ></div>
+                      <div className="absolute inset-0" style={{ background: `radial-gradient(circle at 70% 25%, ${glowTint}, transparent 55%)` }}></div>
                       <img
-                        src={programWorkoutImage(dominantWorkoutCategory(weekFilteredExercises.filter((pe) => programNameOf(pe) === cat).map((pe) => pe.exercise?.categories ?? [])), cat)}
+                        src={programWorkoutImage(dominantWorkoutCategory(entry.sessions.flatMap((se) => se.rows).map((pe) => pe.exercise?.categories ?? [])), entry.name)}
                         alt=""
                         loading="lazy"
                         className="absolute inset-0 w-full h-full object-cover object-top"
                       />
                     </div>
                     <div className="p-3 flex flex-col gap-2">
-                      <div className="font-bold text-[0.8125rem] leading-snug text-fg line-clamp-2 [overflow-wrap:anywhere]">{cat}</div>
-                      <div className="text-[0.6875rem] font-bold px-2.5 py-1 rounded-full w-fit bg-accent/15 text-accent-fg">
-                        פעיל
+                      <div className="font-bold text-[0.8125rem] leading-snug text-fg line-clamp-2 [overflow-wrap:anywhere]">{entry.name}</div>
+                      <div className={`text-[0.6875rem] font-bold px-2.5 py-1 rounded-full w-fit tabular-nums ${done ? "bg-success/15 text-fg" : "bg-accent/15 text-accent-fg"}`}>
+                        {entry.isOneTime ? "חד-פעמי" : done ? "✓ יעד השבוע הושלם" : `השבוע ${entry.doneThisWeek}/${entry.weeklyTarget}`}
                       </div>
                     </div>
                   </button>
                 );
               })}
             </div>
-          )}
-        </div>
+          </div>
         )}
 
         {/* Recent trend */}
@@ -532,8 +552,12 @@ export default function PlanTab({
   }
 
   // ----- Detail / summary screen -----
-  // No mockup covers this state yet — recolored to the same base palette for
-  // consistency with the overview above, structure otherwise unchanged.
+  // The open program's queue entry: its workouts for the week (switchable
+  // below — the patient may do any of them, not only the suggested one).
+  const detailEntry = isDiyMode ? null : (queue.find((e) => e.name === selectedCategory) ?? null);
+  const detailItem = detailEntry?.planned.find((p) => p.slotKey === selectedDayFilter) ?? null;
+  const detailTodayKey = toDateKey(new Date());
+
   return (
     <div key="detail" className="print:hidden max-w-lg mx-auto">
       {FEATURES.patientAiCoach && <PatientCoachSheet contextData={patientCoachContext} />}
@@ -550,8 +574,18 @@ export default function PlanTab({
           <ChevronRight size={24} />
         </button>
         <span className="text-xs font-bold text-muted">פרטים</span>
-        {/* Spacer keeping the title centered — the "•••" here had no action. */}
-        <span className="w-10" aria-hidden="true" />
+        {detailEntry?.canEdit ? (
+          // The patient can make an assigned program their own; the
+          // therapist sees that it was edited and can restore it.
+          <button
+            onClick={() => onEditProgram(detailEntry)}
+            className="flex items-center gap-1.5 px-3.5 h-10 bg-elevated shadow-card rounded-full hover:bg-line active:scale-95 transition-ui duration-150 ease-out text-fg text-xs font-bold"
+          >
+            <Pencil size={14} /> ערוך
+          </button>
+        ) : (
+          <span className="w-10" aria-hidden="true" />
+        )}
       </div>
 
       {(() => {
@@ -579,12 +613,50 @@ export default function PlanTab({
                     : "קלאסי"}
                 </span>
                 <h1 className="text-4xl font-black text-fg tracking-tight leading-tight mb-2">{isDiyMode ? diyProgramName : selectedCategory}</h1>
-                <p className="text-muted text-sm font-medium">
-                  {/* Was "אימון {day id}" ("אימון 6" on Saturday) plus today's
-                      date even when another day was selected. */}
-                  שבוע {activePatientWeek}
-                  {DAYS_OF_WEEK.find((d) => d.id === selectedDayFilter) ? ` · יום ${DAYS_OF_WEEK.find((d) => d.id === selectedDayFilter)!.label}` : ""}
-                </p>
+                {detailEntry && (
+                  <p className="text-muted text-sm font-medium">
+                    {[
+                      detailEntry.weeks.length > 1 ? `שבוע ${activePatientWeek}` : null,
+                      detailItem ? plannedLabel(detailItem, detailEntry) : null,
+                      detailEntry.isOneTime ? null : `השבוע ${detailEntry.doneThisWeek}/${detailEntry.weeklyTarget}`,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </p>
+                )}
+                {/* Done / done on another day / still open from an earlier day. */}
+                {detailItem?.doneLog ? (
+                  <p className="flex items-center gap-1.5 text-xs font-bold text-accent-fg mt-2">
+                    <CheckCircle2 size={14} />
+                    {detailItem.date && detailItem.doneOn !== detailItem.date ? `בוצע ביום ${dayNameOfKey(detailItem.doneOn!)}` : "בוצע"}
+                  </p>
+                ) : detailItem?.date && detailItem.date < detailTodayKey ? (
+                  <p className="text-xs font-bold text-warm-fg mt-2">עוד לא בוצע — אפשר להשלים היום, או לסמן שביצעת ביום אחר</p>
+                ) : null}
+                {detailEntry?.editedByPatientAt && <p className="text-[0.6875rem] font-bold text-accent-fg mt-1.5">ערכת את התוכנית הזו בעצמך</p>}
+
+                {/* The week's planned days for this program; any of them can
+                    be opened, done or marked done. */}
+                {detailEntry && detailEntry.planned.length > 1 && (
+                  <div className="flex gap-2 mt-5 overflow-x-auto no-scrollbar -mx-4 px-4">
+                    {detailEntry.planned.map((item) => {
+                      const isActive = item.slotKey === detailItem?.slotKey && item.id === detailItem?.id;
+                      return (
+                        <button
+                          key={item.id}
+                          onClick={() => openProgram(detailEntry, item)}
+                          aria-pressed={isActive}
+                          className={`shrink-0 flex items-center gap-1.5 px-4 py-2.5 rounded-full text-xs font-extrabold border transition-ui duration-150 ease-out active:scale-[0.97] ${
+                            isActive ? "bg-accent text-on-accent border-accent" : "bg-elevated text-muted border-line hover:border-accent/40"
+                          }`}
+                        >
+                          {plannedLabel(item, detailEntry)}
+                          {item.doneLog && <Check size={12} strokeWidth={3} />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
 
               {/* Metadata rows — no dividers, tight rhythm; primary icon at
@@ -726,7 +798,7 @@ export default function PlanTab({
                     onClick={() => setIsQuickLogOpen(true)}
                     className="w-full flex items-center justify-center gap-2 text-fg font-bold text-sm py-2 rounded-full hover:bg-line active:scale-[0.98] transition-ui duration-150 ease-out"
                   >
-                    <ClipboardCheck size={16} /> כבר התאמנתי — תיעוד מהיר
+                    <ClipboardCheck size={16} /> {detailItem?.doneLog ? "תעד שוב" : "כבר ביצעתי — סמן כבוצע"}
                   </button>
                   </div>
                 </div>
@@ -741,6 +813,7 @@ export default function PlanTab({
                   previousWeights={getLastUsedWeights(workoutLogs)}
                   onClose={() => setIsQuickLogOpen(false)}
                   onLogged={onWorkoutLogged}
+                  queueLogRef={queueLogRef}
                 />
               )}
             </>

@@ -75,12 +75,16 @@ function demo(): PlanFixture {
   return {
     fullName: "רועי בן טוב",
     exercises: [
-      row("חיזוק רגליים", squat, { block: "A", reps: 8, reps_max: 12, weight_kg: 16 }),
-      row("חיזוק רגליים", rdl, { block: "B", rir: 2 }),
-      row("חיזוק רגליים", plank, { block: "C", is_time: true, reps: 45 }),
+      // Three workouts a week: Sunday, Wednesday and Friday.
+      row("חיזוק רגליים", squat, { block: "A", reps: 8, reps_max: 12, weight_kg: 16, scheduled_days: "0" }),
+      row("חיזוק רגליים", rdl, { block: "B", rir: 2, scheduled_days: "0" }),
+      row("חיזוק רגליים", plank, { block: "A", is_time: true, reps: 45, scheduled_days: "3" }),
+      row("חיזוק רגליים", rdl, { block: "B", scheduled_days: "3" }),
+      row("חיזוק רגליים", squat, { block: "A", scheduled_days: "5" }),
       row("מוביליטי", plank, { scheduled_days: "2" }),
     ],
-    workoutLogs: [log(1, 6, "חיזוק רגליים"), log(3, 7, "חיזוק רגליים"), log(5, 5, "מוביליטי"), log(8, 8, "חיזוק רגליים"), log(10, 7, "חיזוק רגליים")],
+    // Last Saturday's log, filed under Sunday's slot (done on another day).
+    workoutLogs: [{ ...log(1, 6, "חיזוק רגליים"), program_id: "חיזוק רגליים", program_week: 1, session_key: "0" }, log(3, 7, "חיזוק רגליים"), log(5, 5, "מוביליטי"), log(8, 8, "חיזוק רגליים"), log(10, 7, "חיזוק רגליים")],
     curatedFacts: [fact("f1", "אימון אקסצנטרי מפחית כאב בגיד הברך תוך 12 שבועות.", "מטא-אנליזה של 14 מחקרים מצאה שיפור משמעותי בכאב ובתפקוד.", "Eccentric training for patellar tendinopathy", 2021, "https://example.com/paper")],
     starterPrograms: [],
   };

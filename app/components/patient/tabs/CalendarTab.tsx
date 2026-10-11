@@ -1,104 +1,47 @@
 "use client";
 
-import { useState } from "react";
-import { CalendarDays, CheckCircle2, ChevronLeft, ChevronRight } from "lucide-react";
-import { isInWeek, planWeeksOf, programNameOf, type HydratedPatientExercise } from "@/app/hooks/useWorkoutSession";
-import type { WorkoutLog } from "@/app/types";
+import { useMemo, useState } from "react";
+import { CalendarDays, CheckCircle2, ChevronLeft, ChevronRight, ClipboardCheck } from "lucide-react";
+import { toDateKey, type HydratedPatientExercise } from "@/app/hooks/useWorkoutSession";
+import type { PatientProgram, WorkoutLog } from "@/app/types";
 import { PROGRAM_TAG_STYLE } from "@/app/constants/catalog";
-import { getExerciseThumbUrl } from "@/app/utils/media";
 import { countLabel } from "@/app/utils/format";
+import { getLastUsedWeights } from "@/app/utils/history";
+import { blocksOf, buildWeekPlan, DAY_NAMES, dayNameOfKey, queueRefFor, sundayOf, type PlannedWorkout, type ProgramQueueEntry } from "@/app/utils/programQueue";
+import QuickLogSheet from "@/app/components/patient/workout/QuickLogSheet";
 
 interface CalendarTabProps {
   patientExercises: HydratedPatientExercise[];
+  programs: PatientProgram[];
   workoutLogs: WorkoutLog[];
   patientId: string;
-  // patients.created_at - the anchor used to compute which program week
-  // (patient_exercises.week) falls on which real calendar date, since
-  // there's no explicit "program start date" in the schema (confirmed
-  // with Roei: created_at is an accepted approximation).
-  programStartDate: string;
-  // programName: which card was tapped — the Plan tab opens that program,
-  // not just whichever one comes first on that day.
-  onSelectDate: (week: number, dayId: string, date: Date, programName: string) => void;
+  onOpenPlanned: (entry: ProgramQueueEntry, item: PlannedWorkout) => void; // opens it on the Plan tab
+  onLogged: () => void; // refetch after "mark as done"
   // Fitness patients only (Explore/builder exist for them): the empty state
   // points there instead of a dead end.
   onBrowsePrograms?: () => void;
 }
 
-const WEEKDAY_LABELS = ["א'", "ב'", "ג'", "ד'", "ה'", "ו'", "ש'"]; // Sunday first, matches DAYS_OF_WEEK/ProtocolBuilder convention
+const WEEKDAY_LABELS = ["א'", "ב'", "ג'", "ד'", "ה'", "ו'", "ש'"]; // Sunday first, matches DAYS_OF_WEEK
 
-// A scheduled_days value is documented as a single DAYS_OF_WEEK id, but
-// PlanTab defensively also accepts a comma-separated value or an empty
-// value (meaning "every day") - matched here exactly for consistency.
-function matchesScheduledDay(pe: HydratedPatientExercise, dayId: string): boolean {
-  if (!pe.scheduled_days || pe.scheduled_days.trim() === "") return true;
-  return pe.scheduled_days.split(",").includes(dayId);
-}
+type DayItem = { entry: ProgramQueueEntry; item: PlannedWorkout };
 
-function toDateKey(d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
-
-function isSameDay(a: Date, b: Date): boolean {
-  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
-}
-
-// Month view of the patient's scheduled workouts (confirmed with Roei,
-// claude/roadmap.md Tier 2 item 3). Deliberately thin: it computes which
-// program week/day a given date falls on and which dates already have a
-// completed workout, then hands off to the existing Plan tab (via
-// onSelectDate) for the actual exercise list - no exercise-list rendering
-// duplicated here.
-export default function CalendarTab({ patientExercises, workoutLogs, patientId, programStartDate, onSelectDate, onBrowsePrograms }: CalendarTabProps) {
+// Month view of the patient's plan: the workouts the therapist set on their
+// days, each done / done on another day / not done / upcoming, plus what was
+// actually trained on each date. A planned workout can be marked done from
+// here (the quick log), and logging it on another day still completes its
+// own planned day (app/utils/programQueue.ts).
+export default function CalendarTab({ patientExercises, programs, workoutLogs, patientId, onOpenPlanned, onLogged, onBrowsePrograms }: CalendarTabProps) {
   const [viewedMonth, setViewedMonth] = useState(() => {
     const d = new Date();
     d.setDate(1);
     d.setHours(0, 0, 0, 0);
     return d;
   });
-
-  // Which day's workouts the sheet below the grid is showing. Presentation
-  // state only — reads the exact same getWeekForDate/matchesScheduledDay
-  // logic below as everything else in this file, it just decides what's
-  // expanded rather than navigating away immediately on tap (that jump now
-  // happens from a card inside the sheet instead, via the same onSelectDate
-  // prop). Defaults to today so the sheet isn't empty on first load.
   const [selectedDate, setSelectedDate] = useState<Date | null>(() => new Date());
+  const [quickLogFor, setQuickLogFor] = useState<DayItem | null>(null);
 
-  const availableWeeks = planWeeksOf(patientExercises);
-
-  // programStartDate is always a valid ISO string - PatientShell falls back
-  // to "now" there if loggedInPatient.created_at is ever missing, so this
-  // component never needs to call Date.now() itself during render.
-  const startDate = new Date(programStartDate);
-  startDate.setHours(0, 0, 0, 0);
-
-  // Program week for a given date, clamped to the range of weeks that
-  // actually exist (same clamp-to-available approach usePlanSelection uses
-  // for activePatientWeek) - a date before the program started, or with no
-  // authored weeks at all, has no schedule to show.
-  const getWeekForDate = (date: Date): number | null => {
-    if (availableWeeks.length === 0) return null;
-    const diffDays = Math.floor((date.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
-    if (diffDays < 0) return null;
-    const weekNum = Math.floor(diffDays / 7) + 1;
-    return availableWeeks.includes(weekNum) ? weekNum : availableWeeks[availableWeeks.length - 1];
-  };
-
-  // Every row scheduled on a given date: one-time (scheduled_date) rows on
-  // exactly that date, recurring rows by plan week + weekday as before.
-  const rowsOnDate = (date: Date) => {
-    const key = toDateKey(date);
-    const week = getWeekForDate(date);
-    const dayId = date.getDay().toString();
-    return patientExercises.filter((pe) =>
-      pe.scheduled_date ? pe.scheduled_date === key : week !== null && isInWeek(pe, week) && matchesScheduledDay(pe, dayId)
-    );
-  };
-
-  const completedDateKeys = new Set(
-    workoutLogs.filter((l) => l.patient_id === patientId).map((l) => toDateKey(new Date(l.created_at)))
-  );
+  const ownLogs = useMemo(() => workoutLogs.filter((l) => l.patient_id === patientId), [workoutLogs, patientId]);
 
   const year = viewedMonth.getFullYear();
   const month = viewedMonth.getMonth();
@@ -112,23 +55,53 @@ export default function CalendarTab({ patientExercises, workoutLogs, patientId, 
   ];
   while (cells.length % 7 !== 0) cells.push(null);
 
+  // The plan of every week the grid shows, keyed by date.
+  const itemsByDate = useMemo(() => {
+    const map = new Map<string, DayItem[]>();
+    for (let row = 0; row < cells.length / 7; row++) {
+      const weekStart = sundayOf(new Date(year, month, row * 7 - leadingBlanks + 1));
+      for (const entry of buildWeekPlan(patientExercises, programs, ownLogs, weekStart)) {
+        for (const item of entry.planned) {
+          if (!item.date) continue;
+          map.set(item.date, [...(map.get(item.date) ?? []), { entry, item }]);
+        }
+      }
+    }
+    return map;
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- cells derive from year/month
+  }, [patientExercises, programs, ownLogs, year, month, leadingBlanks]);
+
+  const logsByDate = useMemo(() => {
+    const map = new Map<string, WorkoutLog[]>();
+    for (const log of ownLogs) {
+      const key = toDateKey(new Date(log.created_at));
+      map.set(key, [...(map.get(key) ?? []), log]);
+    }
+    return map;
+  }, [ownLogs]);
+
   const monthLabel = viewedMonth.toLocaleDateString("he-IL", { month: "long", year: "numeric" });
+  const todayKey = toDateKey(new Date());
 
   const handleChangeMonth = (delta: number) => {
     setViewedMonth(new Date(year, month + delta, 1));
-    // A selection from the previous month has no meaning here — the sheet
-    // prompts for a new pick instead of silently showing stale data.
     setSelectedDate(null);
   };
 
-  // Workouts (one card per distinct program) scheduled on the selected
-  // date — same week/day computation the grid itself uses per-cell below.
-  // (A one-time workout can fall before the plan's start date, where there
-  // is no plan week — the Plan tab then just opens on its first week.)
-  const selectedWeek = selectedDate ? (getWeekForDate(selectedDate) ?? availableWeeks[0]) : null;
-  const selectedDayId = selectedDate ? selectedDate.getDay().toString() : null;
-  const selectedDayExercises = selectedDate ? rowsOnDate(selectedDate) : [];
-  const selectedDayCategories = Array.from(new Set(selectedDayExercises.map(programNameOf)));
+  const selectedKey = selectedDate ? toDateKey(selectedDate) : null;
+  const selectedItems = selectedKey ? (itemsByDate.get(selectedKey) ?? []) : [];
+  const selectedLogs = selectedKey ? (logsByDate.get(selectedKey) ?? []) : [];
+  const monthLogCount = ownLogs.filter((l) => {
+    const d = new Date(l.created_at);
+    return d.getFullYear() === year && d.getMonth() === month;
+  }).length;
+
+  const statusOf = ({ item }: DayItem) => {
+    if (item.doneLog) return item.doneOn !== item.date ? `בוצע ביום ${dayNameOfKey(item.doneOn!)}` : "בוצע";
+    if (item.date! < todayKey) return "לא בוצע";
+    if (item.date === todayKey) return "להיום";
+    return "מתוכנן";
+  };
 
   return (
     <div>
@@ -137,22 +110,13 @@ export default function CalendarTab({ patientExercises, workoutLogs, patientId, 
         לוח שנה
       </h2>
 
-      {/* Month switcher — minimal glyph arrows, no button chrome, matching
-          the reference's understated header. */}
+      {/* Month switcher — minimal glyph arrows, no button chrome. */}
       <div className="flex items-center justify-between mb-7">
-        <button
-          onClick={() => handleChangeMonth(-1)}
-          aria-label="חודש קודם"
-          className="text-muted hover:text-fg active:scale-90 transition-ui duration-150 ease-out p-2 -m-2"
-        >
+        <button onClick={() => handleChangeMonth(-1)} aria-label="חודש קודם" className="text-muted hover:text-fg active:scale-90 transition-ui duration-150 ease-out p-2 -m-2">
           <ChevronRight size={22} />
         </button>
         <h3 className="font-black text-2xl md:text-3xl text-fg tracking-tight">{monthLabel}</h3>
-        <button
-          onClick={() => handleChangeMonth(1)}
-          aria-label="חודש הבא"
-          className="text-muted hover:text-fg active:scale-90 transition-ui duration-150 ease-out p-2 -m-2"
-        >
+        <button onClick={() => handleChangeMonth(1)} aria-label="חודש הבא" className="text-muted hover:text-fg active:scale-90 transition-ui duration-150 ease-out p-2 -m-2">
           <ChevronLeft size={22} />
         </button>
       </div>
@@ -165,51 +129,41 @@ export default function CalendarTab({ patientExercises, workoutLogs, patientId, 
         ))}
       </div>
 
-      {/* Minimal grid — no per-cell card/border, just a number, an optional
-          glowing selection ring, and tiny colored dots for what's scheduled
-          (one dot per category, real info rather than decoration). */}
+      {/* Minimal grid: the date, a check when they trained that day, and one
+          marker per planned workout — filled = done, hollow warm = missed,
+          dot = still to come. */}
       <div className="grid grid-cols-7 gap-y-4">
         {cells.map((date, idx) => {
           if (!date) return <div key={idx} />;
-
-          const scheduledCategories = Array.from(new Set(rowsOnDate(date).map(programNameOf)));
-          const isCompleted = completedDateKeys.has(toDateKey(date));
-          const isClickable = scheduledCategories.length > 0;
-          const isSelected = selectedDate !== null && isSameDay(date, selectedDate);
+          const key = toDateKey(date);
+          const items = itemsByDate.get(key) ?? [];
+          const trained = (logsByDate.get(key) ?? []).length > 0;
+          const isSelected = selectedDate !== null && key === toDateKey(selectedDate);
+          const isToday = key === todayKey;
 
           return (
-            <button
-              key={idx}
-              type="button"
-              disabled={!isClickable}
-              onClick={() => isClickable && setSelectedDate(date)}
-              className="flex flex-col items-center gap-1.5 group"
-            >
+            <button key={idx} type="button" onClick={() => setSelectedDate(date)} className="flex flex-col items-center gap-1.5 group">
               <span
                 className={`relative w-9 h-9 rounded-full flex items-center justify-center text-[0.8125rem] font-bold tabular-nums transition-ui duration-200 ease-out ${
                   isSelected
                     ? "bg-accent text-on-accent shadow-[0_4px_14px_-2px_color-mix(in_srgb,var(--accent)_50%,transparent)]"
-                    : isClickable
+                    : items.length > 0 || trained || isToday
                       ? "text-fg group-hover:bg-line group-active:scale-90"
-                      : "text-muted"
-                }`}
+                      : "text-muted group-hover:bg-line"
+                } ${isToday && !isSelected ? "ring-1 ring-accent" : ""}`}
               >
                 {date.getDate()}
-                {isCompleted && <CheckCircle2 size={11} className="absolute -top-1 -right-1 text-success bg-page rounded-full" />}
+                {trained && <CheckCircle2 size={11} className="absolute -top-1 -right-1 text-success bg-page rounded-full" />}
               </span>
               <div className="flex items-center gap-1 h-1.5">
-                {/* Up to 3 dots, then "+N" — more programs than dots used to read as exactly 3. */}
-                {scheduledCategories.slice(0, 3).map((cat) => (
-                  <span
-                    key={cat}
-                    className="w-1.5 h-1.5 rounded-full"
-                    style={{ background: PROGRAM_TAG_STYLE.text }}
-                  />
-                ))}
-                {scheduledCategories.length > 3 && (
-                  <span className="text-[0.6875rem] font-black leading-none" style={{ color: PROGRAM_TAG_STYLE.text }}>
-                    +{scheduledCategories.length - 3}
-                  </span>
+                {items.slice(0, 3).map(({ item }) =>
+                  item.doneLog ? (
+                    <span key={item.id} className="w-1.5 h-1.5 rounded-full bg-success" />
+                  ) : key < todayKey ? (
+                    <span key={item.id} className="w-1.5 h-1.5 rounded-full border border-warm" />
+                  ) : (
+                    <span key={item.id} className="w-1.5 h-1.5 rounded-full" style={{ background: PROGRAM_TAG_STYLE.text }} />
+                  )
                 )}
               </div>
             </button>
@@ -217,40 +171,29 @@ export default function CalendarTab({ patientExercises, workoutLogs, patientId, 
         })}
       </div>
 
-      <div className="flex items-center gap-4 mt-6 mb-8 text-[0.6875rem] text-muted">
-        <div className="flex items-center gap-1.5">
-          <span className="w-2 h-2 rounded-full" style={{ background: PROGRAM_TAG_STYLE.text }} />
-          נקודה צבעונית = תוכנית אימון מתוזמנת
-        </div>
-        <div className="flex items-center gap-1.5">
-          <CheckCircle2 size={11} className="text-success" />
-          הושלם
-        </div>
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 mt-6 mb-8 text-[0.6875rem] text-muted">
+        <span className="flex items-center gap-1.5">
+          <span className="w-2 h-2 rounded-full" style={{ background: PROGRAM_TAG_STYLE.text }} /> מתוכנן
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="w-2 h-2 rounded-full bg-success" /> בוצע
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="w-2 h-2 rounded-full border border-warm" /> לא בוצע
+        </span>
+        <span className="ms-auto font-bold tabular-nums">{countLabel(monthLogCount, "אימון אחד החודש", "אימונים החודש")}</span>
       </div>
 
-      {/* The day's workouts — a raised surface (rounded top corners) under
-          the calendar. No drag-handle pill: this isn't a draggable sheet,
-          and a handle promised a gesture that didn't exist. Kept in
-          normal document flow rather than position:fixed so a long workout
-          list can never overlap PatientShell's sticky header or bottom nav —
-          it just grows and the page scrolls, which is the safer choice for
-          a list whose length varies with how many categories are scheduled. */}
-      <div className="on-light -mx-4 md:-mx-8 bg-surface rounded-t-[2rem] px-5 pt-3 pb-10 shadow-[0_-8px_30px_-8px_color-mix(in_srgb,var(--shadow-ink)_10%,transparent)]">
-        <div className="h-2" aria-hidden="true"></div>
-
+      {/* The selected day: its planned workouts with their status, and what
+          was trained on it. A raised surface in normal document flow (not
+          position:fixed), so a long list just grows and the page scrolls. */}
+      <div className="on-light -mx-4 md:-mx-8 bg-surface rounded-t-[2rem] px-5 pt-5 pb-10 shadow-[0_-8px_30px_-8px_color-mix(in_srgb,var(--shadow-ink)_10%,transparent)]">
         <div className="flex items-center justify-between mb-4">
-          <h4 className="font-black text-fg text-base">
-            {patientExercises.length === 0 ? "לוח האימונים שלך" : countLabel(selectedDayCategories.length, "אימון אחד", "אימונים")}
-          </h4>
-          {selectedDate && (
-            <span className="text-xs font-bold text-muted">
-              {selectedDate.toLocaleDateString("he-IL", { weekday: "long", day: "numeric", month: "long" })}
-            </span>
-          )}
+          <h4 className="font-black text-fg text-base">{selectedDate ? (selectedKey === todayKey ? "היום" : `יום ${DAY_NAMES[selectedDate.getDay()]}`) : "בחר יום"}</h4>
+          {selectedDate && <span className="text-xs font-bold text-muted">{selectedDate.toLocaleDateString("he-IL", { day: "numeric", month: "long" })}</span>}
         </div>
 
-        {patientExercises.length === 0 ? (
-          // No program at all (not just a free day): say so, and where to get one.
+        {patientExercises.length === 0 && ownLogs.length === 0 ? (
           <div className="text-center py-6 flex flex-col items-center gap-3">
             <p className="text-muted text-sm">עדיין אין לך תוכנית אימון — כשתוסיף אחת, הימים שלה יופיעו כאן.</p>
             {onBrowsePrograms && (
@@ -261,37 +204,83 @@ export default function CalendarTab({ patientExercises, workoutLogs, patientId, 
           </div>
         ) : !selectedDate ? (
           <p className="text-muted text-sm text-center py-6">בחר יום כדי לראות את האימונים שלו.</p>
-        ) : selectedDayCategories.length === 0 ? (
-          <p className="text-muted text-sm text-center py-6">אין אימונים מתוזמנים ביום הזה.</p>
         ) : (
           <div className="flex flex-col gap-2">
-            {selectedDayCategories.map((cat) => {
-              const style = PROGRAM_TAG_STYLE;
-              const catExercises = selectedDayExercises.filter((pe) => programNameOf(pe) === cat);
-              const thumbUrl = catExercises.map((pe) => getExerciseThumbUrl(pe.exercise)).find(Boolean);
-
+            {selectedItems.map((dayItem) => {
+              const { entry, item } = dayItem;
+              const canMarkDone = !item.doneLog && item.date! <= todayKey;
               return (
-                <button
-                  key={cat}
-                  onClick={() => selectedDate && selectedWeek !== null && selectedDayId !== null && onSelectDate(selectedWeek, selectedDayId, selectedDate, cat)}
-                  className="w-full flex items-center gap-3.5 text-right hover:bg-surface-alt active:scale-[0.98] rounded-2xl p-1.5 transition-ui duration-150 ease-out"
-                >
-                  <div className="relative w-14 h-14 rounded-2xl overflow-hidden shrink-0" style={{ background: style.bg }}>
-                    {thumbUrl && <img src={thumbUrl} alt="" className="w-full h-full object-cover" />}
-                    <div className="absolute bottom-0 inset-x-0 h-[3px]" style={{ background: style.text }}></div>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h5 className="font-black text-fg text-[0.9375rem] leading-snug line-clamp-2 [overflow-wrap:anywhere]">{cat}</h5>
-                    <p className="text-muted text-xs font-semibold mt-0.5">
-                      שבוע {selectedWeek} · {countLabel(catExercises.length, "תרגיל אחד", "תרגילים")}
-                    </p>
-                  </div>
-                </button>
+                <div key={item.id} className="flex items-center gap-3 rounded-2xl p-1.5">
+                  <button
+                    onClick={() => onOpenPlanned(entry, item)}
+                    className="flex-1 min-w-0 flex items-center gap-3.5 text-right hover:bg-surface-alt active:scale-[0.98] rounded-2xl transition-ui duration-150 ease-out"
+                  >
+                    <div
+                      className={`w-12 h-12 rounded-2xl shrink-0 flex items-center justify-center ${item.doneLog ? "bg-success/15 text-fg" : ""}`}
+                      style={item.doneLog ? undefined : { background: PROGRAM_TAG_STYLE.bg, color: PROGRAM_TAG_STYLE.text }}
+                    >
+                      {item.doneLog ? <CheckCircle2 size={20} /> : <CalendarDays size={20} />}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h5 className="font-black text-fg text-[0.9375rem] leading-snug line-clamp-2 [overflow-wrap:anywhere]">{entry.name}</h5>
+                      <p className={`text-xs font-semibold mt-0.5 ${!item.doneLog && item.date! < todayKey ? "text-warm-fg" : "text-muted"}`}>
+                        {statusOf(dayItem)} · {countLabel(item.session.rows.length, "תרגיל אחד", "תרגילים")}
+                      </p>
+                    </div>
+                  </button>
+                  {canMarkDone && (
+                    <button
+                      onClick={() => setQuickLogFor(dayItem)}
+                      className="shrink-0 flex items-center gap-1.5 text-xs font-bold text-accent-fg bg-accent/10 hover:bg-accent/15 px-3 py-2 rounded-full active:scale-95 transition-ui duration-150 ease-out"
+                    >
+                      <ClipboardCheck size={14} /> סמן כבוצע
+                    </button>
+                  )}
+                </div>
               );
             })}
+
+            {/* What was trained that day — including workouts planned for
+                another day ("של יום ראשון"). */}
+            {selectedLogs.map((log) => {
+              const forOtherDay = log.session_key && /^[0-6]$/.test(log.session_key) && Number(log.session_key) !== selectedDate.getDay();
+              return (
+                <div key={log.id} className="flex items-center gap-3.5 rounded-2xl p-1.5">
+                  <div className="w-12 h-12 rounded-2xl shrink-0 flex items-center justify-center bg-success/15 text-fg">
+                    <CheckCircle2 size={20} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h5 className="font-black text-fg text-[0.9375rem] leading-snug line-clamp-2 [overflow-wrap:anywhere]">
+                      התאמנת: {log.category || "אימון"}
+                    </h5>
+                    <p className="text-muted text-xs font-semibold mt-0.5">
+                      {new Date(log.created_at).toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" })}
+                      {forOtherDay ? ` · האימון של יום ${DAY_NAMES[Number(log.session_key)]}` : ""}
+                      {log.rpe != null ? ` · מאמץ ${log.rpe}/10` : ""}
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
+
+            {selectedItems.length === 0 && selectedLogs.length === 0 && (
+              <p className="text-muted text-sm text-center py-6">{selectedKey === todayKey ? "אין אימון מתוכנן להיום." : "אין אימונים ביום הזה."}</p>
+            )}
           </div>
         )}
       </div>
+
+      {quickLogFor && (
+        <QuickLogSheet
+          title={quickLogFor.entry.name}
+          {...blocksOf(quickLogFor.item.session.rows)}
+          isAmrap={quickLogFor.entry.isAmrap}
+          previousWeights={getLastUsedWeights(workoutLogs)}
+          onClose={() => setQuickLogFor(null)}
+          onLogged={onLogged}
+          queueLogRef={queueRefFor(quickLogFor.entry, quickLogFor.item)}
+        />
+      )}
     </div>
   );
 }

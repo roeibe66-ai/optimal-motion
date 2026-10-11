@@ -7,7 +7,7 @@ import { useAuth } from "@/app/context/AuthContext";
 import { supabase } from "@/app/lib/supabase";
 import { formatRepTarget, formatWeightKg, getExerciseName, parseWeightInput } from "@/app/utils/format";
 import { getPainColor, getRPEColor } from "@/app/utils/scoring";
-import type { SessionPerformanceEntry } from "@/app/types";
+import type { QueueLogRef, SessionPerformanceEntry } from "@/app/types";
 import type { SessionExercise } from "@/app/hooks/useWorkoutSession";
 import { notify } from "@/app/components/ui/feedback";
 
@@ -19,6 +19,7 @@ interface QuickLogSheetProps {
   previousWeights: Record<string, number>; // exercise id -> weight used last time (getLastUsedWeights)
   onClose: () => void;
   onLogged: () => void; // refetch logs so Home/Calendar update right away
+  queueLogRef?: QueueLogRef | null; // which assigned workout this was, if any
 }
 
 interface SetDraft {
@@ -37,7 +38,7 @@ interface ExerciseDraft {
 // player. Writes the same workout_logs row shape the player does
 // (performance_data = SessionPerformanceEntry[]), flagged is_quick_log, so
 // history charts and the therapist's view read it the same way.
-export default function QuickLogSheet({ title, blocksMap, blocksKeys, isAmrap, previousWeights, onClose, onLogged }: QuickLogSheetProps) {
+export default function QuickLogSheet({ title, blocksMap, blocksKeys, isAmrap, previousWeights, onClose, onLogged, queueLogRef = null }: QuickLogSheetProps) {
   const { loggedInPatient, lang } = useAuth();
   const isClinical = loggedInPatient?.patient_type !== "fitness";
   const exercises = blocksKeys.flatMap((k) => blocksMap[k] ?? []);
@@ -117,6 +118,7 @@ export default function QuickLogSheet({ title, blocksMap, blocksKeys, isAmrap, p
         result_rounds: isAmrap && rounds !== "" ? Math.max(0, parseInt(rounds) || 0) : null,
         result_extra_reps: isAmrap && extraReps !== "" ? Math.max(0, parseInt(extraReps) || 0) : null,
         is_quick_log: true,
+        ...(queueLogRef ?? {}),
       },
     ]);
     setIsSaving(false);

@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import { AuthContext, type AuthContextValue } from "@/app/context/AuthContext";
 import { TRANSLATIONS } from "@/app/constants/translations";
 import { isInWeek, programNameOf, type SessionExercise } from "@/app/hooks/useWorkoutSession";
+import { buildWeekPlan } from "@/app/utils/programQueue";
+import type { PatientProgram } from "@/app/types";
 import PlanTab from "@/app/components/patient/tabs/PlanTab";
 import DevDataToggle from "@/app/components/dev/DevDataToggle";
 import FeedbackHost from "@/app/components/ui/FeedbackHost";
@@ -28,8 +30,18 @@ export default function PlanHarness() {
     setIsLoading(new URLSearchParams(window.location.search).has("loading"));
   }, []);
 
-  const weekFiltered = fixture.exercises.filter((pe) => isInWeek(pe, 1));
-  const patientCategories = Array.from(new Set(weekFiltered.map(programNameOf)));
+  // Fixture rows only carry a program name: use it as the program id too,
+  // so the queue groups them the way it groups real assigned programs.
+  const rows = useMemo(() => fixture.exercises.map((pe) => ({ ...pe, program_id: pe.program_name ?? null })), [fixture]);
+  const programs = useMemo(
+    () =>
+      Array.from(new Set(rows.map((r) => r.program_id).filter((id): id is string => !!id))).map(
+        (id): PatientProgram => ({ id, patient_id: "-1", name: id, created_at: new Date().toISOString() })
+      ),
+    [rows]
+  );
+  const queue = useMemo(() => (isLoading ? [] : buildWeekPlan(rows, programs, fixture.workoutLogs)), [rows, programs, fixture, isLoading]);
+  const weekFiltered = rows.filter((pe) => isInWeek(pe, 1));
   const displayedExercises = weekFiltered.filter((pe) => {
     if (!selectedCategory || programNameOf(pe) !== selectedCategory) return false;
     if (!pe.scheduled_days || pe.scheduled_days.trim() === "") return true;
@@ -64,11 +76,9 @@ export default function PlanHarness() {
             selectedCategory={selectedCategory}
             setSelectedCategory={setSelectedCategory}
             selectedDayFilter={selectedDayFilter}
-            setSelectedDayFilter={setSelectedDayFilter}
             activePatientWeek={1}
             isDiyMode={false}
             diyProgramName=""
-            patientCategories={isLoading ? [] : patientCategories}
             weekFilteredExercises={weekFiltered}
             displayedExercises={displayedExercises}
             blocksMap={blocksMap}
@@ -80,6 +90,13 @@ export default function PlanHarness() {
             hasAnyAssignedExercises={fixture.exercises.length > 0}
             starterPrograms={fixture.starterPrograms}
             onAddStarterProgram={async () => false}
+            queue={queue}
+            onOpenProgram={(entry, item) => {
+              setSelectedCategory(entry.name);
+              setSelectedDayFilter(item.slotKey);
+            }}
+            onEditProgram={() => {}}
+            queueLogRef={null}
           />
         </main>
         <DevDataToggle />
