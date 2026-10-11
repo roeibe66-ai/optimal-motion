@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { Exercise } from "@/app/types";
+import type { DiyExercise } from "@/app/types";
 import { planWeeksOf, type HydratedPatientExercise } from "@/app/hooks/useWorkoutSession";
 
 // Everything the Plan/DIY tabs let the patient pick: which week/category/day
@@ -22,7 +22,7 @@ export function usePlanSelection(patientExercises: HydratedPatientExercise[]) {
   // day (1, 2, 3, ...) — not a calendar weekday. diyActiveDay is whichever
   // day tab is currently open in the builder; "start workout now" runs only
   // that day's exercises (a live session is always one sitting).
-  const [diyExercisesByDay, setDiyExercisesByDay] = useState<Record<number, Exercise[]>>({ 1: [] });
+  const [diyExercisesByDay, setDiyExercisesByDay] = useState<Record<number, DiyExercise[]>>({ 1: [] });
   const [diyActiveDay, setDiyActiveDay] = useState(1);
   const [diyEquipFilter, setDiyEquipFilter] = useState("all");
   // DiyBuilderTab's accordion navigation: which top-level category tab is

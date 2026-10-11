@@ -11,6 +11,7 @@ interface MyWorkoutsScreenProps {
   savedPrograms: SavedProgram[];
   exerciseCatalog: Exercise[];
   onBack: () => void;
+  onBuildNew: () => void;
   onStartProgramDay: (program: SavedProgram, dayNumber: number) => void;
   onEditProgram: (program: SavedProgram) => void;
   onDeleteProgram: (id: string) => void;
@@ -31,13 +32,14 @@ function relativeCreatedLabel(createdAt: string): string {
   return months === 1 ? "נוצר לפני חודש" : `נוצר לפני ${months} חודשים`;
 }
 
-// Page (--bg-page) with --surface program cards, per the global
+// "התוכניות שלי": the saved-programs screen, opened from the folder button
+// on the builder hub (DiyHubScreen). Page (--bg-page) with --surface program cards, per the global
 // color system in app/globals.css.
 //
 // Each program can hold several ordinal days (Day 1, Day 2, ...), so
 // "start" is a row of day pills rather than one button — picking a pill
 // starts that specific day's exercises as a live session.
-export default function MyWorkoutsScreen({ savedPrograms, exerciseCatalog, onBack, onStartProgramDay, onEditProgram, onDeleteProgram }: MyWorkoutsScreenProps) {
+export default function MyWorkoutsScreen({ savedPrograms, exerciseCatalog, onBack, onBuildNew, onStartProgramDay, onEditProgram, onDeleteProgram }: MyWorkoutsScreenProps) {
   const handleDelete = async (program: SavedProgram) => {
     const confirmed = await confirmAction({
       title: "למחוק את האימון?",
@@ -65,20 +67,20 @@ export default function MyWorkoutsScreen({ savedPrograms, exerciseCatalog, onBac
         </button>
         <div>
           <h2 className="text-xl md:text-2xl font-black text-fg tracking-tight">התוכניות שלי</h2>
-          <p className="text-xs text-muted mt-0.5">{countLabel(savedPrograms.length, "תוכנית שבועית אחת שמורה", "תוכניות שבועיות שמורות")}</p>
+          <p className="text-xs text-muted mt-0.5">{countLabel(savedPrograms.length, "תוכנית אחת שמורה", "תוכניות שמורות")}</p>
         </div>
       </div>
 
       <div className="flex flex-col gap-4">
         {savedPrograms.length === 0 ? (
-          <div className="on-light bg-surface rounded-[2rem] shadow-card p-10 flex flex-col items-center text-center gap-2">
-            <div className="w-14 h-14 rounded-full bg-accent/15 text-accent-fg flex items-center justify-center mb-1.5">
-              <Dumbbell size={26} />
+          <div className="on-light bg-surface rounded-2xl shadow-card p-7 flex flex-col items-center text-center gap-1.5">
+            <div className="w-12 h-12 rounded-full bg-accent/15 text-accent-fg flex items-center justify-center mb-1">
+              <Dumbbell size={22} />
             </div>
-            <h3 className="text-lg font-black text-fg">עדיין לא שמרת תוכניות אימון</h3>
-            <p className="text-muted text-sm max-w-xs">בנה תוכנית שבועית מהמאגר הפתוח ושמור אותה כאן לשימוש חוזר בכל זמן.</p>
+            <h4 className="text-base font-black text-fg">עדיין אין תוכניות שמורות</h4>
+            <p className="text-muted text-[0.8125rem] max-w-xs">תוכנית שתשמור בבניית האימון תופיע כאן, מוכנה להפעלה בכל זמן.</p>
             <button
-              onClick={onBack}
+              onClick={onBuildNew}
               className="mt-4 bg-btn-primary hover:bg-btn-primary-hover active:bg-btn-primary-active text-btn-primary-fg font-black text-[0.8125rem] px-6 py-3.5 rounded-2xl flex items-center justify-center gap-2 transition-colors"
             >
               <Plus size={16} />
@@ -176,14 +178,6 @@ export default function MyWorkoutsScreen({ savedPrograms, exerciseCatalog, onBac
                 </div>
               );
             })}
-
-            <button
-              onClick={onBack}
-              className="w-full bg-accent/8 border-[1.5px] border-dashed border-accent/35 text-accent-fg font-extrabold text-[0.8125rem] py-4 rounded-[1.25rem] flex items-center justify-center gap-2 hover:bg-accent/12 transition-ui duration-150 ease-out active:scale-[0.97]"
-            >
-              <Plus size={16} />
-              בנה תוכנית חדשה
-            </button>
           </>
         )}
       </div>

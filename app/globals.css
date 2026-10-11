@@ -402,6 +402,17 @@ html {
   }
 }
 
+/* Full-screen screens presented over the shell (DiyBuilderTab): rise up from
+   the bottom edge like an iOS modal presentation. Fill "backwards" for the
+   same containing-block reason as step-back above. */
+@theme {
+  --animate-screen-up: screen-up 380ms var(--ease-drawer) backwards;
+
+  @keyframes screen-up {
+    from { transform: translateY(100%); }
+  }
+}
+
 /* Reduced-motion stand-in for the celebrate, step-in and card-in animations above:
    same timing, opacity only. */
 @keyframes motion-fade {
@@ -413,6 +424,7 @@ html {
   .animate-celebrate-rise,
   .animate-step-in,
   .animate-step-back,
+  .animate-screen-up,
   .animate-card-in { animation-name: motion-fade; }
   .animate-heart-pop { animation: none; }
 }

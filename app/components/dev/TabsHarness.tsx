@@ -5,13 +5,14 @@ import { AuthContext, type AuthContextValue } from "@/app/context/AuthContext";
 import { TRANSLATIONS } from "@/app/constants/translations";
 import CalendarTab from "@/app/components/patient/tabs/CalendarTab";
 import DiyBuilderTab from "@/app/components/patient/tabs/DiyBuilderTab";
+import DiyHubScreen from "@/app/components/patient/tabs/DiyHubScreen";
 import MyWorkoutsScreen from "@/app/components/patient/tabs/MyWorkoutsScreen";
 import ProfileTab from "@/app/components/patient/tabs/ProfileTab";
 import DevDataToggle from "@/app/components/dev/DevDataToggle";
 import FeedbackHost from "@/app/components/ui/FeedbackHost";
 import { useDevDataMode, type DevDataMode } from "@/app/components/dev/devDataMode";
 import { tabsFixture, type TabsFixture } from "@/app/components/dev/tabFixtures";
-import type { Exercise } from "@/app/types";
+import type { DiyExercise } from "@/app/types";
 
 const TABS = [
   { id: "calendar", label: "Calendar" },
@@ -30,12 +31,13 @@ function TabBody({ tab, fixture }: { tab: TabId; fixture: TabsFixture }) {
   const [equip, setEquip] = useState("all");
   const [category, setCategory] = useState<string | null>("__muscle_groups__");
   const [bodyPart, setBodyPart] = useState<string | null>(null);
-  const [days, setDays] = useState<Record<number, Exercise[]>>(fixture.diyDays);
+  const [days, setDays] = useState<Record<number, DiyExercise[]>>(fixture.diyDays);
   const [activeDay, setActiveDay] = useState(Number(Object.keys(fixture.diyDays)[0] ?? 1));
   const [programName, setProgramName] = useState("");
   const [reminderTime, setReminderTime] = useState("18:00");
   const [reminderDays, setReminderDays] = useState<string[]>(["0", "2", "4"]);
   const [haptics, setHaptics] = useState(true);
+  const [builderOpen, setBuilderOpen] = useState(true);
 
   if (tab === "calendar") {
     return (
@@ -50,6 +52,26 @@ function TabBody({ tab, fixture }: { tab: TabId; fixture: TabsFixture }) {
     );
   }
   if (tab === "diy") {
+    if (!builderOpen) {
+      return (
+        <DiyHubScreen
+          draftName={programName}
+          draftDayCount={Object.keys(days).length}
+          draftExerciseCount={Object.values(days).reduce((acc, exs) => acc + exs.length, 0)}
+          isEditingSavedProgram={false}
+          onContinueDraft={() => setBuilderOpen(true)}
+          onStartNew={() => {
+            setDays({ 1: [] });
+            setActiveDay(1);
+            setBuilderOpen(true);
+          }}
+          savedProgramCount={fixture.savedPrograms.length}
+          onOpenMyWorkouts={() => {}}
+          exerciseCatalog={fixture.catalog}
+          onViewExerciseInfo={() => {}}
+        />
+      );
+    }
     return (
       <DiyBuilderTab
         exerciseCatalog={fixture.catalog}
@@ -69,19 +91,20 @@ function TabBody({ tab, fixture }: { tab: TabId; fixture: TabsFixture }) {
         diyProgramName={programName}
         setDiyProgramName={setProgramName}
         onStartDiyWorkoutNow={() => {}}
-        onOpenMyWorkouts={() => {}}
         onSaveDiyProgram={() => {}}
         isEditingSavedProgram={false}
         onCancelEditSavedProgram={() => {}}
+        onClose={() => setBuilderOpen(false)}
       />
     );
   }
   if (tab === "saved") {
     return (
       <MyWorkoutsScreen
+        onBack={() => {}}
+        onBuildNew={() => {}}
         savedPrograms={fixture.savedPrograms}
         exerciseCatalog={fixture.catalog}
-        onBack={() => {}}
         onStartProgramDay={() => {}}
         onEditProgram={() => {}}
         onDeleteProgram={() => {}}

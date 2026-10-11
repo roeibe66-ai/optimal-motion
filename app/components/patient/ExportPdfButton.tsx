@@ -86,7 +86,12 @@ export default function ExportPdfButton({ program, exerciseCatalog }: ExportPdfB
 
           <div className="mt-6 space-y-8">
             {days.map((day) => {
-              const dayExercises = day.exercise_ids.map((id) => exerciseCatalog.find((e) => e.id === id)).filter((e): e is Exercise => !!e);
+              // Prescriptions are index-aligned with exercise_ids, so pair them
+              // up before dropping ids no longer in the catalog.
+              const dayExercises = day.exercise_ids.flatMap((id, idx) => {
+                const exercise = exerciseCatalog.find((e) => e.id === id);
+                return exercise ? [{ exercise, prescription: day.prescriptions?.[idx] ?? null }] : [];
+              });
               return (
                 <div key={day.day_number} className="break-inside-avoid">
                   <h2 className="text-base font-extrabold border-b border-line pb-1.5 mb-3">יום {day.day_number}</h2>
@@ -95,12 +100,17 @@ export default function ExportPdfButton({ program, exerciseCatalog }: ExportPdfB
                     <p className="text-sm text-muted">אין תרגילים ביום זה.</p>
                   ) : (
                     <div className="space-y-4">
-                      {dayExercises.map((exercise) => {
+                      {dayExercises.map(({ exercise, prescription }, exIdx) => {
                         const dos = cueLines(exercise.patient_cues);
                         const donts = cueLines(exercise.common_mistake);
                         return (
-                          <div key={exercise.id} className="break-inside-avoid">
+                          <div key={`${exercise.id}-${exIdx}`} className="break-inside-avoid">
                             <h3 className="font-bold text-sm">{getExerciseName(exercise, "he")}</h3>
+                            {prescription && (
+                              <p className="text-xs font-bold mt-0.5">
+                                {prescription.sets} סטים × {prescription.reps} {prescription.is_time ? "שניות" : "חזרות"} · מנוחה {prescription.rest_time_seconds} שנ׳
+                              </p>
+                            )}
                             {exercise.description && <p className="text-xs text-muted mt-1">{exercise.description}</p>}
 
                             {(dos.length > 0 || donts.length > 0) && (

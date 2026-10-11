@@ -6,8 +6,9 @@ import { useAuth } from "@/app/context/AuthContext";
 import type { HapticType } from "@/app/hooks/useHaptics";
 import { getExerciseName, parseWeightInput } from "@/app/utils/format";
 import { getLastUsedWeights, parsePerformance } from "@/app/utils/history";
-import type { Exercise, PatientExercise, SessionPerformanceEntry, WorkoutFormat, WorkoutLog } from "@/app/types";
+import type { DiyExercise, Exercise, PatientExercise, SessionPerformanceEntry, WorkoutFormat, WorkoutLog } from "@/app/types";
 import { confirmAction, notify } from "@/app/components/ui/feedback";
+import { getDiyPrescription } from "@/app/utils/diy";
 
 // A PatientExercise as it's actually consumed here: already joined with its
 // Exercise (that join happens in usePatientData, which filters out any
@@ -91,7 +92,7 @@ interface UseWorkoutSessionParams {
   selectedCategory: string | null;
   selectedDayFilter: string;
   isDiyMode: boolean;
-  diySelectedExercises: Exercise[];
+  diySelectedExercises: DiyExercise[];
   // A ready-made workout from Explore, run through the DIY path but with the
   // admin's own blocks/sets/reps instead of the DIY builder's 3x10 default.
   // Never offered for promotion into the weekly plan, and logged under its title.
@@ -224,9 +225,8 @@ export function useWorkoutSession({
   } else if (isDiyMode) {
     diySelectedExercises.forEach((ex, idx) => {
       const blockLetter = String.fromCharCode(65 + idx);
-      blocksMap[blockLetter] = [
-        { id: `diy_${idx}`, exercise: ex, sets: 3, reps: 10, rir: null, is_time: false, block: blockLetter, rest_time_seconds: 60 },
-      ];
+      const { sets, reps, is_time, rest_time_seconds } = getDiyPrescription(ex);
+      blocksMap[blockLetter] = [{ id: `diy_${idx}`, exercise: ex, sets, reps, rir: null, is_time, block: blockLetter, rest_time_seconds }];
     });
   } else {
     displayedExercises.forEach((pe) => {
@@ -696,9 +696,7 @@ export function useWorkoutSession({
           patient_id: loggedInPatient.id,
           exercise_id: ex.id,
           block: String.fromCharCode(65 + idx),
-          sets: 3,
-          reps: 10,
-          is_time: false,
+          ...getDiyPrescription(ex),
           week: activePatientWeek,
           scheduled_days: diyScheduleDay,
         }));

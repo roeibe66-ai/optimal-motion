@@ -252,11 +252,28 @@ export interface BuilderExercise extends Exercise {
 export type BuilderDayPlan = Record<string, BuilderExercise[]>; // keyed by DAYS_OF_WEEK id
 export type BuilderWeekPlan = Record<number, BuilderDayPlan>; // keyed by week number
 
+// What the patient sets per exercise in the DIY builder. Exercises added
+// without one run with DEFAULT_DIY_PRESCRIPTION (app/utils/diy.ts).
+export interface DiyPrescription {
+  sets: number;
+  reps: number; // seconds when is_time
+  is_time: boolean;
+  rest_time_seconds: number;
+}
+
+// A DIY builder draft entry: the catalog exercise plus its prescription.
+export interface DiyExercise extends Exercise {
+  prescription?: DiyPrescription;
+}
+
 // One ordinal day (Day 1, Day 2, ...) within a saved weekly program — not
 // tied to a calendar weekday, just a builder slot.
 export interface SavedProgramDay {
   day_number: number;
   exercise_ids: string[]; // ordered, references exercises.id
+  // Index-aligned with exercise_ids (days is jsonb, so no migration). Absent
+  // on programs saved before the builder had sets/reps/rest.
+  prescriptions?: (DiyPrescription | null)[];
 }
 
 export interface SavedProgram {

@@ -28,7 +28,7 @@ Actual feature code lives under `app/components/`, organized by domain:
   `ProgramSimulatorModal`) — follow that precedent (extracted tab component +
   a shared `*FormModal`) rather than adding new inline tab blocks to the legacy file.
 - `app/components/patient/` — patient-facing app (`PatientShell` + tabs: `PlanTab`,
-  `CalendarTab`, `DiyBuilderTab`, `MyWorkoutsScreen`, `ExploreTab`, `PremiumStoreTab`,
+  `CalendarTab`, `DiyHubScreen` → full-screen `DiyBuilderTab`, `MyWorkoutsScreen`, `ExploreTab`, `PremiumStoreTab`,
   `ProfileTab`, ...)
 - `app/components/marketing/` — landing/login/register/reset-password pages
 - `app/hooks/` — data & session hooks (`usePatientData`, `useAuthSession`,

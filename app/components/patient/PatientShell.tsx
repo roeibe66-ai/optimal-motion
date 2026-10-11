@@ -17,12 +17,14 @@ import PasskeyPrompt from "@/app/components/patient/PasskeyPrompt";
 import PlanTab from "@/app/components/patient/tabs/PlanTab";
 import CalendarTab from "@/app/components/patient/tabs/CalendarTab";
 import DiyBuilderTab from "@/app/components/patient/tabs/DiyBuilderTab";
+import DiyHubScreen from "@/app/components/patient/tabs/DiyHubScreen";
 import MyWorkoutsScreen from "@/app/components/patient/tabs/MyWorkoutsScreen";
 import ExploreTab from "@/app/components/patient/tabs/ExploreTab";
 import PremiumStoreTab from "@/app/components/patient/tabs/PremiumStoreTab";
 import { FEATURES } from "@/app/constants/features";
 import ProfileTab from "@/app/components/patient/tabs/ProfileTab";
-import type { Exercise, SavedProgram, Workout } from "@/app/types";
+import type { DiyExercise, SavedProgram, SavedProgramDay, Workout } from "@/app/types";
+import { getDiyPrescription } from "@/app/utils/diy";
 import type { SessionExercise } from "@/app/hooks/useWorkoutSession";
 import AmrapPlayer, { type AmrapSessionConfig, type AmrapStation } from "@/app/components/patient/workout/AmrapPlayer";
 import { notify } from "@/app/components/ui/feedback";
@@ -40,10 +42,12 @@ export default function PatientShell() {
   const { loggedInPatient } = useAuth();
 
   const [patientTab, setPatientTab] = useState<PatientTab>("plan");
+  // The DIY builder is a full-screen workspace over the shell (opened from
+  // the "בנה אימון" tab's hub), not inline tab content.
+  const [builderOpen, setBuilderOpen] = useState(false);
+  // "התוכניות שלי" is a pushed screen inside the DIY tab (folder button on
+  // the hub), with diyNav as the direction of the last push for the slide.
   const [showMyWorkouts, setShowMyWorkouts] = useState(false);
-  // Direction of the last builder <-> "התוכניות שלי" move, for the push
-  // animation (forward in, back out the same side). null = no animation
-  // (tab switches stay instant).
   const [diyNav, setDiyNav] = useState<"forward" | "back" | null>(null);
   const [editingSavedProgramId, setEditingSavedProgramId] = useState<string | null>(null);
   // A regular Explore workout running through the player with its own
@@ -93,14 +97,15 @@ export default function PatientShell() {
   //
   // Tapping the tab that's already active doesn't switch anything, so it
   // instead pops that tab's own view stack back to its root screen (the
-  // Home tab's workout detail view, the DIY tab's saved-workouts screen or
+  // Home tab's workout detail view, the DIY builder's
   // expanded accordion) rather than being a no-op.
   const switchTab = (tab: PatientTab) => {
     if (tab === patientTab) {
       if (tab === "plan") planSelection.setSelectedCategory(null);
       if (tab === "diy") {
+        setBuilderOpen(false);
         setShowMyWorkouts(false);
-        setEditingSavedProgramId(null);
+        setDiyNav(null);
         planSelection.setDiyCategoryFilter(null);
         planSelection.setDiyBodyPartFilter(null);
       }
@@ -109,9 +114,9 @@ export default function PatientShell() {
     setPatientTab(tab);
     planSelection.setReferenceDate(new Date());
     planSelection.setIsDiyMode(false);
+    setBuilderOpen(false);
     setShowMyWorkouts(false);
     setDiyNav(null);
-    setEditingSavedProgramId(null);
   };
 
   // Calendar tab hands off to the existing Plan tab day view rather than
@@ -129,11 +134,17 @@ export default function PatientShell() {
     planSelection.setSelectedCategory(programName);
   };
 
-  // Hydrates a saved program day's ordered exercise_ids against the live
-  // catalog, silently dropping any id that no longer exists (e.g. an
-  // exercise deleted from the catalog since the program was saved).
-  const hydrateExerciseIds = (exerciseIds: string[]): Exercise[] =>
-    exerciseIds.map((id) => patientData.exerciseCatalog.find((ex) => ex.id === id)).filter((ex): ex is Exercise => !!ex);
+  // Hydrates a saved program day's ordered exercise_ids (and their
+  // index-aligned sets/reps/rest, when saved) against the live catalog,
+  // silently dropping any id that no longer exists (e.g. an exercise
+  // deleted from the catalog since the program was saved).
+  const hydrateDay = (day: SavedProgramDay): DiyExercise[] =>
+    day.exercise_ids.flatMap((id, idx): DiyExercise[] => {
+      const exercise = patientData.exerciseCatalog.find((ex) => ex.id === id);
+      if (!exercise) return [];
+      const prescription = day.prescriptions?.[idx];
+      return [prescription ? { ...exercise, prescription } : exercise];
+    });
 
   // Loading a saved program's specific day to run it right now replaces the
   // active builder draft with just that one day, same overwrite semantics
@@ -141,12 +152,12 @@ export default function PatientShell() {
   const handleStartSavedProgram = (program: SavedProgram, dayNumber: number) => {
     const day = program.days.find((d) => d.day_number === dayNumber) ?? program.days[0];
     if (!day) return;
-    const dayExercises = hydrateExerciseIds(day.exercise_ids);
+    const dayExercises = hydrateDay(day);
     if (dayExercises.length === 0) return notify("אין תרגילים זמינים ביום הזה — ייתכן שהם הוסרו מהמאגר.", "info");
     planSelection.setDiyExercisesByDay({ [day.day_number]: dayExercises });
     planSelection.setDiyActiveDay(day.day_number);
     planSelection.setDiyProgramName(program.name);
-    setShowMyWorkouts(false);
+    setBuilderOpen(false);
     planSelection.setIsDiyMode(true);
     session.startDiyWorkoutNow();
   };
@@ -154,18 +165,55 @@ export default function PatientShell() {
   // Loading a program to edit it replaces the whole draft with every one of
   // its days, so the builder opens exactly where the program left off.
   const handleEditSavedProgram = (program: SavedProgram) => {
-    const hydratedDays = Object.fromEntries(program.days.map((d) => [d.day_number, hydrateExerciseIds(d.exercise_ids)]));
+    const hydratedDays = Object.fromEntries(program.days.map((d) => [d.day_number, hydrateDay(d)]));
     planSelection.setDiyExercisesByDay(Object.keys(hydratedDays).length > 0 ? hydratedDays : { 1: [] });
     planSelection.setDiyActiveDay(program.days[0]?.day_number ?? 1);
     planSelection.setDiyProgramName(program.name);
     setEditingSavedProgramId(program.id);
-    setDiyNav("back");
+    setBuilderOpen(true);
     setShowMyWorkouts(false);
+    setDiyNav(null);
+  };
+
+  // "New workout" from the hub starts from an empty one-day draft. The
+  // unsaved draft it replaces comes back with the toast's undo.
+  const handleStartNewDiyProgram = () => {
+    const snapshot = {
+      days: planSelection.diyExercisesByDay,
+      activeDay: planSelection.diyActiveDay,
+      name: planSelection.diyProgramName,
+      editingId: editingSavedProgramId,
+    };
+    const hadDraft = Object.values(snapshot.days).some((exs) => exs.length > 0);
+    planSelection.setDiyExercisesByDay({ 1: [] });
+    planSelection.setDiyActiveDay(1);
+    planSelection.setDiyProgramName("תוכנית מותאמת אישית");
+    setEditingSavedProgramId(null);
+    setBuilderOpen(true);
+    setShowMyWorkouts(false);
+    setDiyNav(null);
+    if (hadDraft) {
+      notify("הטיוטה הקודמת נוקתה", "info", {
+        action: {
+          label: "ביטול",
+          onClick: () => {
+            planSelection.setDiyExercisesByDay(snapshot.days);
+            planSelection.setDiyActiveDay(snapshot.activeDay);
+            planSelection.setDiyProgramName(snapshot.name);
+            setEditingSavedProgramId(snapshot.editingId);
+          },
+        },
+      });
+    }
   };
 
   const handleSaveDiyProgram = async () => {
     const days = Object.entries(planSelection.diyExercisesByDay)
-      .map(([dayNumber, exercises]) => ({ day_number: Number(dayNumber), exercise_ids: exercises.map((ex) => ex.id) }))
+      .map(([dayNumber, exercises]) => ({
+        day_number: Number(dayNumber),
+        exercise_ids: exercises.map((ex) => ex.id),
+        prescriptions: exercises.map(getDiyPrescription),
+      }))
       .filter((d) => d.exercise_ids.length > 0)
       .sort((a, b) => a.day_number - b.day_number);
     if (days.length === 0) return;
@@ -257,6 +305,34 @@ export default function PatientShell() {
         <AmrapPlayer config={amrapConfig} triggerHaptic={triggerHaptic} onClose={() => setAmrapConfig(null)} onLogged={patientData.refetch} />
       )}
       <PasskeyPrompt />
+      {patientTab === "diy" && builderOpen && (
+        <DiyBuilderTab
+          exerciseCatalog={patientData.exerciseCatalog}
+          onViewExerciseInfo={(exercise) => session.setViewingExInfo(exercise)}
+          diyEquipFilter={planSelection.diyEquipFilter}
+          setDiyEquipFilter={planSelection.setDiyEquipFilter}
+          diyCategoryFilter={planSelection.diyCategoryFilter}
+          setDiyCategoryFilter={planSelection.setDiyCategoryFilter}
+          diyBodyPartFilter={planSelection.diyBodyPartFilter}
+          setDiyBodyPartFilter={planSelection.setDiyBodyPartFilter}
+          diyExercisesByDay={planSelection.diyExercisesByDay}
+          setDiyExercisesByDay={planSelection.setDiyExercisesByDay}
+          diyActiveDay={planSelection.diyActiveDay}
+          setDiyActiveDay={planSelection.setDiyActiveDay}
+          onAddDiyDay={planSelection.addDiyDay}
+          onRemoveDiyDay={planSelection.removeDiyDay}
+          diyProgramName={planSelection.diyProgramName}
+          setDiyProgramName={planSelection.setDiyProgramName}
+          onStartDiyWorkoutNow={() => {
+            planSelection.setIsDiyMode(true);
+            session.startDiyWorkoutNow();
+          }}
+          onSaveDiyProgram={handleSaveDiyProgram}
+          isEditingSavedProgram={editingSavedProgramId !== null}
+          onCancelEditSavedProgram={() => setEditingSavedProgramId(null)}
+          onClose={() => setBuilderOpen(false)}
+        />
+      )}
 
       {/* Locked to the viewport (fixed inset-0, same full-screen-overlay
           pattern WorkoutPlayer already uses) so the outer page can never
@@ -353,51 +429,38 @@ export default function PatientShell() {
 
           {patientTab === "diy" && showMyWorkouts && (
             <div key="my-workouts" className={diyNav === "forward" ? "animate-step-in" : ""}>
-            <MyWorkoutsScreen
-              savedPrograms={savedProgramsData.savedPrograms}
-              exerciseCatalog={patientData.exerciseCatalog}
-              onBack={() => {
-                setDiyNav("back");
-                setShowMyWorkouts(false);
-              }}
-              onStartProgramDay={handleStartSavedProgram}
-              onEditProgram={handleEditSavedProgram}
-              onDeleteProgram={savedProgramsData.deleteProgram}
-            />
+              <MyWorkoutsScreen
+                savedPrograms={savedProgramsData.savedPrograms}
+                exerciseCatalog={patientData.exerciseCatalog}
+                onBack={() => {
+                  setDiyNav("back");
+                  setShowMyWorkouts(false);
+                }}
+                onBuildNew={handleStartNewDiyProgram}
+                onStartProgramDay={handleStartSavedProgram}
+                onEditProgram={handleEditSavedProgram}
+                onDeleteProgram={savedProgramsData.deleteProgram}
+              />
             </div>
           )}
 
           {patientTab === "diy" && !showMyWorkouts && (
-            <div key="builder" className={diyNav === "back" ? "animate-step-back" : ""}>
-            <DiyBuilderTab
-              exerciseCatalog={patientData.exerciseCatalog}
-              onViewExerciseInfo={(exercise) => session.setViewingExInfo(exercise)}
-              diyEquipFilter={planSelection.diyEquipFilter}
-              setDiyEquipFilter={planSelection.setDiyEquipFilter}
-              diyCategoryFilter={planSelection.diyCategoryFilter}
-              setDiyCategoryFilter={planSelection.setDiyCategoryFilter}
-              diyBodyPartFilter={planSelection.diyBodyPartFilter}
-              setDiyBodyPartFilter={planSelection.setDiyBodyPartFilter}
-              diyExercisesByDay={planSelection.diyExercisesByDay}
-              setDiyExercisesByDay={planSelection.setDiyExercisesByDay}
-              diyActiveDay={planSelection.diyActiveDay}
-              setDiyActiveDay={planSelection.setDiyActiveDay}
-              onAddDiyDay={planSelection.addDiyDay}
-              onRemoveDiyDay={planSelection.removeDiyDay}
-              diyProgramName={planSelection.diyProgramName}
-              setDiyProgramName={planSelection.setDiyProgramName}
-              onStartDiyWorkoutNow={() => {
-                planSelection.setIsDiyMode(true);
-                session.startDiyWorkoutNow();
-              }}
-              onOpenMyWorkouts={() => {
-                setDiyNav("forward");
-                setShowMyWorkouts(true);
-              }}
-              onSaveDiyProgram={handleSaveDiyProgram}
-              isEditingSavedProgram={editingSavedProgramId !== null}
-              onCancelEditSavedProgram={() => setEditingSavedProgramId(null)}
-            />
+            <div key="hub" className={diyNav === "back" ? "animate-step-back" : ""}>
+              <DiyHubScreen
+                draftName={planSelection.diyProgramName}
+                draftDayCount={Object.keys(planSelection.diyExercisesByDay).length}
+                draftExerciseCount={Object.values(planSelection.diyExercisesByDay).reduce((acc, exs) => acc + exs.length, 0)}
+                isEditingSavedProgram={editingSavedProgramId !== null}
+                onContinueDraft={() => setBuilderOpen(true)}
+                onStartNew={handleStartNewDiyProgram}
+                savedProgramCount={savedProgramsData.savedPrograms.length}
+                onOpenMyWorkouts={() => {
+                  setDiyNav("forward");
+                  setShowMyWorkouts(true);
+                }}
+                exerciseCatalog={patientData.exerciseCatalog}
+                onViewExerciseInfo={(exercise) => session.setViewingExInfo(exercise)}
+              />
             </div>
           )}
 
