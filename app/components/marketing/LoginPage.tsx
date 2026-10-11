@@ -27,7 +27,7 @@ export default function LoginPage() {
 
   return (
     <div
-      className="relative min-h-screen flex items-center justify-center p-4"
+      className="relative min-h-dvh flex items-center justify-center p-4"
       style={{ background: "radial-gradient(120% 70% at 50% 0%, var(--bg-elevated) 0%, var(--bg-page) 62%), linear-gradient(180deg, var(--bg-elevated), var(--bg-page) 55%)" }}
       dir={lang === "he" ? "rtl" : "ltr"}
     >

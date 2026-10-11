@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AuthContext, type AuthContextValue } from "@/app/context/AuthContext";
 import { TRANSLATIONS } from "@/app/constants/translations";
 import { isInWeek, programNameOf, type SessionExercise } from "@/app/hooks/useWorkoutSession";
@@ -20,6 +20,13 @@ export default function PlanHarness() {
   const fixture = useMemo(() => planFixture(mode), [mode]);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedDayFilter, setSelectedDayFilter] = useState(new Date().getDay().toString());
+  // `?loading=1` holds PlanTab in its first-load state (skeletons) — read
+  // after mount, since the URL isn't available during the server render.
+  const [isLoading, setIsLoading] = useState(false);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reading the URL, browser-only
+    setIsLoading(new URLSearchParams(window.location.search).has("loading"));
+  }, []);
 
   const weekFiltered = fixture.exercises.filter((pe) => isInWeek(pe, 1));
   const patientCategories = Array.from(new Set(weekFiltered.map(programNameOf)));
@@ -52,7 +59,8 @@ export default function PlanHarness() {
         <main className="max-w-5xl w-full mx-auto px-4 md:px-8 pt-6 pb-32">
           <PlanTab
             key={mode}
-            workoutLogs={fixture.workoutLogs}
+            isLoading={isLoading}
+            workoutLogs={isLoading ? [] : fixture.workoutLogs}
             selectedCategory={selectedCategory}
             setSelectedCategory={setSelectedCategory}
             selectedDayFilter={selectedDayFilter}
@@ -60,7 +68,7 @@ export default function PlanHarness() {
             activePatientWeek={1}
             isDiyMode={false}
             diyProgramName=""
-            patientCategories={patientCategories}
+            patientCategories={isLoading ? [] : patientCategories}
             weekFilteredExercises={weekFiltered}
             displayedExercises={displayedExercises}
             blocksMap={blocksMap}

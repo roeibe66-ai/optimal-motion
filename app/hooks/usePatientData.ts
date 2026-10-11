@@ -16,6 +16,10 @@ export function usePatientData() {
   const [patientExercises, setPatientExercises] = useState<HydratedPatientExercise[]>([]);
   const [exerciseCatalog, setExerciseCatalog] = useState<Exercise[]>([]);
   const [workoutLogs, setWorkoutLogs] = useState<WorkoutLog[]>([]);
+  // False until the first fetch settles — lets screens show a skeleton
+  // instead of their empty state ("no plan", "no data yet") for the second
+  // before the real data lands.
+  const [hasLoaded, setHasLoaded] = useState(false);
 
   // Offline-first: paint the last-known plan immediately, before the network
   // fetch below resolves.
@@ -65,6 +69,7 @@ export function usePatientData() {
     }
     if (exs.data) setExerciseCatalog(exerciseRows);
     if (logs.data) setWorkoutLogs(logs.data as WorkoutLog[]);
+    setHasLoaded(true);
     // Depend on the id, not the whole object: AuthContext calls
     // setLoggedInPatient() with a brand-new object on every auth event that
     // carries a session — including TOKEN_REFRESHED, which supabase-js fires
@@ -81,5 +86,5 @@ export function usePatientData() {
     fetchPatientData();
   }, [fetchPatientData]);
 
-  return { patientExercises, exerciseCatalog, workoutLogs, refetch: fetchPatientData };
+  return { patientExercises, exerciseCatalog, workoutLogs, hasLoaded, refetch: fetchPatientData };
 }

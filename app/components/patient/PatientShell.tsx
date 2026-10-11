@@ -443,6 +443,7 @@ export default function PatientShell() {
 
           {patientTab === "plan" && (
             <PlanTab
+              isLoading={!patientData.hasLoaded}
               workoutLogs={patientData.workoutLogs}
               selectedCategory={planSelection.selectedCategory}
               setSelectedCategory={planSelection.setSelectedCategory}

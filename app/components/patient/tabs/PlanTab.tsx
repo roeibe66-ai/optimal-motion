@@ -20,7 +20,7 @@ import { useAuth } from "@/app/context/AuthContext";
 import { countLabel, formatRepTarget, formatTime, formatWeightKg, getExerciseName, getWorkoutMuscleAggregation, type WorkoutMuscleAggregation } from "@/app/utils/format";
 import { AVAILABLE_MUSCLES, DAYS_OF_WEEK, DEFAULT_TRACK_GLOW, EQUIPMENT_LIST, TRACK_GLOW_TINTS } from "@/app/constants/catalog";
 import type { AIAssistantContext, CuratedFact, Exercise, ExploreProgram, WorkoutLog } from "@/app/types";
-import { dailyWorkoutImage, dominantWorkoutCategory } from "@/app/utils/workoutImages";
+import { dailyWorkoutImage, dominantWorkoutCategory, programWorkoutImage } from "@/app/utils/workoutImages";
 import { programNameOf, type HydratedPatientExercise, type SessionExercise } from "@/app/hooks/useWorkoutSession";
 import PatientCoachSheet from "@/app/components/patient/PatientCoachSheet";
 import { FEATURES } from "@/app/constants/features";
@@ -30,6 +30,7 @@ import QuickLogSheet from "@/app/components/patient/workout/QuickLogSheet";
 import { getLastUsedWeights } from "@/app/utils/history";
 
 interface PlanTabProps {
+  isLoading?: boolean; // first fetch still in flight — skeletons, not empty states
   workoutLogs: WorkoutLog[];
   selectedCategory: string | null;
   setSelectedCategory: (category: string | null) => void;
@@ -112,6 +113,7 @@ function CuratedFactCard({ fact }: { fact: CuratedFact }) {
 }
 
 export default function PlanTab({
+  isLoading = false,
   workoutLogs,
   selectedCategory,
   setSelectedCategory,
@@ -254,7 +256,7 @@ export default function PlanTab({
             Rubik ships none, so Hebrew got a faux slant) for
             the typographic contrast the redesign called for. */}
         <div className="pt-2 pb-10 md:pb-14">
-          <p className="text-5xl md:text-6xl font-black tracking-tight text-fg leading-[0.95]">{firstName ?`היי ${firstName},` :"היי,"}</p>
+          <p className="text-5xl md:text-6xl font-black tracking-tight text-fg leading-[0.95] text-balance">{firstName ?`היי ${firstName},` :"היי,"}</p>
           <p className="text-4xl md:text-5xl font-light text-muted mt-1">שנתחיל?</p>
         </div>
 
@@ -267,7 +269,10 @@ export default function PlanTab({
             is gone (week navigation now lives only in the Calendar tab), so
             the hero expands upward into that freed space instead of just
             leaving a gap. */}
-        {patientCategories.length > 0 || isDiyMode ? (
+        {isLoading && patientCategories.length === 0 && !isDiyMode ? (
+          // Same footprint as the hero card, so nothing jumps when it lands.
+          <div aria-hidden="true" className="h-[480px] -mx-4 md:-mx-8 rounded-[2rem] mb-10 bg-surface-alt animate-pulse motion-reduce:animate-none" />
+        ) : patientCategories.length > 0 || isDiyMode ? (
           // -mx-4 md:-mx-8 cancels out `main`'s own side padding
           // (PatientShell) so this hero bleeds to the actual viewport edges
           // instead of sitting inside the page's normal content gutter —
@@ -451,11 +456,20 @@ export default function PlanTab({
                     onClick={() => openProgram(String(cat))}
                     className="on-light w-[158px] rounded-3xl overflow-hidden bg-surface text-right shrink-0 shadow-card transition-ui duration-300 ease-out hover:-translate-y-1 hover:shadow-[0_16px_32px_-8px_color-mix(in_srgb,var(--shadow-ink)_10%,transparent)] active:scale-[0.97] active:translate-y-0"
                   >
-                    <div className="on-light h-[120px] relative bg-surface-alt">
+                    {/* The program's own artwork (its dominant exercise category, same
+                        set as the hero), over the old accent glow as a fallback —
+                        the card used to be an empty 120px gradient block. */}
+                    <div className="on-light h-[120px] relative bg-surface-alt overflow-hidden">
                       <div
                         className="absolute inset-0"
                         style={{ background: `radial-gradient(circle at 70% 25%, ${glowTint}, transparent 55%)` }}
                       ></div>
+                      <img
+                        src={programWorkoutImage(dominantWorkoutCategory(weekFilteredExercises.filter((pe) => programNameOf(pe) === cat).map((pe) => pe.exercise?.categories ?? [])), cat)}
+                        alt=""
+                        loading="lazy"
+                        className="absolute inset-0 w-full h-full object-cover object-top"
+                      />
                     </div>
                     <div className="p-3 flex flex-col gap-2">
                       <div className="font-bold text-[0.8125rem] leading-snug text-fg line-clamp-2 [overflow-wrap:anywhere]">{cat}</div>
@@ -474,7 +488,9 @@ export default function PlanTab({
         {/* Recent trend */}
         <div>
           <div className="text-[0.6875rem] font-extrabold text-muted mb-3.5">מגמה אחרונה</div>
-          {recentLogs.length === 0 ? (
+          {recentLogs.length === 0 && isLoading ? (
+            <div aria-hidden="true" className="h-[15.5rem] rounded-[1.75rem] bg-surface-alt animate-pulse motion-reduce:animate-none" />
+          ) : recentLogs.length === 0 ? (
             <div className="on-light bg-surface p-10 rounded-[2rem] shadow-card text-center">
               <p className="text-muted text-sm">הנתונים יופיעו כאן ברגע שתסיים את האימון הראשון.</p>
             </div>

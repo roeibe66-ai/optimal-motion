@@ -10,6 +10,16 @@ export const metadata: Metadata = {
   title: "Eccentric — Optimal Motion",
   description: "Eccentric · Optimal Motion — קליניקה לשיקום וכושר",
   manifest: "/manifest.json",
+  // Link previews (WhatsApp, iMessage…): the landing poster frame. Relative
+  // URLs need a base — Vercel provides the production domain at build time.
+  metadataBase: new URL(process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : "http://localhost:3000"),
+  openGraph: {
+    title: "Eccentric — Optimal Motion",
+    description: "קליניקה לשיקום וכושר",
+    locale: "he_IL",
+    type: "website",
+    images: [{ url: "/landing/hero-poster.webp", alt: "Eccentric — Optimal Motion" }],
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",

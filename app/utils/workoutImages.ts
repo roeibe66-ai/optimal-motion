@@ -34,3 +34,14 @@ export function dailyWorkoutImage(category: string | null, date = new Date()): s
   if (!set) return ALL_IMAGES[dayNumber % ALL_IMAGES.length];
   return `/workouts/${set.folder}/${(dayNumber % set.count) + 1}.webp`;
 }
+
+// A program card's artwork: stable per program (it's the card's identity, so
+// it doesn't rotate daily like the hero), and picked by a hash of the
+// program's name so two programs in the same category don't look identical.
+export function programWorkoutImage(category: string | null, programName: string): string {
+  let hash = 0;
+  for (const ch of programName) hash = (hash * 31 + ch.codePointAt(0)!) >>> 0;
+  const set = category ? WORKOUT_IMAGE_SETS[category] : undefined;
+  if (!set) return ALL_IMAGES[hash % ALL_IMAGES.length];
+  return `/workouts/${set.folder}/${(hash % set.count) + 1}.webp`;
+}

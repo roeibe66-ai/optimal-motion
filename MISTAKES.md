@@ -307,3 +307,15 @@ to the top edge while a sheet or full-screen flow owns the bottom of the screen.
 **Testing note:** React's `onPointerEnter` is built from `pointerover`/`pointerout`, so
 synthetic `pointerenter` events don't reach it; and the browser pane reports
 `document.hidden` while it isn't displayed, which pauses every toast.
+
+## 2026-10-11 — Home showed "no plan / no data" while it was still loading; landing used 100vh
+
+**What happened:** `usePatientData` had no loaded flag, so on open the home screen rendered
+its empty states — the "מנוחה פעילה" card, "הנתונים יופיעו כאן…", even the starter-program
+offer (when Explore's fetch landed first) — for a patient who had a plan, until the data
+arrived. Separately, the landing and auth pages used `min-h-screen` (100vh), which on iOS
+Safari is taller than the visible area, so the landing's bottom-pinned buttons could sit
+under the browser toolbar.
+**Rule:** a hook that fetches exposes `hasLoaded`; screens show a skeleton with the final
+layout's footprint until then, and an empty state only once the data says it's empty.
+Full-height pages use `min-h-dvh`, and bottom-pinned UI adds `env(safe-area-inset-bottom)`.
