@@ -57,7 +57,7 @@ export default function PremiumStoreTab({ onGoToPlan }: PremiumStoreTabProps) {
                 {userOwnsTrack ? (
                   <button
                     onClick={onGoToPlan}
-                    className="w-full bg-line text-fg px-6 py-3.5 rounded-2xl font-bold text-sm hover:bg-fg/15 transition-colors flex items-center justify-center gap-2"
+                    className="w-full bg-line text-fg px-6 py-3.5 rounded-2xl font-bold text-sm hover:bg-fg/15 transition-ui duration-150 ease-out flex items-center justify-center gap-2 active:scale-[0.97]"
                   >
                     עבור לאימון
                     {/* ArrowLeft, not ArrowRight: SVG icons don't mirror with dir="rtl", and "forward" in RTL points left */}

@@ -148,7 +148,7 @@ export default function AmrapPlayer({ config, triggerHaptic, onClose, onLogged, 
 
   if (phase === "result") {
     return (
-      <div className={`${shell} items-center justify-center p-6 text-center`} dir={dir}>
+      <div data-toast-top className={`${shell} items-center justify-center p-6 text-center`} dir={dir}>
         <Timer size={52} className="text-accent-fg mb-5" />
         <h2 className="text-3xl md:text-4xl font-black mb-2">הזמן נגמר!</h2>
         <p className="text-muted mb-10">בדוק את התוצאה שלך לפני השמירה.</p>
@@ -170,7 +170,7 @@ export default function AmrapPlayer({ config, triggerHaptic, onClose, onLogged, 
 
   if (phase === "rpe") {
     return (
-      <div className={`${shell} items-center justify-center p-6 text-center`} dir={dir}>
+      <div data-toast-top className={`${shell} items-center justify-center p-6 text-center`} dir={dir}>
         <h2 className="text-3xl md:text-4xl font-black mb-3">
           {rounds} סבבים{extraReps > 0 ? ` + ${extraReps} חזרות` : ""}
         </h2>
@@ -184,7 +184,7 @@ export default function AmrapPlayer({ config, triggerHaptic, onClose, onLogged, 
 
   if (phase === "done") {
     return (
-      <div className={`${shell} items-center justify-center p-6 text-center`} dir={dir}>
+      <div data-toast-top className={`${shell} items-center justify-center p-6 text-center`} dir={dir}>
         {/* Same one-shot celebration as WorkoutFinishFlow's done screen
             (trophy pop, then text rises in) — not an endless bounce. */}
         <Trophy size={80} className="text-warm-fg mb-8 animate-celebrate-pop" />
@@ -211,10 +211,10 @@ export default function AmrapPlayer({ config, triggerHaptic, onClose, onLogged, 
   const progress = totalMs > 0 ? 1 - remainingMs / totalMs : 0;
 
   return (
-    <div className={shell} dir={dir}>
+    <div data-toast-top className={shell} dir={dir}>
       {isSimulation && <SimulationBanner onExit={onClose} />}
       <div className="pt-[max(1rem,env(safe-area-inset-top))] px-5 pt-4 flex items-center justify-between gap-3">
-        <button onClick={requestClose} aria-label="סגור" className="w-10 h-10 rounded-full bg-elevated border border-line flex items-center justify-center text-fg hover:bg-line transition-colors">
+        <button onClick={requestClose} aria-label="סגור" className="w-10 h-10 rounded-full bg-elevated border border-line flex items-center justify-center text-fg hover:bg-line transition-ui duration-150 ease-out active:scale-[0.97]">
           <X size={18} />
         </button>
         <div className="text-center min-w-0">
@@ -242,7 +242,7 @@ export default function AmrapPlayer({ config, triggerHaptic, onClose, onLogged, 
             onClick={() => setRounds((r) => Math.max(0, r - 1))}
             disabled={rounds === 0}
             aria-label="הורד סבב"
-            className="w-11 h-11 rounded-full bg-elevated border border-line flex items-center justify-center text-muted hover:text-fg disabled:opacity-40"
+            className="w-11 h-11 rounded-full bg-elevated border border-line flex items-center justify-center text-muted hover:text-fg disabled:opacity-40 transition-ui duration-150 ease-out active:scale-[0.97]"
           >
             <Minus size={18} />
           </button>
@@ -254,7 +254,7 @@ export default function AmrapPlayer({ config, triggerHaptic, onClose, onLogged, 
             onClick={addRound}
             disabled={phase === "ready"}
             aria-label="סיימתי סבב"
-            className="w-11 h-11 rounded-full bg-accent text-on-accent flex items-center justify-center disabled:bg-disabled disabled:text-disabled-fg"
+            className="w-11 h-11 rounded-full bg-accent text-on-accent flex items-center justify-center disabled:bg-disabled disabled:text-disabled-fg transition-ui duration-150 ease-out active:scale-[0.97]"
           >
             <Plus size={18} />
           </button>
@@ -294,7 +294,7 @@ export default function AmrapPlayer({ config, triggerHaptic, onClose, onLogged, 
 
       <div className="px-5 pt-3 pb-[max(1.25rem,env(safe-area-inset-bottom))] border-t border-line bg-elevated/90 backdrop-blur-md flex items-center gap-3">
         {phase === "running" ? (
-          <button onClick={pause} className="flex-1 bg-transparent border-[1.5px] border-btn-secondary text-accent-fg hover:bg-btn-secondary-hover font-black py-3.5 rounded-full flex items-center justify-center gap-2 transition-colors">
+          <button onClick={pause} className="flex-1 bg-transparent border-[1.5px] border-btn-secondary text-accent-fg hover:bg-btn-secondary-hover font-black py-3.5 rounded-full flex items-center justify-center gap-2 transition-ui duration-150 ease-out active:scale-[0.97]">
             <Pause size={18} /> השהה
           </button>
         ) : (
@@ -303,7 +303,7 @@ export default function AmrapPlayer({ config, triggerHaptic, onClose, onLogged, 
           </button>
         )}
         {phase !== "ready" && (
-          <button onClick={finishEarly} className="px-6 py-3.5 rounded-full font-bold text-muted hover:text-fg bg-line/60 transition-colors">
+          <button onClick={finishEarly} className="px-6 py-3.5 rounded-full font-bold text-muted hover:text-fg bg-line/60 transition-ui duration-150 ease-out active:scale-[0.97]">
             סיים
           </button>
         )}

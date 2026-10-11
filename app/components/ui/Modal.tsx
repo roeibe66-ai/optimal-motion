@@ -73,24 +73,23 @@ export default function Modal({ onClose, title, icon, children }: ModalProps) {
   const backdropRef = useRef<HTMLDivElement>(null);
   const drag = useRef<{ startY: number; dy: number; active: boolean; samples: { y: number; t: number }[] } | null>(null);
 
-  const onDragStart = (e: ReactPointerEvent) => {
-    if (isClosing || (e.pointerType === "mouse" && e.button !== 0)) return;
-    drag.current = { startY: e.clientY, dy: 0, active: false, samples: [{ y: e.clientY, t: e.timeStamp }] };
+  // Core drag, driven by both input paths below (pointer on the header,
+  // touch on the scrolled-to-top body).
+  const beginDrag = (y: number, t: number) => {
+    if (isClosing) return false;
+    drag.current = { startY: y, dy: 0, active: false, samples: [{ y, t }] };
+    return true;
   };
 
-  const onDragMove = (e: ReactPointerEvent) => {
+  const moveDrag = (y: number, t: number, capture?: () => void) => {
     const d = drag.current;
     const panel = panelRef.current;
     if (!d || !panel) return;
-    const raw = e.clientY - d.startY;
+    const raw = y - d.startY;
     if (!d.active) {
       if (Math.abs(raw) < DRAG_SLOP) return;
       d.active = true;
-      try {
-        e.currentTarget.setPointerCapture(e.pointerId);
-      } catch {
-        // The pointer can already be gone (released between events) — tracking still works without capture.
-      }
+      capture?.();
       panel.style.transition = "none";
       if (backdropRef.current) backdropRef.current.style.transition = "none";
     }
@@ -98,11 +97,11 @@ export default function Modal({ onClose, title, icon, children }: ModalProps) {
     d.dy = raw >= 0 ? raw : rubberband(raw, height);
     panel.style.transform = `translateY(${d.dy}px)`;
     if (backdropRef.current) backdropRef.current.style.opacity = String(1 - (Math.max(0, d.dy) / height) * 0.7);
-    d.samples.push({ y: e.clientY, t: e.timeStamp });
+    d.samples.push({ y, t });
     if (d.samples.length > 5) d.samples.shift();
   };
 
-  const onDragEnd = () => {
+  const endDrag = () => {
     const d = drag.current;
     const panel = panelRef.current;
     drag.current = null;
@@ -134,6 +133,76 @@ export default function Modal({ onClose, title, icon, children }: ModalProps) {
     }
   };
 
+  // Path 1 — pointer on the handle/header (mouse, pen, touch).
+  const onDragStart = (e: ReactPointerEvent) => {
+    if (e.pointerType === "mouse" && e.button !== 0) return;
+    beginDrag(e.clientY, e.timeStamp);
+  };
+  const onDragMove = (e: ReactPointerEvent) => {
+    const target = e.currentTarget;
+    const pointerId = e.pointerId;
+    moveDrag(e.clientY, e.timeStamp, () => {
+      try {
+        target.setPointerCapture(pointerId);
+      } catch {
+        // The pointer can already be gone (released between events) — tracking still works without capture.
+      }
+    });
+  };
+
+  // Path 2 — pulling down on the content while it's scrolled to the top
+  // (where people actually grab a sheet), like Vaul. Native, non-passive
+  // touch listeners: once it's a sheet drag, preventDefault stops the
+  // browser's own scroll/bounce from taking the gesture. Moving up, or
+  // starting mid-scroll, leaves normal scrolling alone.
+  const bodyRef = useRef<HTMLDivElement>(null);
+  const dragRef = useRef({ beginDrag, moveDrag, endDrag });
+  useEffect(() => {
+    dragRef.current = { beginDrag, moveDrag, endDrag };
+  });
+  useEffect(() => {
+    const body = bodyRef.current;
+    if (!body) return;
+    let candidate: { y: number } | null = null;
+    let dragging = false;
+    const onStart = (e: TouchEvent) => {
+      dragging = false;
+      candidate = e.touches.length === 1 && body.scrollTop <= 0 ? { y: e.touches[0].clientY } : null;
+    };
+    const onMove = (e: TouchEvent) => {
+      const touch = e.touches[0];
+      if (!touch) return;
+      if (!dragging) {
+        if (!candidate) return;
+        const dy = touch.clientY - candidate.y;
+        if (dy < -DRAG_SLOP || body.scrollTop > 0) {
+          candidate = null; // scrolling the content, not the sheet
+          return;
+        }
+        if (dy < DRAG_SLOP) return;
+        if (!dragRef.current.beginDrag(candidate.y, e.timeStamp - 16)) return;
+        dragging = true;
+      }
+      e.preventDefault();
+      dragRef.current.moveDrag(touch.clientY, e.timeStamp);
+    };
+    const onEnd = () => {
+      if (dragging) dragRef.current.endDrag();
+      dragging = false;
+      candidate = null;
+    };
+    body.addEventListener("touchstart", onStart, { passive: true });
+    body.addEventListener("touchmove", onMove, { passive: false });
+    body.addEventListener("touchend", onEnd);
+    body.addEventListener("touchcancel", onEnd);
+    return () => {
+      body.removeEventListener("touchstart", onStart);
+      body.removeEventListener("touchmove", onMove);
+      body.removeEventListener("touchend", onEnd);
+      body.removeEventListener("touchcancel", onEnd);
+    };
+  }, []);
+
   return createPortal(
     <div
       ref={backdropRef}
@@ -153,8 +222,8 @@ export default function Modal({ onClose, title, icon, children }: ModalProps) {
           className="touch-none cursor-grab active:cursor-grabbing"
           onPointerDown={onDragStart}
           onPointerMove={onDragMove}
-          onPointerUp={onDragEnd}
-          onPointerCancel={onDragEnd}
+          onPointerUp={endDrag}
+          onPointerCancel={endDrag}
         >
         <div className="pt-2.5 flex justify-center" aria-hidden="true">
           <div className="w-10 h-1.5 rounded-full bg-fg/20" />
@@ -166,13 +235,13 @@ export default function Modal({ onClose, title, icon, children }: ModalProps) {
           <button
             onClick={handleClose}
             aria-label="סגור"
-            className="text-muted hover:text-fg bg-line hover:bg-fg/15 p-2 rounded-full transition-colors"
+            className="text-muted hover:text-fg bg-line hover:bg-fg/15 p-2 rounded-full transition-ui duration-150 ease-out active:scale-[0.97]"
           >
             <X size={20} />
           </button>
         </div>
         </div>
-        <div className="on-light p-6 overflow-y-auto flex-1 bg-surface text-fg">{children}</div>
+        <div ref={bodyRef} className="on-light p-6 overflow-y-auto overscroll-contain flex-1 bg-surface text-fg">{children}</div>
       </div>
     </div>,
     document.body

@@ -26,7 +26,7 @@ export default function PasskeyPrompt() {
           <div className="w-12 h-12 rounded-2xl bg-accent/15 text-accent-fg flex items-center justify-center">
             <Fingerprint size={26} />
           </div>
-          <button onClick={dismissPrompt} aria-label="סגור" className="text-muted hover:text-fg p-1 -m-1">
+          <button onClick={dismissPrompt} aria-label="סגור" className="text-muted hover:text-fg p-1 -m-1 transition-ui duration-150 ease-out active:scale-[0.97]">
             <X size={18} />
           </button>
         </div>
@@ -41,7 +41,7 @@ export default function PasskeyPrompt() {
         <div className="flex gap-2.5">
           <button
             onClick={dismissPrompt}
-            className="flex-1 border-[1.5px] border-btn-secondary text-accent-fg font-bold text-sm py-3 rounded-2xl hover:bg-btn-secondary-hover transition-colors"
+            className="flex-1 border-[1.5px] border-btn-secondary text-accent-fg font-bold text-sm py-3 rounded-2xl hover:bg-btn-secondary-hover transition-ui duration-150 ease-out active:scale-[0.97]"
           >
             אולי מאוחר יותר
           </button>

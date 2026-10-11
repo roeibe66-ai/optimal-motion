@@ -186,9 +186,9 @@ export default function QuickLogSheet({ title, blocksMap, blocksKeys, isAmrap, p
                   onClick={() => toggleDone(se.id)}
                   aria-pressed={draft.done}
                   aria-label={draft.done ? "סמן כלא בוצע" : "סמן כבוצע"}
-                  className={`w-7 h-7 shrink-0 rounded-full flex items-center justify-center border transition-colors ${
+                  className={`w-7 h-7 shrink-0 rounded-full flex items-center justify-center border transition-ui duration-150 ease-out ${
                     draft.done ? "bg-accent border-accent text-on-accent" : "border-line-input text-transparent"
-                  }`}
+                  } active:scale-[0.97]`}
                 >
                   <Check size={15} />
                 </button>
@@ -251,11 +251,11 @@ export default function QuickLogSheet({ title, blocksMap, blocksKeys, isAmrap, p
                     </div>
                   ))}
                   <div className="flex items-center gap-2 mt-1">
-                    <button onClick={() => addSet(se.id)} className="flex items-center gap-1 text-accent-fg text-xs font-bold px-2.5 py-1.5 rounded-lg hover:bg-accent/10">
+                    <button onClick={() => addSet(se.id)} className="flex items-center gap-1 text-accent-fg text-xs font-bold px-2.5 py-1.5 rounded-lg hover:bg-accent/10 transition-ui duration-150 ease-out active:scale-[0.97]">
                       <Plus size={13} /> סט
                     </button>
                     {draft.sets.length > 1 && (
-                      <button onClick={() => removeSet(se.id)} className="flex items-center gap-1 text-muted text-xs font-bold px-2.5 py-1.5 rounded-lg hover:bg-line">
+                      <button onClick={() => removeSet(se.id)} className="flex items-center gap-1 text-muted text-xs font-bold px-2.5 py-1.5 rounded-lg hover:bg-line transition-ui duration-150 ease-out active:scale-[0.97]">
                         <Minus size={13} /> סט
                       </button>
                     )}
@@ -277,7 +277,7 @@ export default function QuickLogSheet({ title, blocksMap, blocksKeys, isAmrap, p
               key={n}
               onClick={() => setRpe(n)}
               aria-pressed={rpe === n}
-              className={`h-11 rounded-xl text-base font-black transition-ui ${getRPEColor(n)} ${rpe === n ? "ring-4 ring-focus scale-105" : rpe !== null ? "opacity-50" : ""}`}
+              className={`h-11 rounded-xl text-base font-black transition-ui duration-150 ease-out-ui ${getRPEColor(n)} ${rpe === n ? "ring-4 ring-focus scale-105" : rpe !== null ? "opacity-50" : ""} active:scale-[0.97]`}
             >
               {n}
             </button>
@@ -294,7 +294,7 @@ export default function QuickLogSheet({ title, blocksMap, blocksKeys, isAmrap, p
                 key={n}
                 onClick={() => setPainAfter(painAfter === n ? null : n)}
                 aria-pressed={painAfter === n}
-                className={`h-10 rounded-xl text-sm font-black transition-ui ${getPainColor(n)} ${painAfter === n ? "ring-4 ring-focus scale-105" : painAfter !== null ? "opacity-50" : ""}`}
+                className={`h-10 rounded-xl text-sm font-black transition-ui duration-150 ease-out-ui ${getPainColor(n)} ${painAfter === n ? "ring-4 ring-focus scale-105" : painAfter !== null ? "opacity-50" : ""} active:scale-[0.97]`}
               >
                 {n}
               </button>

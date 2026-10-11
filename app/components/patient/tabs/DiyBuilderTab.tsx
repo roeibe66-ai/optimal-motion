@@ -2,7 +2,6 @@
 
 import { useState, type Dispatch, type SetStateAction } from "react";
 import { Bookmark, Check, ChevronDown, ChevronRight, Folder, Info, Plus, X } from "lucide-react";
-import Toast from "@/app/components/ui/Toast";
 import {
   AVAILABLE_MUSCLES,
   BODY_PART_GROUPS,
@@ -22,6 +21,7 @@ import type { Exercise } from "@/app/types";
 import { MAX_CATALOG_TITLE_LENGTH } from "@/app/utils/validation";
 import { countLabel } from "@/app/utils/format";
 import { notify } from "@/app/components/ui/feedback";
+import { tapHaptic } from "@/app/utils/haptics";
 
 interface DiyBuilderTabProps {
   exerciseCatalog: Exercise[];
@@ -103,7 +103,6 @@ export default function DiyBuilderTab({
   const { lang } = useAuth();
   const [isSaving, setIsSaving] = useState(false);
   const [justSaved, setJustSaved] = useState(false);
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const dayNumbers = Object.keys(diyExercisesByDay).map(Number).sort((a, b) => a - b);
   const activeDayExercises = diyExercisesByDay[diyActiveDay] ?? [];
@@ -122,7 +121,7 @@ export default function DiyBuilderTab({
     try {
       await onSaveDiyProgram();
       setJustSaved(true);
-      setToastMessage(isEditingSavedProgram ? "התוכנית עודכנה בהצלחה!" : "התוכנית נשמרה בהצלחה!");
+      notify(isEditingSavedProgram ? "התוכנית עודכנה בהצלחה!" : "התוכנית נשמרה בהצלחה!");
       setTimeout(() => setJustSaved(false), 1800);
     } finally {
       setIsSaving(false);
@@ -182,7 +181,6 @@ export default function DiyBuilderTab({
 
   return (
     <div>
-      {toastMessage && <Toast message={toastMessage} onDismiss={() => setToastMessage(null)} />}
 
       <div className="flex items-start justify-between gap-3 mb-6">
         <div>
@@ -191,7 +189,7 @@ export default function DiyBuilderTab({
         </div>
         <button
           onClick={onOpenMyWorkouts}
-          className="shrink-0 mt-0.5 flex items-center gap-1.5 bg-elevated/90 backdrop-blur-md border border-line text-muted font-bold text-[0.6875rem] px-3 py-2.5 rounded-full whitespace-nowrap hover:border-accent/40 transition-colors shadow-sm"
+          className="shrink-0 mt-0.5 flex items-center gap-1.5 bg-elevated/90 backdrop-blur-md border border-line text-muted font-bold text-[0.6875rem] px-3 py-2.5 rounded-full whitespace-nowrap hover:border-accent/40 transition-ui duration-150 ease-out shadow-sm active:scale-[0.97]"
         >
           <Folder size={14} className="text-accent-fg" />
           התוכניות שלי
@@ -210,9 +208,9 @@ export default function DiyBuilderTab({
             <div key={day} className="relative shrink-0">
               <button
                 onClick={() => setDiyActiveDay(day)}
-                className={`flex items-center gap-1.5 pl-3 pr-4 py-2.5 rounded-full font-extrabold text-xs transition-colors border ${
+                className={`flex items-center gap-1.5 pl-3 pr-4 py-2.5 rounded-full font-extrabold text-xs transition-ui duration-150 ease-out border ${
                   isActive ? "bg-accent text-on-accent border-accent" : "bg-elevated/90 backdrop-blur-md text-muted border-line hover:border-accent/40"
-                }`}
+                } active:scale-[0.97]`}
               >
                 יום {day}
                 {count > 0 && (
@@ -225,7 +223,7 @@ export default function DiyBuilderTab({
                 <button
                   onClick={() => removeDay(day)}
                   aria-label={`הסר יום ${day}`}
-                  className="group absolute -top-3.5 -left-3.5 w-8 h-8 flex items-center justify-center"
+                  className="group absolute -top-3.5 -left-3.5 w-8 h-8 flex items-center justify-center transition-ui duration-150 ease-out active:scale-[0.97]"
                 >
                   <span className="w-4 h-4 bg-line text-fg group-hover:bg-danger group-hover:text-on-danger rounded-full flex items-center justify-center shadow-md transition-colors">
                     <X size={8} strokeWidth={3} />
@@ -237,7 +235,7 @@ export default function DiyBuilderTab({
         })}
         <button
           onClick={onAddDiyDay}
-          className="shrink-0 flex items-center gap-1 pl-3 pr-3.5 py-2.5 rounded-full font-extrabold text-xs bg-accent/15 text-accent-fg border border-dashed border-accent/50 hover:bg-accent/25 transition-colors"
+          className="shrink-0 flex items-center gap-1 pl-3 pr-3.5 py-2.5 rounded-full font-extrabold text-xs bg-accent/15 text-accent-fg border border-dashed border-accent/50 hover:bg-accent/25 transition-ui duration-150 ease-out active:scale-[0.97]"
         >
           <Plus size={14} />
           הוסף יום
@@ -271,12 +269,12 @@ export default function DiyBuilderTab({
             </h4>
             <div className="flex items-center gap-3">
               {isEditingSavedProgram && (
-                <button onClick={onCancelEditSavedProgram} className="text-[0.6875rem] font-bold text-muted hover:text-fg">
+                <button onClick={onCancelEditSavedProgram} className="text-[0.6875rem] font-bold text-muted hover:text-fg transition-ui duration-150 ease-out active:scale-[0.97]">
                   ביטול עריכה
                 </button>
               )}
               {activeDayExercises.length > 0 && (
-                <button onClick={clearActiveDay} className="text-[0.6875rem] font-bold text-muted hover:text-fg">
+                <button onClick={clearActiveDay} className="text-[0.6875rem] font-bold text-muted hover:text-fg transition-ui duration-150 ease-out active:scale-[0.97]">
                   נקה יום זה
                 </button>
               )}
@@ -290,7 +288,7 @@ export default function DiyBuilderTab({
                   <button
                     onClick={() => removeExerciseFromActiveDay(idx)}
                     aria-label="הסר תרגיל"
-                    className="absolute -top-3.5 -right-3.5 w-8 h-8 flex items-center justify-center"
+                    className="absolute -top-3.5 -right-3.5 w-8 h-8 flex items-center justify-center transition-ui duration-150 ease-out active:scale-[0.97]"
                   >
                     <span className="w-4 h-4 bg-danger text-on-danger rounded-full flex items-center justify-center shadow-md">
                       <X size={8} strokeWidth={3} />
@@ -329,9 +327,9 @@ export default function DiyBuilderTab({
             <button
               onClick={handleSaveClick}
               disabled={isSaving}
-              className={`flex-1 border-[1.5px] font-extrabold text-[0.8125rem] py-3.5 rounded-2xl flex items-center justify-center gap-1.5 transition-colors disabled:opacity-70 ${
+              className={`flex-1 border-[1.5px] font-extrabold text-[0.8125rem] py-3.5 rounded-2xl flex items-center justify-center gap-1.5 transition-ui duration-150 ease-out disabled:opacity-70 ${
                 justSaved ? "bg-accent border-accent text-on-accent" : "bg-transparent border-btn-secondary text-accent-fg hover:bg-btn-secondary-hover"
-              }`}
+              } active:scale-[0.97]`}
             >
               {justSaved ? <Check size={15} /> : <Bookmark size={15} />}
               {justSaved ? "נשמר!" : isEditingSavedProgram ? "עדכן תוכנית" : "שמור תוכנית"}
@@ -360,7 +358,7 @@ export default function DiyBuilderTab({
 
           return (
             <div key={tab.id} className="on-light rounded-[1.75rem] overflow-hidden bg-surface backdrop-blur-lg border border-line shadow-sm">
-              <button onClick={() => toggleTab(tab.id)} className="w-full flex items-center gap-3 p-5 text-start">
+              <button onClick={() => toggleTab(tab.id)} className="w-full flex items-center gap-3 p-5 text-start transition-ui duration-150 ease-out active:scale-[0.97]">
                 {tabStyle && <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: tabStyle.solid }} />}
                 <span className="flex-1 font-black text-lg text-fg truncate">{tab.label}</span>
 
@@ -396,7 +394,7 @@ export default function DiyBuilderTab({
                             <button
                               key={region.id}
                               onClick={() => setDiyBodyPartFilter(region.id)}
-                              className="on-light flex flex-col items-start gap-1 rounded-2xl p-3.5 bg-surface-alt border border-line hover:bg-line transition-colors text-start"
+                              className="on-light flex flex-col items-start gap-1 rounded-2xl p-3.5 bg-surface-alt border border-line hover:bg-line transition-ui duration-150 ease-out text-start active:scale-[0.97]"
                             >
                               <span className="font-extrabold text-sm" style={{ color: regionStyle.text }}>
                                 {region.label}
@@ -410,7 +408,7 @@ export default function DiyBuilderTab({
                       <div>
                         <button
                           onClick={() => setDiyBodyPartFilter(null)}
-                          className="flex items-center gap-1 text-xs font-bold text-muted hover:text-fg mb-3.5 transition-colors"
+                          className="flex items-center gap-1 text-xs font-bold text-muted hover:text-fg mb-3.5 transition-ui duration-150 ease-out active:scale-[0.97]"
                         >
                           <ChevronRight size={14} />
                           {BODY_PART_GROUPS.find((r) => r.id === selectedRegion)?.label ?? selectedRegion}
@@ -471,14 +469,19 @@ export default function DiyBuilderTab({
                                     <button
                                       onClick={() => onViewExerciseInfo(ex)}
                                       aria-label="מידע על התרגיל"
-                                      className="on-light w-9 h-9 rounded-full bg-surface-alt text-muted flex items-center justify-center hover:bg-line hover:text-fg transition-colors"
+                                      className="on-light w-11 h-11 rounded-full bg-surface-alt text-muted flex items-center justify-center hover:bg-line hover:text-fg transition-ui duration-150 ease-out active:scale-[0.97]"
                                     >
                                       <Info size={16} />
                                     </button>
                                     <button
-                                      onClick={() => addExerciseToActiveDay(ex)}
+                                      onClick={() => {
+                                        // The builder's most-tapped button: press scale + a light tap, so
+                                        // adding is felt even when the tray isn't in view.
+                                        tapHaptic();
+                                        addExerciseToActiveDay(ex);
+                                      }}
                                       aria-label="הוסף לאימון"
-                                      className="w-9 h-9 rounded-full bg-accent/15 text-accent-fg flex items-center justify-center hover:bg-accent/25 transition-colors"
+                                      className="w-11 h-11 rounded-full bg-accent/15 text-accent-fg flex items-center justify-center hover:bg-accent/25 active:scale-90 transition-ui duration-150 ease-out"
                                     >
                                       <Plus size={18} />
                                     </button>

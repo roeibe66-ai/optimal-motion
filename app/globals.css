@@ -457,3 +457,29 @@ html {
     box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text) 45%, transparent);
   }
 }
+
+/* Toast stack (FeedbackHost) placement: above the bottom nav normally; at
+   the top edge while a sheet or a full-screen flow (workout player) is open,
+   so a toast never covers that screen's own bottom buttons — including the
+   one the user may want right after an undo. It then enters/exits from the
+   top, keeping in and out on the same edge. */
+body:has(.sheet-panel, [data-toast-top]) .toast-stack {
+  top: max(1rem, env(safe-area-inset-top));
+  bottom: auto;
+  flex-direction: column;
+}
+body:has(.sheet-panel, [data-toast-top]) .toast-stack .toast-pill[data-leaving] {
+  transform: translateY(-100%);
+}
+@starting-style {
+  body:has(.sheet-panel, [data-toast-top]) .toast-stack .toast-pill {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  body:has(.sheet-panel, [data-toast-top]) .toast-stack .toast-pill[data-leaving] { transform: none; }
+  @starting-style {
+    body:has(.sheet-panel, [data-toast-top]) .toast-stack .toast-pill { transform: none; }
+  }
+}

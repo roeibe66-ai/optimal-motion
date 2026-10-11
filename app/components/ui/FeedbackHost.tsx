@@ -2,28 +2,36 @@
 
 import { AlertTriangle, HelpCircle } from "lucide-react";
 import Modal from "@/app/components/ui/Modal";
-import Toast from "@/app/components/ui/Toast";
+import { ToastPill } from "@/app/components/ui/Toast";
 import { dismissToast, settleConfirm, useFeedbackState } from "@/app/components/ui/feedback";
 
 // Renders whatever notify()/confirmAction() (feedback.ts) asked for. Mounted
 // once per app root (app/page.tsx, and the /dev harnesses).
 export default function FeedbackHost() {
-  const { toast, confirm } = useFeedbackState();
+  const { toasts, confirm } = useFeedbackState();
 
   return (
     <>
-      {toast && (
-        <Toast
-          key={toast.id}
-          message={toast.message}
-          tone={toast.tone}
-          action={toast.action}
-          // Long or error messages stay up longer: ~60ms per character on
-          // top of the base, capped so a stack trace can't pin it forever.
-          // An undo needs time to be reached for: at least 5s.
-          durationMs={Math.max(toast.action ? 5000 : 0, Math.min(7000, (toast.tone === "error" ? 3500 : 2500) + toast.message.length * 60))}
-          onDismiss={() => dismissToast(toast.id)}
-        />
+      {/* Newest nearest the screen edge, up to three; older ones recede
+          (scale/opacity by depth). Placement is CSS (.toast-stack): above the
+          bottom nav, or at the top while a sheet/full-screen flow is open. */}
+      {toasts.length > 0 && (
+        <div className="toast-stack fixed bottom-24 left-1/2 -translate-x-1/2 z-[250] flex flex-col-reverse items-center gap-2 w-max max-w-[calc(100vw-2rem)] print:hidden">
+          {[...toasts].reverse().map((toast, depth) => (
+            <ToastPill
+              key={toast.id}
+              depth={depth}
+              message={toast.message}
+              tone={toast.tone}
+              action={toast.action}
+              // Long or error messages stay up longer: ~60ms per character on
+              // top of the base, capped so a stack trace can't pin it forever.
+              // An undo needs time to be reached for: at least 5s.
+              durationMs={Math.max(toast.action ? 5000 : 0, Math.min(7000, (toast.tone === "error" ? 3500 : 2500) + toast.message.length * 60))}
+              onDismiss={() => dismissToast(toast.id)}
+            />
+          ))}
+        </div>
       )}
 
       {confirm && (

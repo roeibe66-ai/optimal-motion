@@ -12,6 +12,7 @@ import { toDateKey } from "@/app/hooks/useWorkoutSession";
 import { useAuth } from "@/app/context/AuthContext";
 import type { Exercise, ExploreProgram, Workout } from "@/app/types";
 import { notify } from "@/app/components/ui/feedback";
+import { tapHaptic } from "@/app/utils/haptics";
 
 interface ExploreTabProps {
   freePrograms: ExploreProgram[];
@@ -80,7 +81,7 @@ function LikeButton({ isLiked, onToggle }: { isLiked: boolean; onToggle: () => v
   const toggle = () => {
     if (!isLiked) {
       setPopKey((k) => k + 1);
-      if (localStorage.getItem("optimalMotionHaptics") !== "false") navigator.vibrate?.(30);
+      tapHaptic();
     }
     onToggle();
   };
@@ -425,7 +426,7 @@ export default function ExploreTab({
                 <button
                   onClick={handleRemove}
                   disabled={isBusy}
-                  className="w-full bg-transparent border-[1.5px] border-btn-secondary text-accent-fg hover:bg-btn-secondary-hover font-bold text-sm py-3 rounded-2xl transition-colors disabled:bg-disabled disabled:text-disabled-fg"
+                  className="w-full bg-transparent border-[1.5px] border-btn-secondary text-accent-fg hover:bg-btn-secondary-hover font-bold text-sm py-3 rounded-2xl transition-ui duration-150 ease-out disabled:bg-disabled disabled:text-disabled-fg active:scale-[0.97]"
                 >
                   הסר מהתוכניות שלי
                 </button>
@@ -442,7 +443,7 @@ export default function ExploreTab({
           ) : (
             <button
               onClick={handleContactForPremium}
-              className="w-full bg-warm hover:brightness-110 text-on-accent font-black text-sm py-3.5 rounded-2xl transition-colors flex items-center justify-center gap-2"
+              className="w-full bg-warm hover:brightness-110 text-on-accent font-black text-sm py-3.5 rounded-2xl transition-ui duration-150 ease-out flex items-center justify-center gap-2 active:scale-[0.97]"
             >
               <Lock size={16} /> תוכנית פרימיום — לפתיחה צור קשר
             </button>
@@ -479,7 +480,7 @@ export default function ExploreTab({
           {!workoutPreview.is_free ? (
             <button
               onClick={() => contactForPremium(workoutPreview.title)}
-              className="w-full bg-warm hover:brightness-110 text-on-accent font-black text-sm py-3.5 rounded-2xl transition-colors flex items-center justify-center gap-2"
+              className="w-full bg-warm hover:brightness-110 text-on-accent font-black text-sm py-3.5 rounded-2xl transition-ui duration-150 ease-out flex items-center justify-center gap-2 active:scale-[0.97]"
             >
               <Lock size={16} /> אימון פרימיום — לפתיחה צור קשר
             </button>
@@ -491,7 +492,7 @@ export default function ExploreTab({
                     key={mode}
                     type="button"
                     onClick={() => setScheduleMode(mode)}
-                    className={`flex-1 py-2 rounded-lg text-sm font-bold transition-colors ${scheduleMode === mode ? "bg-accent text-on-accent" : "text-muted hover:text-fg"}`}
+                    className={`flex-1 py-2 rounded-lg text-sm font-bold transition-ui duration-150 ease-out ${scheduleMode === mode ? "bg-accent text-on-accent" : "text-muted hover:text-fg"} active:scale-[0.97]`}
                   >
                     {mode === "weekly" ? "כל שבוע" : "תאריך מסוים"}
                   </button>
@@ -534,9 +535,9 @@ export default function ExploreTab({
                       onClick={() => setPickedDays((prev) => (isPicked ? prev.filter((d) => d !== day.id) : [...prev, day.id]))}
                       aria-pressed={isPicked}
                       aria-label={`יום ${day.label}`}
-                      className={`on-light py-3 rounded-xl border font-black text-sm transition-colors ${
+                      className={`on-light py-3 rounded-xl border font-black text-sm transition-ui duration-150 ease-out ${
                         isPicked ? "bg-accent text-on-accent border-accent" : "bg-surface-alt text-fg border-line hover:bg-line"
-                      }`}
+                      } active:scale-[0.97]`}
                     >
                       {day.he_short}
                     </button>
@@ -552,7 +553,7 @@ export default function ExploreTab({
               </button>
               </>
               )}
-              <button onClick={() => setPickDayFor(null)} className="text-sm font-bold text-muted hover:text-fg">
+              <button onClick={() => setPickDayFor(null)} className="text-sm font-bold text-muted hover:text-fg transition-ui duration-150 ease-out active:scale-[0.97]">
                 ביטול
               </button>
             </div>
@@ -574,7 +575,7 @@ export default function ExploreTab({
                   setPickedDays([]);
                   setPickDayFor(String(workoutPreview.id));
                 }}
-                className="w-full bg-transparent border-[1.5px] border-btn-secondary text-accent-fg hover:bg-btn-secondary-hover font-bold text-sm py-3 rounded-2xl transition-colors flex items-center justify-center gap-2"
+                className="w-full bg-transparent border-[1.5px] border-btn-secondary text-accent-fg hover:bg-btn-secondary-hover font-bold text-sm py-3 rounded-2xl transition-ui duration-150 ease-out flex items-center justify-center gap-2 active:scale-[0.97]"
               >
                 <CalendarPlus size={16} /> הוסף ללו&quot;ז שלי
               </button>

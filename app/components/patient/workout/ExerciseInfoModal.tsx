@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { ClipboardList, Dumbbell, History, Info, Loader2, TrendingUp } from "lucide-react";
 import {
   CartesianGrid,
@@ -78,6 +78,13 @@ function PlaceholderTabBody({ icon, text }: { icon: ReactNode; text: string }) {
 export default function ExerciseInfoModal({ exercise, historyData, onClose }: ExerciseInfoModalProps) {
   const { lang } = useAuth();
   const [activeTab, setActiveTab] = useState<TabId>("about");
+  const tabsRef = useRef<HTMLDivElement>(null);
+  const [indicator, setIndicator] = useState<{ left: number; width: number } | null>(null);
+  useLayoutEffect(() => {
+    const tab = tabsRef.current?.querySelector<HTMLElement>(`[data-tab="${activeTab}"]`);
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- measuring layout (the tabs' natural widths) to position the indicator
+    if (tab) setIndicator({ left: tab.offsetLeft, width: tab.offsetWidth });
+  }, [activeTab]);
   const { sessions: pastSessions, isLoading: isHistoryLoading } = useExerciseHistory(exercise.id);
 
   // Cue lines first, mistake lines immediately after — one merged list, one
@@ -129,20 +136,30 @@ export default function ExerciseInfoModal({ exercise, historyData, onClose }: Ex
       {/* Sticky under the modal's own fixed header so switching tabs never
           requires scrolling back up first — bleeds to the sheet's edges
           (-mx-6) so its white backing fully covers content scrolling under it. */}
-      <div className="on-light sticky top-0 z-10 -mx-6 px-6 bg-surface flex gap-5 border-b border-line mb-6">
+      <div ref={tabsRef} className="on-light sticky top-0 z-10 -mx-6 px-6 bg-surface flex gap-5 border-b border-line mb-6">
         {TABS.map((tab) => {
           const isActive = activeTab === tab.id;
           return (
             <button
               key={tab.id}
+              data-tab={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`relative py-3 text-sm font-bold transition-colors ${isActive ? "text-accent-fg" : "text-muted hover:text-fg"}`}
+              className={`relative py-3 text-sm font-bold transition-ui duration-150 ease-out active:scale-[0.97] ${isActive ? "text-accent-fg" : "text-muted hover:text-fg"}`}
             >
               {tab.label}
-              {isActive && <span className="absolute bottom-0 inset-x-0 h-[2.5px] bg-accent rounded-full" />}
             </button>
           );
         })}
+        {/* One indicator that slides to the active tab (it used to be a
+            separate line under each tab, which jumped). Measured, since the
+            tabs are their natural widths. */}
+        {indicator && (
+          <span
+            aria-hidden="true"
+            className="absolute bottom-0 left-0 h-[2.5px] bg-accent rounded-full transition-[translate,width] duration-200 ease-out-strong motion-reduce:transition-none"
+            style={{ translate: `${indicator.left}px 0`, width: indicator.width }}
+          />
+        )}
       </div>
 
       {activeTab === "about" && (

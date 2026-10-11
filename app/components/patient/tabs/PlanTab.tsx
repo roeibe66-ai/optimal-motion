@@ -368,7 +368,7 @@ export default function PlanTab({
             {(todayCat || isDiyMode) && (
             <button
               onClick={() => openProgram(String(todayCat))}
-              className="absolute bottom-5 left-5 z-10 w-14 h-14 rounded-full bg-fg/15 border border-fg/25 backdrop-blur-md flex items-center justify-center hover:bg-fg/25 hover:scale-110 active:scale-95 transition-ui duration-200 ease-out shadow-[0_8px_24px_-4px_color-mix(in_srgb,var(--shadow-ink)_50%,transparent)]"
+              className="absolute bottom-5 left-5 z-10 w-14 h-14 rounded-full bg-fg/15 border border-fg/25 backdrop-blur-md flex items-center justify-center hover:bg-fg/25 hover:scale-[1.04] active:scale-95 transition-ui duration-200 ease-out shadow-[0_8px_24px_-4px_color-mix(in_srgb,var(--shadow-ink)_50%,transparent)]"
             >
               <Play size={20} className="fill-fg text-fg" />
             </button>
@@ -390,7 +390,7 @@ export default function PlanTab({
                 <button
                   key={w.id}
                   onClick={() => onAddStarterProgram(String(w.id))}
-                  className="on-light flex items-center gap-4 bg-surface-alt hover:bg-line rounded-2xl p-4 text-start transition-colors"
+                  className="on-light flex items-center gap-4 bg-surface-alt hover:bg-line rounded-2xl p-4 text-start transition-ui duration-150 ease-out active:scale-[0.97]"
                 >
                   <div className="w-11 h-11 rounded-full bg-accent text-on-accent flex items-center justify-center font-black text-sm shrink-0">{idx + 1}</div>
                   <div className="flex-1 overflow-hidden">

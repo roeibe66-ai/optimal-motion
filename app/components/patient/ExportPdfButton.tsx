@@ -63,7 +63,7 @@ export default function ExportPdfButton({ program, exerciseCatalog }: ExportPdfB
     <>
       <button
         onClick={() => setIsPrinting(true)}
-        className="flex items-center gap-1.5 text-[0.6875rem] font-bold text-muted hover:text-accent-fg transition-colors print:hidden"
+        className="flex items-center gap-1.5 text-[0.6875rem] font-bold text-muted hover:text-accent-fg transition-ui duration-150 ease-out print:hidden active:scale-[0.97]"
       >
         <Printer size={13} />
         ייצוא PDF

@@ -294,3 +294,16 @@ would have been positioned relative to the animated wrapper instead of the viewp
 **Rule:** entrance keyframes on anything that can contain fixed/sticky UI use
 `fill-mode: backwards` (no lingering effect), and fixed bars stay outside the animated
 element (Plan detail animates its sections, not the root holding the CTA bar).
+
+## 2026-10-11 — A second toast silently cancelled the first one's undo
+
+**What happened:** `notify()` kept a single toast slot, so removing builder day 2 and then
+day 3 replaced day 2's "ביטול" toast — day 2 could no longer be undone, with nothing on
+screen saying so. The toast also kept counting down while the user reached for "ביטול",
+and while the app was in the background.
+**Rule:** feedback that carries an action is a promise — it stacks (`ui/feedback.ts`, up to
+3) instead of being replaced, pauses while pointed at / while `document.hidden`, and moves
+to the top edge while a sheet or full-screen flow owns the bottom of the screen.
+**Testing note:** React's `onPointerEnter` is built from `pointerover`/`pointerout`, so
+synthetic `pointerenter` events don't reach it; and the browser pane reports
+`document.hidden` while it isn't displayed, which pauses every toast.

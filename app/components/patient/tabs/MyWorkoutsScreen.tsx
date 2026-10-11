@@ -125,7 +125,7 @@ export default function MyWorkoutsScreen({ savedPrograms, exerciseCatalog, onBac
                     <button
                       onClick={() => handleDelete(program)}
                       aria-label="מחק תוכנית"
-                      className="on-light w-8 h-8 rounded-full bg-surface-alt flex items-center justify-center text-muted hover:text-danger-fg hover:bg-danger/10 transition-colors shrink-0"
+                      className="on-light w-8 h-8 rounded-full bg-surface-alt flex items-center justify-center text-muted hover:text-danger-fg hover:bg-danger/10 transition-ui duration-150 ease-out shrink-0 active:scale-[0.97]"
                     >
                       <Trash2 size={14} />
                     </button>
@@ -169,7 +169,7 @@ export default function MyWorkoutsScreen({ savedPrograms, exerciseCatalog, onBac
 
                   <button
                     onClick={() => onEditProgram(program)}
-                    className="w-full bg-transparent border-[1.5px] border-btn-secondary text-accent-fg font-bold text-[0.8125rem] py-3 rounded-2xl hover:bg-btn-secondary-hover transition-colors"
+                    className="w-full bg-transparent border-[1.5px] border-btn-secondary text-accent-fg font-bold text-[0.8125rem] py-3 rounded-2xl hover:bg-btn-secondary-hover transition-ui duration-150 ease-out active:scale-[0.97]"
                   >
                     ערוך תוכנית
                   </button>
@@ -179,7 +179,7 @@ export default function MyWorkoutsScreen({ savedPrograms, exerciseCatalog, onBac
 
             <button
               onClick={onBack}
-              className="w-full bg-accent/8 border-[1.5px] border-dashed border-accent/35 text-accent-fg font-extrabold text-[0.8125rem] py-4 rounded-[1.25rem] flex items-center justify-center gap-2 hover:bg-accent/12 transition-colors"
+              className="w-full bg-accent/8 border-[1.5px] border-dashed border-accent/35 text-accent-fg font-extrabold text-[0.8125rem] py-4 rounded-[1.25rem] flex items-center justify-center gap-2 hover:bg-accent/12 transition-ui duration-150 ease-out active:scale-[0.97]"
             >
               <Plus size={16} />
               בנה תוכנית חדשה

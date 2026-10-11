@@ -268,9 +268,9 @@ export default function ProfileTab({
                   role="radio"
                   aria-checked={themeSetting === option.id}
                   onClick={() => setThemeSetting(option.id)}
-                  className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-colors ${
+                  className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-ui duration-150 ease-out ${
                     themeSetting === option.id ? "bg-accent text-on-accent" : "text-muted hover:text-fg"
-                  }`}
+                  } active:scale-[0.97]`}
                 >
                   {option.label}
                 </button>

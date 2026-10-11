@@ -60,7 +60,7 @@ function RirInfoButton() {
   const [isOpen, setIsOpen] = useState(false);
   return (
     <span className="relative inline-flex normal-case tracking-normal">
-      <button onClick={() => setIsOpen((prev) => !prev)} aria-label="מה זה RIR" aria-expanded={isOpen} className="text-muted hover:text-fg transition-colors p-1 -m-1">
+      <button onClick={() => setIsOpen((prev) => !prev)} aria-label="מה זה RIR" aria-expanded={isOpen} className="text-muted hover:text-fg transition-ui duration-150 ease-out p-1 -m-1 active:scale-[0.97]">
         <Info size={13} />
       </button>
       {isOpen && (
@@ -173,6 +173,7 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
 
   return (
     <div
+      data-toast-top
       className="fixed inset-0 z-[150] bg-page text-fg flex flex-col overflow-hidden"
       dir={dir}
       onTouchStart={session.onTouchStart}
@@ -346,8 +347,9 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
             />
 
             {/* Minimal controls, seamless below the player — no drawer/card.
-                Sticky to the bottom of the scrolling stage. */}
-            <div className="sticky bottom-0 z-10 w-full flex justify-center bg-page pt-3 pb-1">
+                Sticky to the bottom of the scrolling stage; a soft fade on
+                its top edge (not a hard cut) shows content scrolls under it. */}
+            <div className="sticky bottom-0 z-10 w-full flex justify-center bg-page pt-3 pb-1 before:content-[''] before:absolute before:inset-x-0 before:bottom-full before:h-6 before:bg-gradient-to-t before:from-page before:to-transparent before:pointer-events-none">
             {session.activeAssign?.is_time ? (
               session.exTimer === 0 ? (
                 <button
@@ -589,7 +591,7 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
                 this cream background they'd be nearly invisible, so both
                 convert to the solid brand-terracotta accent instead. */}
             {/* Sticky to the bottom of the scrolling stage, like the active screen's controls. */}
-            <div className="sticky bottom-0 z-10 w-full flex items-center justify-center gap-8 bg-page pt-3 pb-1">
+            <div className="sticky bottom-0 z-10 w-full flex items-center justify-center gap-8 bg-page pt-3 pb-1 before:content-[''] before:absolute before:inset-x-0 before:bottom-full before:h-6 before:bg-gradient-to-t before:from-page before:to-transparent before:pointer-events-none">
               {session.isSupersetCheck ? (
                 <button
                   onClick={session.handleContinueSuperset}

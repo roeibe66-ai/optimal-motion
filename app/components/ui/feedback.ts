@@ -39,11 +39,14 @@ export interface ConfirmRequest extends ConfirmOptions {
 }
 
 interface FeedbackState {
-  toast: ToastRequest | null;
+  // Oldest first, at most MAX_TOASTS. A stack, not one slot: a second
+  // notify() used to replace the first — and with it the first's "ביטול".
+  toasts: ToastRequest[];
   confirm: ConfirmRequest | null;
 }
 
-let state: FeedbackState = { toast: null, confirm: null };
+const MAX_TOASTS = 3;
+let state: FeedbackState = { toasts: [], confirm: null };
 let nextId = 1;
 const listeners = new Set<() => void>();
 
@@ -53,7 +56,7 @@ function setState(next: Partial<FeedbackState>) {
 }
 
 export function notify(message: string, tone: ToastTone = "success", options: { action?: ToastAction } = {}) {
-  setState({ toast: { id: nextId++, message, tone, action: options.action } });
+  setState({ toasts: [...state.toasts, { id: nextId++, message, tone, action: options.action }].slice(-MAX_TOASTS) });
 }
 
 export function confirmAction(options: ConfirmOptions): Promise<boolean> {
@@ -65,7 +68,7 @@ export function confirmAction(options: ConfirmOptions): Promise<boolean> {
 }
 
 export function dismissToast(id: number) {
-  if (state.toast?.id === id) setState({ toast: null });
+  if (state.toasts.some((t) => t.id === id)) setState({ toasts: state.toasts.filter((t) => t.id !== id) });
 }
 
 export function settleConfirm(id: number, confirmed: boolean) {
@@ -78,7 +81,7 @@ const subscribe = (l: () => void) => {
   listeners.add(l);
   return () => listeners.delete(l);
 };
-const SERVER_STATE: FeedbackState = { toast: null, confirm: null };
+const SERVER_STATE: FeedbackState = { toasts: [], confirm: null };
 
 export function useFeedbackState() {
   return useSyncExternalStore(subscribe, () => state, () => SERVER_STATE);
