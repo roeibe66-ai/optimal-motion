@@ -79,7 +79,7 @@ export default function MyWorkoutsScreen({ savedPrograms, exerciseCatalog, onBac
             <p className="text-muted text-sm max-w-xs">בנה תוכנית שבועית מהמאגר הפתוח ושמור אותה כאן לשימוש חוזר בכל זמן.</p>
             <button
               onClick={onBack}
-              className="mt-4 bg-btn-primary hover:bg-btn-primary-hover active:bg-btn-primary-active text-btn-primary-fg font-black text-[13px] px-6 py-3.5 rounded-2xl flex items-center justify-center gap-2 transition-colors"
+              className="mt-4 bg-btn-primary hover:bg-btn-primary-hover active:bg-btn-primary-active text-btn-primary-fg font-black text-[0.8125rem] px-6 py-3.5 rounded-2xl flex items-center justify-center gap-2 transition-colors"
             >
               <Plus size={16} />
               בנה תוכנית חדשה
@@ -113,11 +113,11 @@ export default function MyWorkoutsScreen({ savedPrograms, exerciseCatalog, onBac
                   <div className="flex justify-between items-start gap-2.5">
                     <div>
                       <div className="text-base font-black text-fg">{program.name}</div>
-                      <div className="text-[11px] text-muted mt-0.5">
+                      <div className="text-[0.6875rem] text-muted mt-0.5">
                         {countLabel(days.length, "יום אחד", "ימים")} · {countLabel(totalExerciseCount, "תרגיל אחד", "תרגילים")} · {relativeCreatedLabel(program.created_at)}
                       </div>
                       {missingCount > 0 && (
-                        <div className="text-[11px] font-bold text-warm-fg mt-1">
+                        <div className="text-[0.6875rem] font-bold text-warm-fg mt-1">
                           {countLabel(missingCount, "תרגיל אחד הוסר", `תרגילים הוסרו`)} מהמאגר מאז שנשמרה התוכנית
                         </div>
                       )}
@@ -139,7 +139,7 @@ export default function MyWorkoutsScreen({ savedPrograms, exerciseCatalog, onBac
                       return (
                         <span
                           key={cat}
-                          className="flex items-center gap-1.5 text-[10px] font-extrabold px-2.5 py-1 rounded-full"
+                          className="flex items-center gap-1.5 text-[0.6875rem] font-extrabold px-2.5 py-1 rounded-full"
                           style={{ color: style.text, background: style.bg }}
                         >
                           <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: style.text }}></span>
@@ -159,7 +159,7 @@ export default function MyWorkoutsScreen({ savedPrograms, exerciseCatalog, onBac
                         onClick={() => onStartProgramDay(program, d.day_number)}
                         disabled={d.exercises.length === 0}
                         title={d.exercises.length === 0 ? "כל התרגילים של היום הזה הוסרו מהמאגר" : undefined}
-                        className="flex items-center gap-1.5 bg-btn-primary text-btn-primary-fg font-black text-[12px] py-2.5 px-3.5 rounded-2xl hover:bg-btn-primary-hover active:bg-btn-primary-active transition-colors disabled:bg-disabled disabled:text-disabled-fg disabled:pointer-events-none"
+                        className="flex items-center gap-1.5 bg-btn-primary text-btn-primary-fg font-black text-xs py-2.5 px-3.5 rounded-2xl hover:bg-btn-primary-hover active:bg-btn-primary-active transition-colors disabled:bg-disabled disabled:text-disabled-fg disabled:pointer-events-none"
                       >
                         <Play size={12} fill="currentColor" />
                         יום {d.day_number} ({d.exercises.length})
@@ -169,7 +169,7 @@ export default function MyWorkoutsScreen({ savedPrograms, exerciseCatalog, onBac
 
                   <button
                     onClick={() => onEditProgram(program)}
-                    className="w-full bg-transparent border-[1.5px] border-btn-secondary text-accent-fg font-bold text-[13px] py-3 rounded-2xl hover:bg-btn-secondary-hover transition-colors"
+                    className="w-full bg-transparent border-[1.5px] border-btn-secondary text-accent-fg font-bold text-[0.8125rem] py-3 rounded-2xl hover:bg-btn-secondary-hover transition-colors"
                   >
                     ערוך תוכנית
                   </button>
@@ -179,7 +179,7 @@ export default function MyWorkoutsScreen({ savedPrograms, exerciseCatalog, onBac
 
             <button
               onClick={onBack}
-              className="w-full bg-accent/8 border-[1.5px] border-dashed border-accent/35 text-accent-fg font-extrabold text-[13px] py-4 rounded-[1.25rem] flex items-center justify-center gap-2 hover:bg-accent/12 transition-colors"
+              className="w-full bg-accent/8 border-[1.5px] border-dashed border-accent/35 text-accent-fg font-extrabold text-[0.8125rem] py-4 rounded-[1.25rem] flex items-center justify-center gap-2 hover:bg-accent/12 transition-colors"
             >
               <Plus size={16} />
               בנה תוכנית חדשה

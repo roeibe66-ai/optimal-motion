@@ -45,7 +45,7 @@ export default function ExerciseMuscleMap({ exercise }: ExerciseMuscleMapProps) 
   return (
     <div className="mb-4">
       <AnatomyDiagram primaryMuscles={primaryIds} secondaryMuscles={secondaryIds} />
-      <div className="flex flex-wrap gap-x-4 gap-y-1.5 mt-2.5 text-[11px] font-bold">
+      <div className="flex flex-wrap gap-x-4 gap-y-1.5 mt-2.5 text-[0.6875rem] font-bold">
         {primaryIds.length > 0 && (
           <span className="flex items-center gap-1.5 text-fg">
             <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: ANATOMY_TIER_COLORS.primary }} />

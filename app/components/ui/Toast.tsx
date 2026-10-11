@@ -2,13 +2,14 @@
 
 import { useEffect, useRef, useState } from "react";
 import { AlertCircle, CheckCircle2, Info } from "lucide-react";
-import type { ToastTone } from "@/app/components/ui/feedback";
+import type { ToastAction, ToastTone } from "@/app/components/ui/feedback";
 
 interface ToastProps {
   message: string;
   onDismiss: () => void;
   durationMs?: number;
   tone?: ToastTone; // success (default) / error / info — the icon and its color
+  action?: ToastAction; // e.g. "ביטול" (undo); tapping it runs the action and dismisses
 }
 
 const TONE_ICON = {
@@ -33,7 +34,7 @@ export default function Toast(props: ToastProps) {
 // Must match the .toast-pill[data-leaving] duration in globals.css.
 const TOAST_EXIT_MS = 200;
 
-function ToastPill({ message, onDismiss, durationMs = 2500, tone = "success" }: ToastProps) {
+function ToastPill({ message, onDismiss, durationMs = 2500, tone = "success", action }: ToastProps) {
   const [isLeaving, setIsLeaving] = useState(false);
 
   // Callers pass an inline arrow, so onDismiss changes identity on every
@@ -43,6 +44,11 @@ function ToastPill({ message, onDismiss, durationMs = 2500, tone = "success" }: 
   useEffect(() => {
     onDismissRef.current = onDismiss;
   });
+
+  const leaveNow = () => {
+    setIsLeaving(true);
+    setTimeout(() => onDismissRef.current(), TOAST_EXIT_MS);
+  };
 
   useEffect(() => {
     const leave = setTimeout(() => setIsLeaving(true), durationMs);
@@ -64,6 +70,17 @@ function ToastPill({ message, onDismiss, durationMs = 2500, tone = "success" }: 
       >
         {TONE_ICON[tone]}
         <span className="min-w-0">{message}</span>
+        {action && (
+          <button
+            onClick={() => {
+              action.onClick();
+              leaveNow();
+            }}
+            className="shrink-0 -my-1.5 ms-1 px-3 py-1.5 rounded-full text-accent-fg font-black hover:bg-accent/10 active:scale-95 transition-ui duration-150 ease-out"
+          >
+            {action.label}
+          </button>
+        )}
       </div>
     </div>
   );

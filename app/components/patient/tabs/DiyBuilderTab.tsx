@@ -21,7 +21,7 @@ import { ExerciseThumb } from "@/app/components/ExerciseMedia";
 import type { Exercise } from "@/app/types";
 import { MAX_CATALOG_TITLE_LENGTH } from "@/app/utils/validation";
 import { countLabel } from "@/app/utils/format";
-import { confirmAction } from "@/app/components/ui/feedback";
+import { notify } from "@/app/components/ui/feedback";
 
 interface DiyBuilderTabProps {
   exerciseCatalog: Exercise[];
@@ -160,30 +160,24 @@ export default function DiyBuilderTab({
     return parts.find((p) => p !== "upper-body" && p !== "lower-body") ?? parts[0];
   };
 
-  // Removing a day / clearing it drops its exercises with no undo — ask
-  // first, but only when there's something to lose.
-  const removeDay = async (day: number) => {
-    const count = diyExercisesByDay[day]?.length ?? 0;
-    if (count > 0) {
-      const confirmed = await confirmAction({
-        title: `להסיר את יום ${day}?`,
-        message: count === 1 ? "גם התרגיל שבחרת ליום הזה יוסר." : `גם ${count} התרגילים שבחרת ליום הזה יוסרו.`,
-        confirmLabel: "הסר יום",
-        destructive: true,
-      });
-      if (!confirmed) return;
-    }
+  // Removing or clearing a day is recoverable, so it happens at once with
+  // an undo on the toast (Apple's "forgiveness": undo for slips, a
+  // confirmation only for what can't be taken back).
+  const removeDay = (day: number) => {
+    const snapshot = diyExercisesByDay[day] ?? [];
     onRemoveDiyDay(day);
+    notify(`יום ${day} הוסר`, "info", {
+      action: { label: "ביטול", onClick: () => setDiyExercisesByDay((prev) => ({ ...prev, [day]: snapshot })) },
+    });
   };
 
-  const clearActiveDay = async () => {
-    const confirmed = await confirmAction({
-      title: `לנקות את יום ${diyActiveDay}?`,
-      message: "כל התרגילים שבחרת ליום הזה יוסרו.",
-      confirmLabel: "נקה",
-      destructive: true,
+  const clearActiveDay = () => {
+    const day = diyActiveDay;
+    const snapshot = diyExercisesByDay[day] ?? [];
+    setDiyExercisesByDay((prev) => ({ ...prev, [day]: [] }));
+    notify(`יום ${day} נוקה`, "info", {
+      action: { label: "ביטול", onClick: () => setDiyExercisesByDay((prev) => ({ ...prev, [day]: snapshot })) },
     });
-    if (confirmed) setDiyExercisesByDay((prev) => ({ ...prev, [diyActiveDay]: [] }));
   };
 
   return (
@@ -193,11 +187,11 @@ export default function DiyBuilderTab({
       <div className="flex items-start justify-between gap-3 mb-6">
         <div>
           <h2 className="text-2xl md:text-3xl font-black text-fg tracking-tight mb-1.5">בנה תוכנית שבועית</h2>
-          <p className="text-muted text-[13px] md:text-sm">הוסף ימי אימון ובחר תרגילים לכל יום מהמאגר הפתוח שלך.</p>
+          <p className="text-muted text-[0.8125rem] md:text-sm">הוסף ימי אימון ובחר תרגילים לכל יום מהמאגר הפתוח שלך.</p>
         </div>
         <button
           onClick={onOpenMyWorkouts}
-          className="shrink-0 mt-0.5 flex items-center gap-1.5 bg-elevated/90 backdrop-blur-md border border-line text-muted font-bold text-[11px] px-3 py-2.5 rounded-full whitespace-nowrap hover:border-accent/40 transition-colors shadow-sm"
+          className="shrink-0 mt-0.5 flex items-center gap-1.5 bg-elevated/90 backdrop-blur-md border border-line text-muted font-bold text-[0.6875rem] px-3 py-2.5 rounded-full whitespace-nowrap hover:border-accent/40 transition-colors shadow-sm"
         >
           <Folder size={14} className="text-accent-fg" />
           התוכניות שלי
@@ -222,7 +216,7 @@ export default function DiyBuilderTab({
               >
                 יום {day}
                 {count > 0 && (
-                  <span className={`text-[10px] rounded-full px-1.5 py-0.5 ${isActive ? "bg-on-accent/15" : "bg-fg/10 text-muted"}`}>{count}</span>
+                  <span className={`text-[0.6875rem] rounded-full px-1.5 py-0.5 ${isActive ? "bg-on-accent/15" : "bg-fg/10 text-muted"}`}>{count}</span>
                 )}
               </button>
               {dayNumbers.length > 1 && (
@@ -272,17 +266,17 @@ export default function DiyBuilderTab({
       {totalExerciseCount > 0 && (
         <div className="on-light bg-surface border border-line p-4 rounded-3xl mb-8 flex flex-col gap-3.5 sticky top-4 z-30 backdrop-blur-xl shadow-card">
           <div className="flex justify-between items-center">
-            <h4 className="font-extrabold text-accent-fg text-[13px]">
+            <h4 className="font-extrabold text-accent-fg text-[0.8125rem]">
               יום {diyActiveDay} ({countLabel(activeDayExercises.length, "תרגיל אחד", "תרגילים")})
             </h4>
             <div className="flex items-center gap-3">
               {isEditingSavedProgram && (
-                <button onClick={onCancelEditSavedProgram} className="text-[11px] font-bold text-muted hover:text-fg">
+                <button onClick={onCancelEditSavedProgram} className="text-[0.6875rem] font-bold text-muted hover:text-fg">
                   ביטול עריכה
                 </button>
               )}
               {activeDayExercises.length > 0 && (
-                <button onClick={clearActiveDay} className="text-[11px] font-bold text-muted hover:text-fg">
+                <button onClick={clearActiveDay} className="text-[0.6875rem] font-bold text-muted hover:text-fg">
                   נקה יום זה
                 </button>
               )}
@@ -309,16 +303,16 @@ export default function DiyBuilderTab({
                     legacyFit="object-contain p-0.5"
                     fallback={<div className="on-light w-9 h-9 rounded-[10px] bg-surface-alt" />}
                   />
-                  <span className="text-[11px] font-bold text-fg leading-tight line-clamp-2 w-full">{getExerciseName(ex, lang)}</span>
+                  <span className="text-[0.6875rem] font-bold text-fg leading-tight line-clamp-2 w-full">{getExerciseName(ex, lang)}</span>
                 </div>
               ))}
             </div>
           ) : (
-            <p className="text-[11px] font-medium text-muted">עדיין לא נבחרו תרגילים ליום {diyActiveDay}. בחר תרגילים מהרשימה למטה.</p>
+            <p className="text-[0.6875rem] font-medium text-muted">עדיין לא נבחרו תרגילים ליום {diyActiveDay}. בחר תרגילים מהרשימה למטה.</p>
           )}
 
           <div>
-            <label htmlFor="diy-program-name" className="block text-[10px] font-extrabold text-accent-fg mb-1.5">
+            <label htmlFor="diy-program-name" className="block text-[0.6875rem] font-extrabold text-accent-fg mb-1.5">
               שם התוכנית
             </label>
             <input
@@ -335,7 +329,7 @@ export default function DiyBuilderTab({
             <button
               onClick={handleSaveClick}
               disabled={isSaving}
-              className={`flex-1 border-[1.5px] font-extrabold text-[13px] py-3.5 rounded-2xl flex items-center justify-center gap-1.5 transition-colors disabled:opacity-70 ${
+              className={`flex-1 border-[1.5px] font-extrabold text-[0.8125rem] py-3.5 rounded-2xl flex items-center justify-center gap-1.5 transition-colors disabled:opacity-70 ${
                 justSaved ? "bg-accent border-accent text-on-accent" : "bg-transparent border-btn-secondary text-accent-fg hover:bg-btn-secondary-hover"
               }`}
             >
@@ -407,7 +401,7 @@ export default function DiyBuilderTab({
                               <span className="font-extrabold text-sm" style={{ color: regionStyle.text }}>
                                 {region.label}
                               </span>
-                              <span className="text-[11px] font-bold text-muted">{countLabel(count, "תרגיל אחד", "תרגילים")}</span>
+                              <span className="text-[0.6875rem] font-bold text-muted">{countLabel(count, "תרגיל אחד", "תרגילים")}</span>
                             </button>
                           );
                         })}
@@ -442,14 +436,14 @@ export default function DiyBuilderTab({
                                     />
 
                                     <div className="overflow-hidden">
-                                      <h4 className="font-extrabold text-fg text-[13px] truncate">{getExerciseName(ex, lang)}</h4>
+                                      <h4 className="font-extrabold text-fg text-[0.8125rem] truncate">{getExerciseName(ex, lang)}</h4>
                                       <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-                                        <span className="text-[11px] text-muted truncate">
+                                        <span className="text-[0.6875rem] text-muted truncate">
                                           {AVAILABLE_MUSCLES.find((m) => m.id === ex.target_muscle)?.label}
                                         </span>
                                         <span className="w-[3px] h-[3px] rounded-full bg-line shrink-0"></span>
                                         <span
-                                          className="text-[10px] font-extrabold px-2 py-0.5 rounded-full whitespace-nowrap"
+                                          className="text-[0.6875rem] font-extrabold px-2 py-0.5 rounded-full whitespace-nowrap"
                                           style={{ background: style.bg, color: style.text }}
                                         >
                                           {/* First category + "+N": a nowrap pill of all of them was clipped by the card. */}
@@ -463,7 +457,7 @@ export default function DiyBuilderTab({
                                           const bodyPartLabel = BODY_PART_GROUPS.find((p) => p.id === bodyPartId)?.label;
                                           return (
                                             <span
-                                              className="text-[10px] font-extrabold px-2 py-0.5 rounded-full whitespace-nowrap"
+                                              className="text-[0.6875rem] font-extrabold px-2 py-0.5 rounded-full whitespace-nowrap"
                                               style={{ background: bodyPartStyle.bg, color: bodyPartStyle.text }}
                                             >
                                               {bodyPartLabel}

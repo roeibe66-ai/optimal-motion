@@ -157,7 +157,7 @@ export default function ExerciseInfoModal({ exercise, historyData, onClose }: Ex
             <div className={hasHeatmapData ? "mb-6" : ""}>
               <div className="flex items-center gap-2 mb-4">
                 <ClipboardList size={15} className="text-accent-fg" />
-                <h4 className="font-bold text-[13px] text-muted">הנחיות</h4>
+                <h4 className="font-bold text-[0.8125rem] text-muted">הנחיות</h4>
               </div>
               <div>
                 {instructionLines.map((line, i) => (
@@ -199,7 +199,7 @@ export default function ExerciseInfoModal({ exercise, historyData, onClose }: Ex
                     <span className="text-sm font-black text-fg">
                       {new Date(session.date).toLocaleDateString("he-IL", { weekday: "short", day: "2-digit", month: "2-digit", year: "numeric" })}
                     </span>
-                    <span className="text-[11px] font-bold text-muted">{session.sets.length} סטים</span>
+                    <span className="text-[0.6875rem] font-bold text-muted">{session.sets.length} סטים</span>
                   </div>
                   <div className="flex flex-col gap-1.5">
                     {session.sets.map((set, i) => (
@@ -208,10 +208,10 @@ export default function ExerciseInfoModal({ exercise, historyData, onClose }: Ex
                         <div className="flex items-center gap-2">
                           <span className="font-bold text-fg">{set.reps} חזרות</span>
                           {formatWeightKg(set.weight_kg) && (
-                            <span className="on-light bg-surface text-fg text-[10px] font-extrabold px-2 py-0.5 rounded-full border border-line">{formatWeightKg(set.weight_kg)}</span>
+                            <span className="on-light bg-surface text-fg text-[0.6875rem] font-extrabold px-2 py-0.5 rounded-full border border-line">{formatWeightKg(set.weight_kg)}</span>
                           )}
                           {set.rir != null && (
-                            <span className="on-light bg-surface text-accent-fg text-[10px] font-extrabold px-2 py-0.5 rounded-full border border-line">
+                            <span className="on-light bg-surface text-accent-fg text-[0.6875rem] font-extrabold px-2 py-0.5 rounded-full border border-line">
                               RIR {set.rir}
                             </span>
                           )}

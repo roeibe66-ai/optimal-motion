@@ -359,7 +359,7 @@ html {
    content enters from the "forward" side — from the left in RTL Hebrew, from
    the right in LTR — so the flow reads as moving ahead. */
 @theme {
-  --animate-step-in: step-in 250ms var(--ease-out-strong) both;
+  --animate-step-in: step-in 250ms var(--ease-out-strong) backwards;
 
   @keyframes step-in {
     from { opacity: 0; transform: translateX(var(--step-from, 24px)); }
@@ -379,6 +379,29 @@ html {
   }
 }
 
+/* Like (Explore cards): the heart settles in from slightly small — no
+   overshoot, a like isn't a throw. Plays only when liking. */
+@theme {
+  --animate-heart-pop: heart-pop 300ms var(--ease-out-strong) both;
+
+  @keyframes heart-pop {
+    from { transform: scale(0.75); }
+  }
+}
+
+/* Drill-down "back" (the reverse of step-in): the previous screen returns
+   from the opposite side it left by. Both use fill "backwards", not "both":
+   a transform animation that stays in effect after it ends makes its
+   element the containing block for position:fixed descendants (toasts,
+   CTA bars) on the screens these wrap. */
+@theme {
+  --animate-step-back: step-back 250ms var(--ease-out-strong) backwards;
+
+  @keyframes step-back {
+    from { opacity: 0; transform: translateX(calc(var(--step-from, 24px) * -1)); }
+  }
+}
+
 /* Reduced-motion stand-in for the celebrate, step-in and card-in animations above:
    same timing, opacity only. */
 @keyframes motion-fade {
@@ -389,7 +412,9 @@ html {
   .animate-celebrate-pop,
   .animate-celebrate-rise,
   .animate-step-in,
+  .animate-step-back,
   .animate-card-in { animation-name: motion-fade; }
+  .animate-heart-pop { animation: none; }
 }
 
 /* Horizontal carousels (Explore, PlanTab, DiyBuilder, admin) scroll by
@@ -411,4 +436,24 @@ html {
   transition-property: scale, translate, transform, box-shadow, background-color, color, border-color, opacity;
   transition-timing-function: var(--tw-ease, var(--default-transition-timing-function));
   transition-duration: var(--tw-duration, var(--default-transition-duration));
+}
+
+/* Translucent "glass" surfaces (anything with a backdrop blur that isn't a
+   dimming scrim) turn near-solid when the user asks for less transparency,
+   and get a defined edge when they ask for more contrast. Scrims
+   (bg-backdrop) keep their dim. */
+@media (prefers-reduced-transparency: reduce) {
+  [class*="backdrop-blur"]:not([class*="bg-backdrop"]) {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    background-color: color-mix(in srgb, var(--bg-elevated) 96%, transparent);
+  }
+}
+@media (prefers-contrast: more) {
+  [class*="backdrop-blur"]:not([class*="bg-backdrop"]) {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    background-color: var(--bg-elevated);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text) 45%, transparent);
+  }
 }

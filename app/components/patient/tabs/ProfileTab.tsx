@@ -164,7 +164,7 @@ export default function ProfileTab({
                 <p className="text-xs text-muted">הצטרפות, שדרוג וביטול מסלולים</p>
               </div>
             </div>
-            <span className="on-light text-[10px] font-bold text-muted bg-surface-alt px-2 py-1 rounded-full shrink-0">בקרוב</span>
+            <span className="on-light text-[0.6875rem] font-bold text-muted bg-surface-alt px-2 py-1 rounded-full shrink-0">בקרוב</span>
           </div>
 
           <div className="flex items-center justify-between px-5 py-4 border-b border-line opacity-50 cursor-default">
@@ -175,7 +175,7 @@ export default function ProfileTab({
                 <p className="text-xs text-muted">היסטוריית תשלומים באפליקציה</p>
               </div>
             </div>
-            <span className="on-light text-[10px] font-bold text-muted bg-surface-alt px-2 py-1 rounded-full shrink-0">בקרוב</span>
+            <span className="on-light text-[0.6875rem] font-bold text-muted bg-surface-alt px-2 py-1 rounded-full shrink-0">בקרוב</span>
           </div>
 
           {/* Note: the mockup drops the "edit personal details" row entirely (Premium/Invoices/Notifications/Haptics/Logout only) — removed to match; it was a non-functional placeholder with no onClick either way, so nothing behavioral is lost. */}

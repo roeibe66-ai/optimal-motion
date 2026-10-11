@@ -17,9 +17,11 @@ export default function FeedbackHost() {
           key={toast.id}
           message={toast.message}
           tone={toast.tone}
+          action={toast.action}
           // Long or error messages stay up longer: ~60ms per character on
           // top of the base, capped so a stack trace can't pin it forever.
-          durationMs={Math.min(7000, (toast.tone === "error" ? 3500 : 2500) + toast.message.length * 60)}
+          // An undo needs time to be reached for: at least 5s.
+          durationMs={Math.max(toast.action ? 5000 : 0, Math.min(7000, (toast.tone === "error" ? 3500 : 2500) + toast.message.length * 60))}
           onDismiss={() => dismissToast(toast.id)}
         />
       )}
@@ -31,7 +33,7 @@ export default function FeedbackHost() {
           title={confirm.title}
           icon={confirm.destructive ? <AlertTriangle size={20} className="text-danger-fg" /> : <HelpCircle size={20} className="text-accent-fg" />}
         >
-          {confirm.message && <p className="text-start text-fg text-[15px] leading-relaxed mb-6">{confirm.message}</p>}
+          {confirm.message && <p className="text-start text-fg text-[0.9375rem] leading-relaxed mb-6">{confirm.message}</p>}
           <div className="flex flex-col gap-2.5">
             <button
               onClick={() => settleConfirm(confirm.id, true)}

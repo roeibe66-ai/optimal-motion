@@ -283,3 +283,14 @@ still, so this hit common iPhones, not just small ones. Real 4:5 media (350px ta
 **Rule:** full-screen flows need a scrolling middle (`flex-1 min-h-0 overflow-y-auto`) with
 the primary action `sticky bottom-0`, and media/rings sized by `dvh` as well as width.
 Check every full-screen screen at 375×667 and 320×568 (`/dev/player`).
+
+## 2026-10-11 — A finished `fill-mode: both` transform animation anchors `position: fixed` children
+
+**What happened (caught before shipping):** the screen-push animation (`step-in`, used on
+wrappers around whole screens) had `animation-fill-mode: both`. A transform animation that
+stays "in effect" after it ends keeps making its element the containing block for
+`position: fixed` descendants — so the builder's toast and the Plan detail's fixed CTA bar
+would have been positioned relative to the animated wrapper instead of the viewport.
+**Rule:** entrance keyframes on anything that can contain fixed/sticky UI use
+`fill-mode: backwards` (no lingering effect), and fixed bars stay outside the animated
+element (Plan detail animates its sections, not the root holding the CTA bar).

@@ -41,6 +41,10 @@ export default function PatientShell() {
 
   const [patientTab, setPatientTab] = useState<PatientTab>("plan");
   const [showMyWorkouts, setShowMyWorkouts] = useState(false);
+  // Direction of the last builder <-> "התוכניות שלי" move, for the push
+  // animation (forward in, back out the same side). null = no animation
+  // (tab switches stay instant).
+  const [diyNav, setDiyNav] = useState<"forward" | "back" | null>(null);
   const [editingSavedProgramId, setEditingSavedProgramId] = useState<string | null>(null);
   // A regular Explore workout running through the player with its own
   // blocks/sets/reps (see useWorkoutSession's adHocSession).
@@ -106,6 +110,7 @@ export default function PatientShell() {
     planSelection.setReferenceDate(new Date());
     planSelection.setIsDiyMode(false);
     setShowMyWorkouts(false);
+    setDiyNav(null);
     setEditingSavedProgramId(null);
   };
 
@@ -154,6 +159,7 @@ export default function PatientShell() {
     planSelection.setDiyActiveDay(program.days[0]?.day_number ?? 1);
     planSelection.setDiyProgramName(program.name);
     setEditingSavedProgramId(program.id);
+    setDiyNav("back");
     setShowMyWorkouts(false);
   };
 
@@ -268,36 +274,36 @@ export default function PatientShell() {
             MISTAKES.md) — using the same working
             max(<min>, env(safe-area-inset-bottom)) pattern as
             PatientCoachSheet instead. */}
-        <nav className="fixed bottom-0 left-0 right-0 bg-elevated/90 backdrop-blur-md border-t border-line z-50 print:hidden pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+        <nav className="fixed bottom-0 left-0 right-0 bg-elevated/90 backdrop-blur-md z-50 print:hidden pb-[max(0.5rem,env(safe-area-inset-bottom))] shadow-[inset_0_0.5px_0_color-mix(in_srgb,white_25%,transparent),0_-10px_24px_-16px_color-mix(in_srgb,var(--shadow-ink)_35%,transparent)]">
           <div className="flex justify-around items-center h-16 max-w-5xl mx-auto px-2">
             <button onClick={() => switchTab("plan")} className={`flex flex-col items-center justify-center w-16 h-full gap-1 transition-colors ${patientTab === "plan" ? "text-accent-fg" : "text-muted hover:text-fg"}`}>
               <HomeIcon size={22} className={patientTab === "plan" ? "fill-accent/15" : ""} />
-              <span className="text-[10px] font-bold">ראשי</span>
+              <span className="text-[0.6875rem] font-bold">היום</span>
             </button>
 
             <button onClick={() => switchTab("calendar")} className={`flex flex-col items-center justify-center w-16 h-full gap-1 transition-colors ${patientTab === "calendar" ? "text-accent-fg" : "text-muted hover:text-fg"}`}>
               <CalendarDays size={22} className={patientTab === "calendar" ? "fill-accent/15" : ""} />
-              <span className="text-[10px] font-bold">לוח שנה</span>
+              <span className="text-[0.6875rem] font-bold">לוח שנה</span>
             </button>
 
             {loggedInPatient.patient_type === "fitness" && (
               <button onClick={() => switchTab("diy")} className={`flex flex-col items-center justify-center w-16 h-full gap-1 transition-colors ${patientTab === "diy" ? "text-accent-fg" : "text-muted hover:text-fg"}`}>
                 <Dumbbell size={22} />
-                <span className="text-[10px] font-bold">בנה אימון</span>
+                <span className="text-[0.6875rem] font-bold">בנה אימון</span>
               </button>
             )}
 
             {loggedInPatient.patient_type === "fitness" && (
               <button onClick={() => switchTab("explore")} className={`flex flex-col items-center justify-center w-16 h-full gap-1 transition-colors ${patientTab === "explore" ? "text-accent-fg" : "text-muted hover:text-fg"}`}>
                 <Compass size={22} className={patientTab === "explore" ? "fill-accent/15" : ""} />
-                <span className="text-[10px] font-bold">גלה</span>
+                <span className="text-[0.6875rem] font-bold">גלה</span>
               </button>
             )}
 
             {FEATURES.premiumTab && loggedInPatient.patient_type === "fitness" && (
               <button onClick={() => switchTab("premium")} className={`flex flex-col items-center justify-center w-16 h-full gap-1 transition-colors ${patientTab === "premium" ? "text-accent-fg" : "text-muted hover:text-fg"}`}>
                 <Crown size={22} className={patientTab === "premium" ? "fill-accent/15" : ""} />
-                <span className="text-[10px] font-bold">תוכניות</span>
+                <span className="text-[0.6875rem] font-bold">תוכניות</span>
               </button>
             )}
 
@@ -307,13 +313,13 @@ export default function PatientShell() {
                 job (open the account/profile screen). */}
             <button onClick={() => switchTab("profile")} className={`flex flex-col items-center justify-center w-16 h-full gap-1 transition-colors ${patientTab === "profile" ? "text-accent-fg" : "text-muted hover:text-fg"}`}>
               <span
-                className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold transition-colors ${
+                className={`w-6 h-6 rounded-full flex items-center justify-center text-[0.6875rem] font-bold transition-colors ${
                   patientTab === "profile" ? "bg-accent text-on-accent" : "bg-warm text-on-accent"
                 }`}
               >
                 {loggedInPatient.full_name.charAt(0)}
               </span>
-              <span className="text-[10px] font-bold">פרופיל</span>
+              <span className="text-[0.6875rem] font-bold">פרופיל</span>
             </button>
           </div>
         </nav>
@@ -346,17 +352,23 @@ export default function PatientShell() {
           )}
 
           {patientTab === "diy" && showMyWorkouts && (
+            <div key="my-workouts" className={diyNav === "forward" ? "animate-step-in" : ""}>
             <MyWorkoutsScreen
               savedPrograms={savedProgramsData.savedPrograms}
               exerciseCatalog={patientData.exerciseCatalog}
-              onBack={() => setShowMyWorkouts(false)}
+              onBack={() => {
+                setDiyNav("back");
+                setShowMyWorkouts(false);
+              }}
               onStartProgramDay={handleStartSavedProgram}
               onEditProgram={handleEditSavedProgram}
               onDeleteProgram={savedProgramsData.deleteProgram}
             />
+            </div>
           )}
 
           {patientTab === "diy" && !showMyWorkouts && (
+            <div key="builder" className={diyNav === "back" ? "animate-step-back" : ""}>
             <DiyBuilderTab
               exerciseCatalog={patientData.exerciseCatalog}
               onViewExerciseInfo={(exercise) => session.setViewingExInfo(exercise)}
@@ -378,11 +390,15 @@ export default function PatientShell() {
                 planSelection.setIsDiyMode(true);
                 session.startDiyWorkoutNow();
               }}
-              onOpenMyWorkouts={() => setShowMyWorkouts(true)}
+              onOpenMyWorkouts={() => {
+                setDiyNav("forward");
+                setShowMyWorkouts(true);
+              }}
               onSaveDiyProgram={handleSaveDiyProgram}
               isEditingSavedProgram={editingSavedProgramId !== null}
               onCancelEditSavedProgram={() => setEditingSavedProgramId(null)}
             />
+            </div>
           )}
 
           {patientTab === "explore" && (

@@ -11,10 +11,18 @@ import { useSyncExternalStore } from "react";
 
 export type ToastTone = "success" | "error" | "info";
 
+// An action on the toast itself — "ביטול" (undo) for recoverable actions,
+// instead of asking "are you sure?" up front.
+export interface ToastAction {
+  label: string;
+  onClick: () => void;
+}
+
 export interface ToastRequest {
   id: number;
   message: string;
   tone: ToastTone;
+  action?: ToastAction;
 }
 
 export interface ConfirmOptions {
@@ -44,8 +52,8 @@ function setState(next: Partial<FeedbackState>) {
   listeners.forEach((l) => l());
 }
 
-export function notify(message: string, tone: ToastTone = "success") {
-  setState({ toast: { id: nextId++, message, tone } });
+export function notify(message: string, tone: ToastTone = "success", options: { action?: ToastAction } = {}) {
+  setState({ toast: { id: nextId++, message, tone, action: options.action } });
 }
 
 export function confirmAction(options: ConfirmOptions): Promise<boolean> {

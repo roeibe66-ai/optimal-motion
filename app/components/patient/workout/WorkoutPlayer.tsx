@@ -68,7 +68,7 @@ function RirInfoButton() {
           <span className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
           {/* Grows up out of the ⓘ it's anchored to (origin-bottom). */}
           <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 z-50 w-64 bg-elevated text-fg rounded-2xl shadow-elevated border border-line p-4 text-start font-normal block origin-bottom transition-[opacity,scale] duration-150 ease-out-strong starting:opacity-0 starting:scale-95">
-            <span className="block font-black text-fg text-[13px] mb-1.5">מהו RIR?</span>
+            <span className="block font-black text-fg text-[0.8125rem] mb-1.5">מהו RIR?</span>
             <span className="block text-xs leading-relaxed">
               Reps In Reserve — כמה חזרות נוספות היית יכול לבצע בטכניקה תקינה. לדוגמה, RIR 2 אומר שצריך לעצור את הסט כשאתה מרגיש שנשארו לך עוד 2 חזרות בלבד עד הכשל.
             </span>
@@ -278,7 +278,7 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
           the old ring's !isSupersetCheck guard made. */}
       {isPostSet && !session.isSupersetCheck && (
         <div className="relative z-10 flex flex-col items-center pt-2">
-          <span className="text-[11px] font-bold text-muted mb-1">מנוחה</span>
+          <span className="text-[0.6875rem] font-bold text-muted mb-1">מנוחה</span>
           <span className="text-6xl font-black tabular-nums text-fg tracking-tighter" dir="ltr">
             {formatTime(session.restTimer)}
           </span>
@@ -311,12 +311,12 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
                       ? formatRepTarget(session.activeAssign?.reps, session.activeAssign?.reps_max)
                       : session.effectiveTargetReps}
                   </span>
-                  <span className="text-[11px] font-bold text-muted mt-2">חזרות</span>
+                  <span className="text-[0.6875rem] font-bold text-muted mt-2">חזרות</span>
                 </div>
                 {session.effectiveTargetRir !== null && (
                   <div className="flex flex-col items-center">
                     <span className="text-7xl font-black text-accent-fg tabular-nums leading-none">{session.effectiveTargetRir}</span>
-                    <span className="relative flex items-center gap-1 text-[11px] font-bold text-muted uppercase tracking-wide mt-2">
+                    <span className="relative flex items-center gap-1 text-[0.6875rem] font-bold text-muted uppercase tracking-wide mt-2">
                       RIR <RirInfoButton />
                     </span>
                   </div>
@@ -363,7 +363,7 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
                     className="flex flex-col items-center gap-1 text-muted hover:text-fg active:scale-90 transition-[scale,background-color,color,border-color] duration-150 ease-out"
                   >
                     <SkipForward size={20} />
-                    <span className="text-[10px] font-bold">דלג</span>
+                    <span className="text-[0.6875rem] font-bold">דלג</span>
                   </button>
                   <button
                     onClick={session.toggleExerciseTimer}
@@ -471,7 +471,7 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
                       placeholder={
                         <div className="w-full h-full bg-gradient-to-br from-elevated to-line flex flex-col items-center justify-center gap-1.5">
                           <Dumbbell size={28} className="text-muted" />
-                          <span className="text-muted text-[11px] font-bold">אין מדיה זמינה</span>
+                          <span className="text-muted text-[0.6875rem] font-bold">אין מדיה זמינה</span>
                         </div>
                       }
                     />
@@ -483,7 +483,7 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
             {/* Text hierarchy: eyebrow label, set count, exercise name. */}
             {isSameExerciseNext ? (
               <div className="flex flex-col items-center gap-1.5">
-                <span className="text-[11px] font-bold text-muted">הסט הבא</span>
+                <span className="text-[0.6875rem] font-bold text-muted">הסט הבא</span>
                 <span className="text-muted text-sm font-bold tabular-nums">
                   סט {session.currentBlockSet + 1} מתוך {session.maxSetsInBlock}
                 </span>
@@ -491,7 +491,7 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
               </div>
             ) : next ? (
               <div className="flex flex-col items-center gap-1.5">
-                <span className="text-[11px] font-bold text-muted">הבא בתור</span>
+                <span className="text-[0.6875rem] font-bold text-muted">הבא בתור</span>
                 <span className="text-muted text-sm font-bold tabular-nums">סט 1 מתוך {next.sets}</span>
                 <button
                   onClick={() => session.setViewingExInfo(next.exercise)}
@@ -527,7 +527,7 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
                   <span className="text-4xl font-black text-fg tabular-nums" dir="ltr">
                     {session.actualRepsLogged}
                   </span>
-                  <span className="text-[10px] font-bold text-muted mt-0.5">
+                  <span className="text-[0.6875rem] font-bold text-muted mt-0.5">
                     {session.activeAssign?.is_time ? "שניות שהוחזקו" : "חזרות שבוצעו"}
                   </span>
                 </div>
@@ -541,7 +541,7 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
               </div>
 
               <div className="relative flex items-center gap-3">
-                <span className="text-[11px] font-bold text-muted uppercase tracking-wide">RIR</span>
+                <span className="text-[0.6875rem] font-bold text-muted uppercase tracking-wide">RIR</span>
                 <RirInfoButton />
 
                 {RIR_OPTIONS.map((val) => {
@@ -553,7 +553,7 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
                       aria-pressed={isSelected}
                       aria-label={`RIR ${val === 4 ? "4 ומעלה" : val}`}
                       // 28px circle, 40×44 tap target (the after: inset, sized to the gap-3 so neighbours don't overlap) — tapped between sets with a raised pulse.
-                      className={`relative w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold transition-[scale,background-color,color,box-shadow] duration-150 ease-out active:scale-90 after:absolute after:-inset-x-1.5 after:-inset-y-2 after:content-[''] ${
+                      className={`relative w-7 h-7 rounded-full flex items-center justify-center text-[0.6875rem] font-bold transition-[scale,background-color,color,box-shadow] duration-150 ease-out active:scale-90 after:absolute after:-inset-x-1.5 after:-inset-y-2 after:content-[''] ${
                         isSelected ? "bg-accent text-on-accent scale-110 shadow-[0_2px_10px_-2px_color-mix(in_srgb,var(--accent)_50%,transparent)]" : "text-muted border border-line"
                       }`}
                     >
@@ -566,7 +566,7 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
               {/* Optional weight used — left empty, nothing is logged. */}
               {!session.activeAssign?.is_time && (
                 <label className="flex items-center gap-2">
-                  <span className="text-[11px] font-bold text-muted">משקל</span>
+                  <span className="text-[0.6875rem] font-bold text-muted">משקל</span>
                   <input
                     type="text"
                     inputMode="decimal"
@@ -577,7 +577,7 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
                     className="w-16 bg-fg/10 border border-line rounded-full px-2 py-1 text-center text-sm font-bold text-fg tabular-nums outline-none focus:border-focus focus:ring-2 focus:ring-focus placeholder:text-muted"
                     dir="ltr"
                   />
-                  <span className="text-[11px] font-bold text-muted">ק״ג</span>
+                  <span className="text-[0.6875rem] font-bold text-muted">ק״ג</span>
                 </label>
               )}
             </div>
@@ -604,7 +604,7 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
                     className="flex flex-col items-center gap-1 text-muted hover:text-fg active:scale-90 transition-[scale,background-color,color,border-color] duration-150 ease-out"
                   >
                     <span className="text-lg font-black">+15</span>
-                    <span className="text-[10px] font-bold">שניות</span>
+                    <span className="text-[0.6875rem] font-bold">שניות</span>
                   </button>
                   <button
                     onClick={session.handleEndRest}

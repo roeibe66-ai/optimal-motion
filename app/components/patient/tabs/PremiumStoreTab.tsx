@@ -17,7 +17,7 @@ export default function PremiumStoreTab({ onGoToPlan }: PremiumStoreTabProps) {
       <div className="mb-10 text-center max-w-2xl mx-auto flex flex-col items-center gap-2.5">
         <Crown className="text-warm-fg" size={34} />
         <h2 className="text-2xl md:text-4xl font-black text-fg tracking-tight">התוכניות שלנו</h2>
-        <p className="text-[13px] md:text-base text-muted leading-relaxed max-w-[280px] md:max-w-md">
+        <p className="text-[0.8125rem] md:text-base text-muted leading-relaxed max-w-[280px] md:max-w-md">
           פתח את הפוטנציאל המלא שלך. בחר מסלול ועקוב אחר ההתקדמות עם השיטה המקצועית.
         </p>
       </div>
@@ -33,7 +33,7 @@ export default function PremiumStoreTab({ onGoToPlan }: PremiumStoreTabProps) {
                 <div className="absolute inset-0" style={{ background: `radial-gradient(circle at 70% 20%, ${glowTint}, transparent 55%)` }}></div>
 
                 <span
-                  className={`absolute top-3.5 right-3.5 text-[10px] font-black px-2.5 py-1 rounded-full flex items-center gap-1 ${
+                  className={`absolute top-3.5 right-3.5 text-[0.6875rem] font-black px-2.5 py-1 rounded-full flex items-center gap-1 ${
                     userOwnsTrack ? "bg-accent text-on-accent" : "bg-warm text-on-accent"
                   }`}
                 >
@@ -52,7 +52,7 @@ export default function PremiumStoreTab({ onGoToPlan }: PremiumStoreTabProps) {
               </div>
 
               <div className="p-4.5 flex-1 flex flex-col gap-4">
-                <p className="text-muted text-[13px] leading-relaxed flex-1">{track.desc}</p>
+                <p className="text-muted text-[0.8125rem] leading-relaxed flex-1">{track.desc}</p>
 
                 {userOwnsTrack ? (
                   <button

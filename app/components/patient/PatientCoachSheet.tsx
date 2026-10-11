@@ -83,8 +83,8 @@ export default function PatientCoachSheet({ contextData }: PatientCoachSheetProp
               <Sparkles size={18} />
             </div>
             <div>
-              <h3 className="font-black text-fg text-[15px]">מאמן AI אישי</h3>
-              <p className="text-[11px] text-muted font-semibold">כאן כדי לעזור להתאים את האימון שלך</p>
+              <h3 className="font-black text-fg text-[0.9375rem]">מאמן AI אישי</h3>
+              <p className="text-[0.6875rem] text-muted font-semibold">כאן כדי לעזור להתאים את האימון שלך</p>
             </div>
           </div>
           <button onClick={() => setIsOpen(false)} className="p-2 text-muted hover:text-fg active:scale-90 transition-ui duration-150 ease-out" aria-label="סגור">
@@ -94,14 +94,14 @@ export default function PatientCoachSheet({ contextData }: PatientCoachSheetProp
 
         <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
           {messages.length === 0 && (
-            <div className="text-center text-muted text-[13px] font-medium mt-6 px-4 leading-relaxed">
+            <div className="text-center text-muted text-[0.8125rem] font-medium mt-6 px-4 leading-relaxed">
               כואב לך באיזשהו תרגיל? רוצה גרסה קלה או מאתגרת יותר? יש לך שאלה על האימון? שאל אותי כל דבר.
             </div>
           )}
           {messages.map((m, i) => (
             <div key={i} className={`flex ${m.role === "user" ? "justify-start" : "justify-end"}`}>
               <div
-                className={`max-w-[85%] rounded-2xl px-4 py-3 text-[13.5px] leading-relaxed whitespace-pre-wrap ${
+                className={`max-w-[85%] rounded-2xl px-4 py-3 text-[0.8438rem] leading-relaxed whitespace-pre-wrap ${
                   m.role === "user" ? "bg-line text-fg" : "bg-accent text-on-accent"
                 }`}
               >

@@ -162,11 +162,11 @@ export default function QuickLogSheet({ title, blocksMap, blocksKeys, isAmrap, p
       {isAmrap && (
         <div className="on-light bg-surface-alt rounded-2xl p-4 mb-5 grid grid-cols-2 gap-3">
           <label className="flex flex-col gap-1.5">
-            <span className="text-[11px] font-extrabold text-muted">סבבים מלאים</span>
+            <span className="text-[0.6875rem] font-extrabold text-muted">סבבים מלאים</span>
             <input type="number" inputMode="numeric" min={0} value={rounds} onChange={(e) => setRounds(e.target.value)} placeholder="0" className={inputClass} dir="ltr" />
           </label>
           <label className="flex flex-col gap-1.5">
-            <span className="text-[11px] font-extrabold text-muted">חזרות נוספות</span>
+            <span className="text-[0.6875rem] font-extrabold text-muted">חזרות נוספות</span>
             <input type="number" inputMode="numeric" min={0} value={extraReps} onChange={(e) => setExtraReps(e.target.value)} placeholder="0" className={inputClass} dir="ltr" />
           </label>
         </div>
@@ -194,7 +194,7 @@ export default function QuickLogSheet({ title, blocksMap, blocksKeys, isAmrap, p
                 </button>
                 <div className="flex-1 min-w-0">
                   <div className="font-bold text-fg truncate">{getExerciseName(se.exercise, lang)}</div>
-                  <div className="text-[11px] font-bold text-muted">
+                  <div className="text-[0.6875rem] font-bold text-muted">
                     {isAmrap ? "בכל סבב: " : `יעד: ${se.sets} × `}
                     {se.is_time ? se.reps : formatRepTarget(se.reps, se.reps_max)} {unit}
                     {prescribedWeight && ` · ${prescribedWeight}`}
@@ -218,7 +218,7 @@ export default function QuickLogSheet({ title, blocksMap, blocksKeys, isAmrap, p
                 >
                 <div className="overflow-hidden -mx-1 px-1">
                 <div className="pt-3.5 pb-1 flex flex-col gap-2">
-                  <div className="grid grid-cols-[2.5rem_1fr_1fr] gap-2 text-[10px] font-extrabold text-muted px-0.5">
+                  <div className="grid grid-cols-[2.5rem_1fr_1fr] gap-2 text-[0.6875rem] font-extrabold text-muted px-0.5">
                     <span>סט</span>
                     <span className="text-center">{unit}</span>
                     {!se.is_time && <span className="text-center">משקל (ק״ג)</span>}

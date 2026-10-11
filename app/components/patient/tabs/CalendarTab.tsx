@@ -159,7 +159,7 @@ export default function CalendarTab({ patientExercises, workoutLogs, patientId, 
 
       <div className="grid grid-cols-7 mb-4">
         {WEEKDAY_LABELS.map((label) => (
-          <div key={label} className="text-center text-[11px] font-bold text-muted">
+          <div key={label} className="text-center text-[0.6875rem] font-bold text-muted">
             {label}
           </div>
         ))}
@@ -186,7 +186,7 @@ export default function CalendarTab({ patientExercises, workoutLogs, patientId, 
               className="flex flex-col items-center gap-1.5 group"
             >
               <span
-                className={`relative w-9 h-9 rounded-full flex items-center justify-center text-[13px] font-bold tabular-nums transition-ui duration-200 ease-out ${
+                className={`relative w-9 h-9 rounded-full flex items-center justify-center text-[0.8125rem] font-bold tabular-nums transition-ui duration-200 ease-out ${
                   isSelected
                     ? "bg-accent text-on-accent shadow-[0_4px_14px_-2px_color-mix(in_srgb,var(--accent)_50%,transparent)]"
                     : isClickable
@@ -207,7 +207,7 @@ export default function CalendarTab({ patientExercises, workoutLogs, patientId, 
                   />
                 ))}
                 {scheduledCategories.length > 3 && (
-                  <span className="text-[9px] font-black leading-none" style={{ color: PROGRAM_TAG_STYLE.text }}>
+                  <span className="text-[0.6875rem] font-black leading-none" style={{ color: PROGRAM_TAG_STYLE.text }}>
                     +{scheduledCategories.length - 3}
                   </span>
                 )}
@@ -217,7 +217,7 @@ export default function CalendarTab({ patientExercises, workoutLogs, patientId, 
         })}
       </div>
 
-      <div className="flex items-center gap-4 mt-6 mb-8 text-[11px] text-muted">
+      <div className="flex items-center gap-4 mt-6 mb-8 text-[0.6875rem] text-muted">
         <div className="flex items-center gap-1.5">
           <span className="w-2 h-2 rounded-full" style={{ background: PROGRAM_TAG_STYLE.text }} />
           נקודה צבעונית = תוכנית אימון מתוזמנת
@@ -228,21 +228,22 @@ export default function CalendarTab({ patientExercises, workoutLogs, patientId, 
         </div>
       </div>
 
-      {/* "Bottom sheet" — visually a sheet (distinct surface, rounded top
-          corners, drag-handle pill) sitting under the calendar. Kept in
+      {/* The day's workouts — a raised surface (rounded top corners) under
+          the calendar. No drag-handle pill: this isn't a draggable sheet,
+          and a handle promised a gesture that didn't exist. Kept in
           normal document flow rather than position:fixed so a long workout
           list can never overlap PatientShell's sticky header or bottom nav —
           it just grows and the page scrolls, which is the safer choice for
           a list whose length varies with how many categories are scheduled. */}
       <div className="on-light -mx-4 md:-mx-8 bg-surface rounded-t-[2rem] px-5 pt-3 pb-10 shadow-[0_-8px_30px_-8px_color-mix(in_srgb,var(--shadow-ink)_10%,transparent)]">
-        <div className="on-light w-10 h-1.5 rounded-full bg-surface-alt mx-auto mb-5"></div>
+        <div className="h-2" aria-hidden="true"></div>
 
         <div className="flex items-center justify-between mb-4">
           <h4 className="font-black text-fg text-base">
             {patientExercises.length === 0 ? "לוח האימונים שלך" : countLabel(selectedDayCategories.length, "אימון אחד", "אימונים")}
           </h4>
           {selectedDate && (
-            <span className="text-[12px] font-bold text-muted">
+            <span className="text-xs font-bold text-muted">
               {selectedDate.toLocaleDateString("he-IL", { weekday: "long", day: "numeric", month: "long" })}
             </span>
           )}
@@ -280,8 +281,8 @@ export default function CalendarTab({ patientExercises, workoutLogs, patientId, 
                     <div className="absolute bottom-0 inset-x-0 h-[3px]" style={{ background: style.text }}></div>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h5 className="font-black text-fg text-[15px] leading-snug line-clamp-2 [overflow-wrap:anywhere]">{cat}</h5>
-                    <p className="text-muted text-[12px] font-semibold mt-0.5">
+                    <h5 className="font-black text-fg text-[0.9375rem] leading-snug line-clamp-2 [overflow-wrap:anywhere]">{cat}</h5>
+                    <p className="text-muted text-xs font-semibold mt-0.5">
                       שבוע {selectedWeek} · {countLabel(catExercises.length, "תרגיל אחד", "תרגילים")}
                     </p>
                   </div>

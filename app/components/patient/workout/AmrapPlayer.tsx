@@ -218,7 +218,7 @@ export default function AmrapPlayer({ config, triggerHaptic, onClose, onLogged, 
           <X size={18} />
         </button>
         <div className="text-center min-w-0">
-          <div className="text-[11px] font-extrabold text-accent-fg">AMRAP · {Math.round(config.timeCapSeconds / 60)} דק׳</div>
+          <div className="text-[0.6875rem] font-extrabold text-accent-fg">AMRAP · {Math.round(config.timeCapSeconds / 60)} דק׳</div>
           <h1 className="font-black text-lg truncate">{config.title}</h1>
         </div>
         <div className="w-10" />
@@ -248,7 +248,7 @@ export default function AmrapPlayer({ config, triggerHaptic, onClose, onLogged, 
           </button>
           <div className="text-center min-w-[88px]">
             <div className="text-4xl font-black tabular-nums">{rounds}</div>
-            <div className="text-[11px] font-bold text-muted">סבבים</div>
+            <div className="text-[0.6875rem] font-bold text-muted">סבבים</div>
           </div>
           <button
             onClick={addRound}
@@ -278,11 +278,11 @@ export default function AmrapPlayer({ config, triggerHaptic, onClose, onLogged, 
                       </div>
                     }
                   />
-                  <span className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-scrim/70 text-surface text-[11px] font-black flex items-center justify-center">{idx + 1}</span>
+                  <span className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-scrim/70 text-surface text-[0.6875rem] font-black flex items-center justify-center">{idx + 1}</span>
                 </div>
                 <div className="p-2">
-                  <div className="text-[12px] font-extrabold text-fg truncate">{getExerciseName(station.exercise, lang)}</div>
-                  <div className="text-[11px] font-bold text-accent-fg tabular-nums">
+                  <div className="text-xs font-extrabold text-fg truncate">{getExerciseName(station.exercise, lang)}</div>
+                  <div className="text-[0.6875rem] font-bold text-accent-fg tabular-nums">
                     {station.is_time ? station.reps : formatRepTarget(station.reps, station.reps_max)} {station.is_time ? "שנ׳" : "חזרות"}
                   </div>
                 </div>

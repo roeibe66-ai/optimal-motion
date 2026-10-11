@@ -11,7 +11,7 @@ import { ExerciseThumb as SharedExerciseThumb } from "@/app/components/ExerciseM
 import { toDateKey } from "@/app/hooks/useWorkoutSession";
 import { useAuth } from "@/app/context/AuthContext";
 import type { Exercise, ExploreProgram, Workout } from "@/app/types";
-import { confirmAction, notify } from "@/app/components/ui/feedback";
+import { notify } from "@/app/components/ui/feedback";
 
 interface ExploreTabProps {
   freePrograms: ExploreProgram[];
@@ -58,7 +58,7 @@ function coverGifForWorkout(workout: Workout, exerciseCatalog: Exercise[]) {
 // Kept in the page's RTL on purpose — dir="auto" would flip Hebrew titles
 // that open with an English term ("AMRAP מלא…") to LTR and misorder them.
 // overflow-wrap lets one long token ("HIIT-Tabata-EMOM-…") wrap too.
-const CARD_TITLE_CLASS = "font-extrabold text-[13px] leading-snug text-fg line-clamp-2 [overflow-wrap:anywhere]";
+const CARD_TITLE_CLASS = "font-extrabold text-[0.8125rem] leading-snug text-fg line-clamp-2 [overflow-wrap:anywhere]";
 
 // Card artwork, or the soft accent gradient when there's none — or when the
 // image fails to load (a dead cover URL would otherwise show the browser's
@@ -69,6 +69,42 @@ function CardCover({ coverUrl }: { coverUrl: string | null }) {
     return <img src={coverUrl} alt="" loading="lazy" onError={() => setFailedSrc(coverUrl)} className="absolute inset-0 w-full h-full object-contain p-2" />;
   }
   return <div className="absolute inset-0" style={{ background: "radial-gradient(circle at 70% 20%, color-mix(in srgb, var(--accent) 22%, transparent), transparent 70%)" }} />;
+}
+
+// The heart on a card. A like is a small but real moment, so it gets a
+// one-shot pop (only when liking, not un-liking) and a light haptic on the
+// same tap. It sits inside the card's own <button>, so it can't be a
+// <button> itself — hence role/tabIndex/keyboard handling on the span.
+function LikeButton({ isLiked, onToggle }: { isLiked: boolean; onToggle: () => void }) {
+  const [popKey, setPopKey] = useState(0);
+  const toggle = () => {
+    if (!isLiked) {
+      setPopKey((k) => k + 1);
+      if (localStorage.getItem("optimalMotionHaptics") !== "false") navigator.vibrate?.(30);
+    }
+    onToggle();
+  };
+  return (
+    <span
+      onClick={(e) => {
+        e.stopPropagation();
+        toggle();
+      }}
+      onKeyDown={(e) => {
+        if (e.key !== "Enter" && e.key !== " ") return;
+        e.preventDefault();
+        e.stopPropagation();
+        toggle();
+      }}
+      role="button"
+      tabIndex={0}
+      aria-pressed={isLiked}
+      aria-label={isLiked ? "הסר לייק" : "אהבתי"}
+      className="on-light absolute top-2.5 left-2.5 w-8 h-8 rounded-full bg-surface backdrop-blur-md flex items-center justify-center shadow-sm active:scale-90 transition-transform"
+    >
+      <Heart key={popKey} size={15} className={`${isLiked ? "fill-accent-fg text-accent-fg" : "text-muted"} ${popKey ? "animate-heart-pop" : ""}`} />
+    </span>
+  );
 }
 
 function WorkoutCard({
@@ -91,26 +127,16 @@ function WorkoutCard({
     >
       <div className="on-light h-[110px] relative bg-surface-alt">
         <CardCover coverUrl={coverUrl} />
-        <div
-          onClick={(e) => {
-            e.stopPropagation();
-            onToggleLike();
-          }}
-          role="button"
-          aria-label={isLiked ? "הסר לייק" : "אהבתי"}
-          className="on-light absolute top-2.5 left-2.5 w-8 h-8 rounded-full bg-surface backdrop-blur-md flex items-center justify-center shadow-sm active:scale-90 transition-transform"
-        >
-          <Heart size={15} className={isLiked ? "fill-accent-fg text-accent-fg" : "text-muted"} />
-        </div>
+        <LikeButton isLiked={isLiked} onToggle={onToggleLike} />
         {!workout.is_free && (
-          <span className="absolute top-2.5 right-2.5 bg-warm text-on-accent text-[9px] font-black px-2 py-1 rounded-full">פרימיום</span>
+          <span className="absolute top-2.5 right-2.5 bg-warm text-on-accent text-[0.6875rem] font-black px-2 py-1 rounded-full">פרימיום</span>
         )}
       </div>
       <div className="p-3.5 flex flex-col gap-1.5">
         <h4 className={CARD_TITLE_CLASS}>
           {workout.title}
         </h4>
-        <span className={`text-[10px] font-extrabold w-fit ${workout.format === "amrap" ? "px-2 py-0.5 rounded-full bg-accent/15 text-accent-fg" : "text-muted"}`}>
+        <span className={`text-[0.6875rem] font-extrabold w-fit ${workout.format === "amrap" ? "px-2 py-0.5 rounded-full bg-accent/15 text-accent-fg" : "text-muted"}`}>
           {workoutFormatLabel(workout)}
         </span>
       </div>
@@ -165,20 +191,10 @@ function ProgramCard({
       <div className="on-light h-[110px] relative bg-surface-alt">
         <CardCover coverUrl={coverUrl} />
 
-        <div
-          onClick={(e) => {
-            e.stopPropagation();
-            onToggleLike();
-          }}
-          role="button"
-          aria-label={isLiked ? "הסר לייק" : "אהבתי"}
-          className="on-light absolute top-2.5 left-2.5 w-8 h-8 rounded-full bg-surface backdrop-blur-md flex items-center justify-center shadow-sm active:scale-90 transition-transform"
-        >
-          <Heart size={15} className={isLiked ? "fill-accent-fg text-accent-fg" : "text-muted"} />
-        </div>
+        <LikeButton isLiked={isLiked} onToggle={onToggleLike} />
 
         {!program.is_free && (
-          <span className="absolute top-2.5 right-2.5 bg-warm text-on-accent text-[9px] font-black px-2 py-1 rounded-full">
+          <span className="absolute top-2.5 right-2.5 bg-warm text-on-accent text-[0.6875rem] font-black px-2 py-1 rounded-full">
             פרימיום
           </span>
         )}
@@ -188,12 +204,12 @@ function ProgramCard({
         <h4 className={CARD_TITLE_CLASS}>
           {program.title}
         </h4>
-        <span className="text-[10px] font-bold text-muted">
+        <span className="text-[0.6875rem] font-bold text-muted">
           {weeks > 1 ? `${weeks} שבועות · ` : ""}
           {trainingDaysLabel(days)}
         </span>
         {isAdded && (
-          <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full w-fit bg-accent/15 text-accent-fg flex items-center gap-1">
+          <span className="text-[0.6875rem] font-extrabold px-2 py-0.5 rounded-full w-fit bg-accent/15 text-accent-fg flex items-center gap-1">
             <Check size={10} /> בתוכניות שלך
           </span>
         )}
@@ -218,7 +234,7 @@ function ProgramCarousel<T = ExploreProgram>({
     <div className="mb-8">
       <div className="flex items-center gap-2 mb-3.5">
         {icon}
-        <h3 className="text-[13px] font-extrabold text-muted">{title}</h3>
+        <h3 className="text-[0.8125rem] font-extrabold text-muted">{title}</h3>
       </div>
       <div className="flex gap-3.5 overflow-x-auto no-scrollbar pb-1">{list.map(render)}</div>
     </div>
@@ -337,16 +353,13 @@ export default function ExploreTab({
 
   const handleRemove = async () => {
     if (!preview) return;
-    const confirmed = await confirmAction({
-      title: "להסיר את התוכנית?",
-      message: `"${preview.title}" תוסר מהתוכניות שלך. אפשר להוסיף אותה שוב מכאן בכל זמן.`,
-      confirmLabel: "הסר",
-      destructive: true,
-    });
-    if (!confirmed) return;
+    // Recoverable (it's a copy of a published template), so no "are you
+    // sure?" — remove now and offer undo, which adds it back.
+    const programId = String(preview.id);
     setIsBusy(true);
-    await onRemoveProgram(String(preview.id));
+    const ok = await onRemoveProgram(programId);
     setIsBusy(false);
+    if (ok) notify(`"${preview.title}" הוסרה מהתוכניות שלך`, "info", { action: { label: "ביטול", onClick: () => void onAddProgram(programId) } });
   };
 
   const handleContactForPremium = () => {
@@ -360,7 +373,7 @@ export default function ExploreTab({
         <h2 className="text-2xl md:text-3xl font-black text-fg tracking-tight mb-1.5 flex items-center gap-2">
           <Compass size={24} className="text-accent-fg" /> גלה אימונים ותוכניות
         </h2>
-        <p className="text-muted text-[13px] md:text-sm">אימונים לביצוע מיידי ותוכניות מוכנות — הוסף לתוכנית שלך והם יופיעו במסך הבית.</p>
+        <p className="text-muted text-[0.8125rem] md:text-sm">אימונים לביצוע מיידי ותוכניות מוכנות — הוסף לתוכנית שלך והם יופיעו במסך הבית.</p>
       </div>
 
       <ProgramCarousel<Workout> title="אימונים שאהבתי" icon={<Heart size={13} className="fill-accent text-accent-fg" />} list={likedWorkouts} render={renderWorkoutCard} />
@@ -390,7 +403,7 @@ export default function ExploreTab({
           <div className="flex flex-col gap-4 mb-6">
             {previewDays.map(({ day, exercises }) => (
               <div key={day.id}>
-                <div className="text-[11px] font-extrabold text-accent-fg mb-2">יום {day.label}</div>
+                <div className="text-[0.6875rem] font-extrabold text-accent-fg mb-2">יום {day.label}</div>
                 <div className="flex flex-col gap-2">
                   {exercises.map((ex, idx) => (
                     <div key={`${ex.id}-${idx}`} className="on-light flex items-center gap-3 bg-surface-alt rounded-2xl p-3">
@@ -456,7 +469,7 @@ export default function ExploreTab({
                   <ExerciseThumb exercise={ex} alt={getExerciseName(ex, lang)} />
                   <div className="min-w-0 flex-1">
                     <div className="text-sm font-bold text-fg truncate">{getExerciseName(ex, lang)}</div>
-                    <div className="text-[11px] font-bold text-accent-fg tabular-nums">{workoutItemLabel(workoutPreview, item)}</div>
+                    <div className="text-[0.6875rem] font-bold text-accent-fg tabular-nums">{workoutItemLabel(workoutPreview, item)}</div>
                   </div>
                 </div>
               );
