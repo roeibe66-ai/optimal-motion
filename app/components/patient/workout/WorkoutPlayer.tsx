@@ -380,6 +380,10 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
               exercise={ex}
               label={ex ? getExerciseName(ex, lang) : "Exercise media"}
               className="max-w-[min(100%,34dvh)]"
+              // A 16:9 clip under the same cap was only ~155px tall on an
+              // iPhone — wide clips break out of the side padding instead,
+              // nearly edge to edge (6px gutter each side).
+              wideClassName="w-[calc(100%+1.75rem)] max-w-none shrink-0"
               placeholder={
                 // Muted-icon-plus-caption placeholder on a dark elevated
                 // gradient, matching the player's dark shell.
@@ -586,6 +590,8 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
                 </button>
               </div>
 
+              {/* RIR ("reps in reserve") means nothing for a timed hold. */}
+              {!session.activeAssign?.is_time && (
               <div className="relative flex items-center gap-3">
                 <span className="text-[0.6875rem] font-bold text-muted uppercase tracking-wide">RIR</span>
                 <RirInfoButton />
@@ -608,6 +614,7 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
                   );
                 })}
               </div>
+              )}
 
               {/* Optional weight used — left empty, nothing is logged. */}
               {!session.activeAssign?.is_time && (

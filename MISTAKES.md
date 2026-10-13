@@ -343,3 +343,14 @@ exercise id (`activeAssign.exercise.id`) instead of the one performed.
 dumbbell in its name. Fix the data (real machine/barbell/cable equipment ids) rather than
 adding more heuristics. Anything that records a set uses `displayedExercise`, not
 `activeAssign.exercise`.
+
+## 2026-10-13 — Rest/exercise timers froze while the PWA was in the background
+
+**What happened:** patients (all on iPhone, installed as a home-screen PWA) reported that
+the rest timer stopped when they switched to another app mid-rest. Both countdowns in
+`useWorkoutSession` subtracted 1 from state on every `setInterval` tick, and iOS suspends a
+backgrounded page's timers — so no ticks, no time passing. (The AMRAP player already used
+a wall-clock deadline and was fine.)
+**Rule:** never count time by counting ticks. Keep a deadline (`Date.now() + seconds`) in a
+ref, derive the remaining seconds from it on each tick, and resync on `visibilitychange` /
+`pageshow`. Pausing stores the remaining seconds and drops the deadline.

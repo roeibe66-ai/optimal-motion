@@ -1,7 +1,7 @@
 "use client";
 
 import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
-import { ClipboardList, Dumbbell, History, Info, Loader2, TrendingUp } from "lucide-react";
+import { ClipboardList, History, Info, Loader2, TrendingUp } from "lucide-react";
 import {
   CartesianGrid,
   Line,
@@ -19,6 +19,7 @@ import AnatomyHeatmap from "@/app/components/AnatomyHeatmap";
 import { ExerciseMediaPlayer } from "@/app/components/ExerciseMedia";
 import { formatCueLines, formatWeightKg, getExerciseName, pickLangText, type CueLine } from "@/app/utils/format";
 import { EQUIPMENT_LIST } from "@/app/constants/catalog";
+import { EquipmentIcon } from "@/app/components/ui/EquipmentIcon";
 import { useExerciseHistory } from "@/app/hooks/useExerciseHistory";
 
 import type { ExerciseHistoryPoint } from "@/app/hooks/useWorkoutSession";
@@ -126,7 +127,7 @@ export default function ExerciseInfoModal({ exercise, historyData, onClose }: Ex
         <div className="flex flex-wrap gap-2 mb-5">
           {exercise.equipment.map((eqId) => (
             <span key={eqId} className="inline-flex items-center gap-1.5 bg-accent/15 text-accent-fg text-xs font-bold px-3 py-1.5 rounded-full border border-transparent">
-              <Dumbbell size={12} className="text-accent-fg" />
+              <EquipmentIcon id={eqId} size={12} className="text-accent-fg" />
               {EQUIPMENT_LIST.find((e) => e.id === eqId)?.label || eqId}
             </span>
           ))}

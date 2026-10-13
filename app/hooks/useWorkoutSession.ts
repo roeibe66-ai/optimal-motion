@@ -159,6 +159,13 @@ export function useWorkoutSession({
   const [restTimerTotal, setRestTimerTotal] = useState(60);
   const [exTimer, setExTimer] = useState<number | null>(null);
   const [isExTimerRunning, setIsExTimerRunning] = useState(false);
+  // Wall-clock deadlines (Date.now() ms) behind restTimer/exTimer. The
+  // countdowns used to subtract 1 per setInterval tick, and iOS suspends
+  // timers while the PWA is in the background — so switching apps mid-rest
+  // froze the clock. Now each tick (and returning to the app) recomputes the
+  // remaining seconds from the deadline, so time keeps passing while away.
+  const restEndsAt = useRef<number | null>(null);
+  const exEndsAt = useRef<number | null>(null);
 
   // Swipe-to-finish tracking lives in refs, not state: a touchmove fires
   // ~60x/s and setState there re-rendered the whole player on every frame.
@@ -335,7 +342,7 @@ export function useWorkoutSession({
           exercise_id: (displayedExercise ?? activeAssign.exercise).id,
           set_number: currentBlockSet,
           reps: actualRepsLogged ? parseInt(actualRepsLogged) : Number(effectiveTargetReps ?? activeAssign.reps) || 0,
-          rir: pendingSetRir ?? undefined,
+          rir: activeAssign.is_time ? undefined : (pendingSetRir ?? undefined),
           weight_kg: parseWeightInput(pendingSetWeight) ?? undefined,
         },
       ]);
@@ -360,7 +367,7 @@ export function useWorkoutSession({
       // between sets of the same exercise and between blocks, rather than
       // the previous hardcoded 60/90 split.
       const rest = activeAssign?.rest_time_seconds ?? 60;
-      setIsResting(true);
+      setIsResting(true); // the countdown effect sets restEndsAt from this
       setRestTimer(rest);
       setRestTimerTotal(rest);
     } else {
@@ -371,6 +378,7 @@ export function useWorkoutSession({
 
   const handleEndRest = () => {
     triggerHaptic("light");
+    restEndsAt.current = null;
     setIsResting(false);
     if (currentBlockSet < maxSetsInBlock) {
       setCurrentBlockSet((prev) => prev + 1);
@@ -402,6 +410,8 @@ export function useWorkoutSession({
     setActiveBlockIdx(last.blockIdx);
     setActiveExInBlockIdx(last.exInBlockIdx);
     setCurrentBlockSet(last.blockSet);
+    restEndsAt.current = null;
+    exEndsAt.current = null;
     setIsResting(false);
     setIsSupersetCheck(false);
     setWorkoutFinished(false);
@@ -435,7 +445,8 @@ export function useWorkoutSession({
       setPendingSetWeight(
         lastWeightByAssign[activeAssign.id] ?? (previousWeight !== null ? String(previousWeight) : prescribedWeight > 0 ? String(prescribedWeight) : "")
       );
-      setExTimer(null);
+      exEndsAt.current = null;
+    setExTimer(null);
       setIsExTimerRunning(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -461,10 +472,34 @@ export function useWorkoutSession({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isWorkoutMode, displayedExercise, currentBlockSet, maxSetsInBlock, isResting]);
 
+  // Seconds left until a deadline, rounded up (so "0" shows only once it's over).
+  const secondsUntil = (endsAt: number) => Math.max(0, Math.ceil((endsAt - Date.now()) / 1000));
+
+  // Coming back to the app: snap both countdowns to the real remaining time
+  // right away instead of waiting for the next tick.
+  useEffect(() => {
+    if (!isWorkoutMode) return;
+    const resync = () => {
+      if (document.visibilityState !== "visible") return;
+      if (restEndsAt.current !== null) setRestTimer(secondsUntil(restEndsAt.current));
+      if (exEndsAt.current !== null) setExTimer(secondsUntil(exEndsAt.current));
+    };
+    document.addEventListener("visibilitychange", resync);
+    window.addEventListener("pageshow", resync);
+    return () => {
+      document.removeEventListener("visibilitychange", resync);
+      window.removeEventListener("pageshow", resync);
+    };
+  }, [isWorkoutMode]);
+
   // Rest-between-sets countdown.
   useEffect(() => {
     let interval: ReturnType<typeof setInterval> | undefined;
-    if (isResting && restTimer > 0) interval = setInterval(() => setRestTimer((prev) => prev - 1), 1000);
+    if (isResting && restTimer > 0) {
+      // A new rest (every exit clears the deadline) starts its clock here.
+      if (restEndsAt.current === null) restEndsAt.current = Date.now() + restTimer * 1000;
+      interval = setInterval(() => restEndsAt.current !== null && setRestTimer(secondsUntil(restEndsAt.current)), 1000);
+    }
     // eslint-disable-next-line react-hooks/set-state-in-effect -- reacting to the countdown's own terminal value, not syncing external state
     else if (isResting && restTimer <= 0) handleEndRest();
     return () => clearInterval(interval);
@@ -482,8 +517,10 @@ export function useWorkoutSession({
   useEffect(() => {
     let interval: ReturnType<typeof setInterval> | undefined;
     if (isExTimerRunning && exTimer !== null && exTimer > 0) {
-      interval = setInterval(() => setExTimer((prev) => (prev !== null ? prev - 1 : 0)), 1000);
+      if (exEndsAt.current === null) exEndsAt.current = Date.now() + exTimer * 1000;
+      interval = setInterval(() => exEndsAt.current !== null && setExTimer(secondsUntil(exEndsAt.current)), 1000);
     } else if (exTimer === 0) {
+      exEndsAt.current = null;
       triggerHaptic("success");
       // eslint-disable-next-line react-hooks/set-state-in-effect -- reacting to the countdown's own terminal value, not syncing external state
       setIsExTimerRunning(false);
@@ -593,6 +630,7 @@ export function useWorkoutSession({
 
   const addRestTime = () => {
     triggerHaptic("light");
+    if (restEndsAt.current !== null) restEndsAt.current += 15_000;
     setRestTimer((prev) => prev + 15);
     setRestTimerTotal((prev) => prev + 15);
   };
@@ -608,6 +646,12 @@ export function useWorkoutSession({
     if (!isExTimerRunning && exTimer === null && activeAssign) {
       setExTimer(Number(effectiveTargetReps ?? activeAssign.reps));
     }
+    // Pausing freezes the remaining seconds (exTimer) and drops the deadline;
+    // resuming sets a new one from there (in the countdown effect).
+    if (isExTimerRunning && exEndsAt.current !== null) {
+      setExTimer(secondsUntil(exEndsAt.current));
+      exEndsAt.current = null;
+    }
     setIsExTimerRunning((prev) => !prev);
   };
 
@@ -622,6 +666,7 @@ export function useWorkoutSession({
       const elapsed = exTimer !== null ? Math.max(0, prescribed - exTimer) : 0;
       setActualRepsLogged(String(elapsed));
     }
+    exEndsAt.current = null;
     setIsExTimerRunning(false);
     handleFinishAction();
   };
@@ -780,11 +825,14 @@ export function useWorkoutSession({
     });
     const last = lastUsedWeights[pick.id];
     setPendingSetWeight(last != null ? String(last) : "");
+    exEndsAt.current = null;
     setExTimer(null);
     setIsExTimerRunning(false);
   };
 
   const closeWorkout = () => {
+    restEndsAt.current = null;
+    exEndsAt.current = null;
     setSetHistory([]);
     setIsWorkoutMode(false);
     setWorkoutFinished(false);

@@ -41,7 +41,15 @@ function weightLog(entries: { exercise_id: string; weight_kg: number }[]): Worko
 function demo(): PlayerFixture {
   const squat = ex("d1", "סקוואט גביע", { difficulty_level: "intermediate", equipment: ["kettlebell"], synergists: ["gluteal", "adductors"] });
   const rdl = ex("d2", "דדליפט רומני", { target_muscle: "hamstring" });
-  const plank = ex("d3", "פלאנק", { target_muscle: "abs" });
+  // A real approved 16:9 clip (floor exercise), to check the wide media box.
+  const plank = ex("d3", "פלאנק", {
+    target_muscle: "abs",
+    media: [{
+      id: "dev-wide", exercise_id: "d3", exercise_slug: "push-up", view: "diag", kind: "video", position: 0,
+      path: "v1/push-up/push-up_diag_fe2b52db.mp4", poster_path: "v1/push-up/push-up_diag_fe2b52db.webp",
+      aspect: "16:9", width: 1280, height: 720, duration_s: 5.04, bytes: 228755, loop_mode: "none", approved: true,
+    }],
+  });
   return {
     title: "חיזוק רגליים",
     exercises: [se(squat, "A", { reps: 10, weight_kg: 16, rir: 2 }), se(rdl, "B", { reps: 8 }), se(plank, "C", { is_time: true, reps: 45 })],

@@ -22,6 +22,7 @@ import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip as Rechart
 import { useAuth } from "@/app/context/AuthContext";
 import { countLabel, formatRepTarget, formatTime, formatWeightKg, getExerciseName, getWorkoutMuscleAggregation, type WorkoutMuscleAggregation } from "@/app/utils/format";
 import { AVAILABLE_MUSCLES, DEFAULT_TRACK_GLOW, EQUIPMENT_LIST, TRACK_GLOW_TINTS } from "@/app/constants/catalog";
+import { EquipmentIcon } from "@/app/components/ui/EquipmentIcon";
 import type { AIAssistantContext, CuratedFact, Exercise, ExploreProgram, QueueLogRef, WorkoutLog } from "@/app/types";
 import { blocksOf, DAY_NAMES, dayNameOfKey, plannedLabel, queueRefFor, type PlannedWorkout, type ProgramQueueEntry } from "@/app/utils/programQueue";
 import { dailyWorkoutImage, dominantWorkoutCategory, programWorkoutImage } from "@/app/utils/workoutImages";
@@ -631,6 +632,9 @@ export default function PlanTab({
             });
           });
           const equipmentLabels = equipSet.size > 0 ? Array.from(equipSet).join(", ") : "משקל גוף (ללא ציוד)";
+          // A kettlebell-only workout gets the kettlebell glyph instead of the dumbbell.
+          const equipIds = new Set(displayedExercises.flatMap((a) => a.exercise?.equipment ?? []).filter((id) => id !== "bodyweight"));
+          const equipIconId = equipIds.size === 1 && equipIds.has("kettlebell") ? "kettlebell" : "dumbbells";
 
           return (
             <>
@@ -693,7 +697,7 @@ export default function PlanTab({
                   pattern instead of the old bordered rows. */}
               <div className={`space-y-3.5 mb-10 text-muted text-sm ${pushIn}`}>
                 <div className="flex items-center gap-4">
-                  <Dumbbell size={20} className="text-accent-fg shrink-0" />
+                  <EquipmentIcon id={equipIconId} size={20} className="text-accent-fg shrink-0" />
                   <div className="flex-1 flex justify-between items-center">
                     <span>{equipmentLabels}</span>
                   </div>

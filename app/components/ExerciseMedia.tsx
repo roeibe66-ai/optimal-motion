@@ -168,10 +168,14 @@ interface ExerciseMediaPlayerProps {
   // it) — for tiles whose shape doesn't match the clip's aspect.
   fillFit?: Fit;
   className?: string;
+  // "box" only: replaces className while the shown clip is 16:9, so a wide
+  // clip can take more width than a portrait one (same width = a much
+  // shorter box).
+  wideClassName?: string;
   placeholder?: ReactNode; // shown when the exercise has no media at all
 }
 
-export function ExerciseMediaPlayer({ exercise, label, mode = "box", fillFit = "cover", className = "", placeholder }: ExerciseMediaPlayerProps) {
+export function ExerciseMediaPlayer({ exercise, label, mode = "box", fillFit = "cover", className = "", wideClassName, placeholder }: ExerciseMediaPlayerProps) {
   const items = getExerciseMediaItems(exercise);
   const reducedMotion = usePrefersReducedMotion();
   const exerciseId = exercise?.id ?? "";
@@ -194,7 +198,7 @@ export function ExerciseMediaPlayer({ exercise, label, mode = "box", fillFit = "
   // The angle toggle sits under the box, not over it — overlaid it hid the
   // hands/feet in 16:9 floor clips.
   return (
-    <div className={`w-full flex flex-col items-center gap-2.5 ${className}`}>
+    <div className={`flex flex-col items-center gap-2.5 ${current.aspect === "16:9" && wideClassName !== undefined ? wideClassName : `w-full ${className}`}`}>
       <div
         className={`relative w-full ${ASPECT_CLASS[current.aspect]} rounded-[2rem] overflow-hidden border border-line shadow-card ${current.legacy ? "bg-fg/10" : ""}`}
         style={current.legacy ? undefined : { background: MEDIA_STUDIO_BG }}
