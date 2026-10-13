@@ -5,6 +5,8 @@ import { ArrowLeftRight, GripVertical, Info, Minus, Plus, Trash2 } from "lucide-
 import { AVAILABLE_MUSCLES } from "@/app/constants/catalog";
 import { useAuth } from "@/app/context/AuthContext";
 import { ExerciseThumb } from "@/app/components/ExerciseMedia";
+import ExerciseNoteEditor from "@/app/components/ExerciseNoteEditor";
+import ExerciseNotes from "@/app/components/ExerciseNotes";
 import type { DiyExercise, DiyPrescription, Exercise } from "@/app/types";
 import { getExerciseName } from "@/app/utils/format";
 import { tapHaptic } from "@/app/utils/haptics";
@@ -299,6 +301,17 @@ export default function DiyDayList({ exercises, onChangePrescription, onReorder,
               />
               <Stepper label="מנוחה (שנ׳)" value={p.rest_time_seconds} limit={DIY_LIMITS.rest} onChange={(rest_time_seconds) => update({ rest_time_seconds })} />
             </div>
+
+            {/* The therapist's note on an assigned exercise is read-only here;
+                the patient's own note sits under it. */}
+            <ExerciseNotes therapistNote={ex.assigned?.notes} className="mt-3" />
+            <ExerciseNoteEditor
+              exercise={ex}
+              value={p.notes ?? ""}
+              onChange={(notes) => update({ notes })}
+              placeholder="הערה שלי (לא חובה)"
+              className="mt-2.5"
+            />
           </li>
         );
       })}

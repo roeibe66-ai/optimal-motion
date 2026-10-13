@@ -171,6 +171,7 @@ export interface PackageExercise {
   scheduled_days: string; // single DAYS_OF_WEEK id
   rest_time_seconds: number;
   weight_kg?: number | null; // optional prescribed weight (numeric column — coerce with Number())
+  notes?: string; // the therapist's note, copied to the patient's row when the template is assigned
   // Live since 20260901084753_patient_and_package_exercises_tempo, but no
   // builder UI sets them yet — read-only fields so the PDF export can
   // display tempo when a row happens to have it, without claiming the
@@ -208,7 +209,8 @@ export interface PatientExercise {
   reps: number; // lower bound when reps_max is set
   reps_max?: number | null; // upper bound of a rep range; null = single target
   rir: number | null;
-  notes?: string;
+  notes?: string; // the therapist's note — admin-only to write (see 20261013120000_exercise_notes.sql)
+  patient_notes?: string | null; // the patient's own note on this exercise
   is_time: boolean;
   week: number | null; // null = every week (a workout the patient pinned to a weekday)
   scheduled_days?: string | null; // comma-separated DAYS_OF_WEEK ids, or null for "every day"
@@ -264,6 +266,7 @@ export interface BuilderExercise extends Exercise {
   block: string;
   rest_time_seconds: number;
   weight_kg?: number | null;
+  notes?: string; // the therapist's note for this exercise, shown to the patient
 }
 
 export type BuilderDayPlan = Record<string, BuilderExercise[]>; // keyed by DAYS_OF_WEEK id
@@ -276,6 +279,7 @@ export interface DiyPrescription {
   reps: number; // seconds when is_time
   is_time: boolean;
   rest_time_seconds: number;
+  notes?: string; // the patient's own note — saved as patient_exercises.patient_notes, never .notes
 }
 
 // A DIY builder draft entry: the catalog exercise plus its prescription.

@@ -76,10 +76,10 @@ function demo(): PlanFixture {
     fullName: "רועי בן טוב",
     exercises: [
       // Three workouts a week: Sunday, Wednesday and Friday.
-      row("חיזוק רגליים", squat, { block: "A", reps: 8, reps_max: 12, weight_kg: 16, scheduled_days: "0" }),
-      row("חיזוק רגליים", rdl, { block: "B", rir: 2, scheduled_days: "0" }),
+      row("חיזוק רגליים", squat, { block: "A", reps: 8, reps_max: 12, weight_kg: 16, scheduled_days: "0", notes: "ירידה איטית, 3 שניות למטה", patient_notes: "להתחיל עם 14 ק״ג" }),
+      row("חיזוק רגליים", rdl, { block: "B", rir: 2, scheduled_days: "0", notes: "ימין בלבד · ברך מעט כפופה" }),
       row("חיזוק רגליים", plank, { block: "A", is_time: true, reps: 45, scheduled_days: "3" }),
-      row("חיזוק רגליים", rdl, { block: "B", scheduled_days: "3" }),
+      row("חיזוק רגליים", rdl, { block: "B", scheduled_days: "3", notes: "ימין בלבד · ברך מעט כפופה", patient_notes: "להתחיל עם 14 ק״ג" }),
       row("חיזוק רגליים", squat, { block: "A", scheduled_days: "5" }),
       row("מוביליטי", plank, { scheduled_days: "2" }),
     ],

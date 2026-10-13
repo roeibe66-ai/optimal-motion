@@ -23,6 +23,8 @@ import { useAuth } from "@/app/context/AuthContext";
 import { countLabel, formatRepTarget, formatTime, formatWeightKg, getExerciseName, getWorkoutMuscleAggregation, type WorkoutMuscleAggregation } from "@/app/utils/format";
 import { AVAILABLE_MUSCLES, DEFAULT_TRACK_GLOW, EQUIPMENT_LIST, TRACK_GLOW_TINTS } from "@/app/constants/catalog";
 import { EquipmentIcon } from "@/app/components/ui/EquipmentIcon";
+import MuscleThumb, { exerciseMuscles } from "@/app/components/MuscleThumb";
+import ExerciseNotes from "@/app/components/ExerciseNotes";
 import type { AIAssistantContext, CuratedFact, Exercise, ExploreProgram, QueueLogRef, WorkoutLog } from "@/app/types";
 import { blocksOf, DAY_NAMES, dayNameOfKey, plannedLabel, queueRefFor, type PlannedWorkout, type ProgramQueueEntry } from "@/app/utils/programQueue";
 import { dailyWorkoutImage, dominantWorkoutCategory, programWorkoutImage } from "@/app/utils/workoutImages";
@@ -779,6 +781,12 @@ export default function PlanTab({
                                   <div className="text-muted text-[0.6875rem] font-bold mt-1">{st.label}</div>
                                 </div>
                               ))}
+                              {/* Which muscles it works, at a glance (the full map is in the info sheet). */}
+                              <MuscleThumb
+                                exercise={assignment.exercise}
+                                label={`שרירים: ${exerciseMuscles(assignment.exercise).prime.map((m) => AVAILABLE_MUSCLES.find((am) => am.id === m)?.label ?? m).join(", ")}`}
+                                className="on-light w-12 shrink-0 self-center rounded-lg bg-surface-alt"
+                              />
                             </div>
                             {(assignment.rir != null || weight) && (
                               <div className="flex gap-1.5 mt-2 text-[0.6875rem] font-bold">
@@ -786,6 +794,7 @@ export default function PlanTab({
                                 {weight && <span className="bg-accent/15 text-accent-fg px-1.5 py-0.5 rounded">{weight}</span>}
                               </div>
                             )}
+                            <ExerciseNotes therapistNote={assignment.notes} patientNote={assignment.patient_notes} className="mt-2" />
                           </div>
                         </div>
                         {isSuperset && !isAmrap && idx < block.length - 1 && (

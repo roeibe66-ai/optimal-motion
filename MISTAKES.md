@@ -354,3 +354,12 @@ a wall-clock deadline and was fine.)
 **Rule:** never count time by counting ticks. Keep a deadline (`Date.now() + seconds`) in a
 ref, derive the remaining seconds from it on each tick, and resync on `visibilitychange` /
 `pageshow`. Pausing stores the remaining seconds and drops the deadline.
+
+## 2026-10-13 — A swipe inside a sheet over the workout player could finish a set
+
+**What happened:** the player's swipe handlers sit on its root element, and the sheets
+opened over it (exercise info, swap) render through a portal into `<body>` — but React
+still bubbles their touch events up the component tree to the player. A horizontal swipe
+inside a sheet could log a set the patient hadn't done.
+**Rule:** gesture handlers on a parent that hosts portal children check
+`e.currentTarget.contains(e.target)` (real DOM containment) before acting.

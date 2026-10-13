@@ -34,6 +34,7 @@ export function assignedEntryToDraft(entry: ProgramQueueEntry): AssignedProgramD
           reps: Number(row.reps) || 10,
           is_time: !!row.is_time,
           rest_time_seconds: Number(row.rest_time_seconds) || 0,
+          notes: row.patient_notes ?? "",
         },
         assigned: {
           block: row.block || "A",
@@ -94,7 +95,9 @@ export function draftToSessionsPayload(draft: AssignedProgramDraft) {
         is_time: p.is_time,
         rest_time_seconds: p.rest_time_seconds,
         weight_kg: ex.assigned?.weight_kg ?? null,
-        notes: ex.assigned?.notes ?? "",
+        // The therapist's note isn't sent: patient_save_program_week carries
+        // it over server-side, so the patient can't change it.
+        patient_notes: p.notes?.trim() ?? "",
       };
     });
     return { days: daysValue, items };

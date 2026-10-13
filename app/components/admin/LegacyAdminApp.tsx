@@ -42,6 +42,7 @@ import { supabase } from "@/app/lib/supabase";
 import { useAuth } from "@/app/context/AuthContext";
 import { ADMIN_CATEGORY_STYLES, ADMIN_TAGS, AVAILABLE_MUSCLES, DAYS_OF_WEEK, DEFAULT_ADMIN_CATEGORY_STYLE, EQUIPMENT_LIST, MUSCLE_REGIONS } from "@/app/constants/catalog";
 import AdminSidebar from "@/app/components/admin/AdminSidebar";
+import ExerciseNoteEditor from "@/app/components/ExerciseNoteEditor";
 import AdminCoPilotDrawer from "@/app/components/admin/AdminCoPilotDrawer";
 import WorkoutBuilderTab from "@/app/components/admin/tabs/WorkoutBuilderTab";
 import ProgramLibraryTab from "@/app/components/admin/tabs/ProgramLibraryTab";
@@ -544,7 +545,7 @@ export default function LegacyAdminApp() {
             // still a text column — if this loaded protocol later gets assigned
             // directly to a patient, saveBuilderPlan writes these straight into
             // patient_exercises, now an integer column.
-            newPlan[w][day].push({ ...ex, temp_id: Math.random().toString(), sets: Number(pe.sets) || 0, reps: Number(pe.reps) || 0, rir: pe.rir, is_time: pe.is_time, block: pe.block || "A", rest_time_seconds: pe.rest_time_seconds ?? 60, weight_kg: pe.weight_kg != null ? Number(pe.weight_kg) : null });
+            newPlan[w][day].push({ ...ex, temp_id: Math.random().toString(), sets: Number(pe.sets) || 0, reps: Number(pe.reps) || 0, rir: pe.rir, is_time: pe.is_time, block: pe.block || "A", rest_time_seconds: pe.rest_time_seconds ?? 60, weight_kg: pe.weight_kg != null ? Number(pe.weight_kg) : null, notes: pe.notes ?? "" });
           }
         });
         return newPlan;
@@ -602,7 +603,7 @@ export default function LegacyAdminApp() {
       Object.keys(builderPlan).forEach((w) => {
         Object.keys(builderPlan[w as any]).forEach((dayId) => {
           builderPlan[w as any][dayId].forEach((ex) => {
-            inserts.push({ package_id: pkg.id, exercise_id: ex.id, block: ex.block || "A", sets: ex.sets, reps: ex.reps, rir: ex.rir, is_time: ex.is_time, week: parseInt(w), scheduled_days: dayId, rest_time_seconds: ex.rest_time_seconds || 60, weight_kg: ex.weight_kg ?? null });
+            inserts.push({ package_id: pkg.id, exercise_id: ex.id, block: ex.block || "A", sets: ex.sets, reps: ex.reps, rir: ex.rir, is_time: ex.is_time, week: parseInt(w), scheduled_days: dayId, rest_time_seconds: ex.rest_time_seconds || 60, weight_kg: ex.weight_kg ?? null, notes: ex.notes?.trim() ?? "" });
           });
         });
       });
@@ -641,7 +642,7 @@ export default function LegacyAdminApp() {
             reps: ex.reps,
             rir: ex.rir,
             is_time: ex.is_time,
-            notes: "",
+            notes: ex.notes?.trim() ?? "",
             scheduled_days: dayId,
             week: parseInt(w),
             rest_time_seconds: ex.rest_time_seconds || 60,
@@ -1391,6 +1392,14 @@ export default function LegacyAdminApp() {
                                 <button onClick={() => removeBuilderExercise(day.id, ex.temp_id)} className="p-2 text-danger-fg hover:bg-danger/10 rounded-xl transition-colors">
                                   <Trash2 size={16} />
                                 </button>
+                                {/* The therapist's note, shown to the patient in the plan and the player. */}
+                                <ExerciseNoteEditor
+                                  exercise={ex}
+                                  value={ex.notes ?? ""}
+                                  onChange={(notes) => updateBuilderExercise(day.id, ex.temp_id, "notes", notes)}
+                                  placeholder="הערה למטופל (לא חובה)"
+                                  className="basis-full"
+                                />
                               </div>
                             ))}
                           </div>
@@ -1554,12 +1563,12 @@ export default function LegacyAdminApp() {
                                     />
                                   </div>
                                   <div className="flex-1 min-w-[150px]">
-                                    <label className="block text-xs font-bold text-muted uppercase">הערה</label>
-                                    <input
-                                      type="text"
+                                    <label className="block text-xs font-bold text-muted uppercase">הערה למטופל</label>
+                                    <ExerciseNoteEditor
+                                      exercise={assign.exercise ?? {}}
                                       value={editAssignForm.notes}
-                                      onChange={(e) => setEditAssignForm({ ...editAssignForm, notes: e.target.value })}
-                                      className="w-full border-b border-line-input bg-transparent text-fg p-1"
+                                      onChange={(notes) => setEditAssignForm({ ...editAssignForm, notes })}
+                                      placeholder="הערה למטופל (לא חובה)"
                                     />
                                   </div>
                                 </div>
@@ -1608,6 +1617,7 @@ export default function LegacyAdminApp() {
                                     </span>
                                   )}
                                   {assign.notes && <span className="on-light bg-surface-alt px-3 py-1 rounded-lg border border-line max-w-[200px] truncate">הערה: {assign.notes}</span>}
+                                  {assign.patient_notes && <span className="on-light bg-surface-alt px-3 py-1 rounded-lg border border-line max-w-[200px] truncate" title="נכתב על ידי המטופל">הערת המטופל: {assign.patient_notes}</span>}
                                 </div>
                                 {assign.scheduled_days && (
                                   <div className="flex flex-wrap gap-1 mt-1">

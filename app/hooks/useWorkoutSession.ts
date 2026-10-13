@@ -70,6 +70,8 @@ export interface SessionExercise {
   block: string;
   rest_time_seconds: number;
   weight_kg?: number | null; // optional prescribed weight, shown only when set
+  notes?: string | null; // the therapist's note (plan rows only)
+  patient_notes?: string | null; // the patient's own note
 }
 
 // The pre-workout pain check-in (clinical patients only) and the
@@ -248,8 +250,8 @@ export function useWorkoutSession({
   } else if (isDiyMode) {
     diySelectedExercises.forEach((ex, idx) => {
       const blockLetter = String.fromCharCode(65 + idx);
-      const { sets, reps, is_time, rest_time_seconds } = getDiyPrescription(ex);
-      blocksMap[blockLetter] = [{ id: `diy_${idx}`, exercise: ex, sets, reps, rir: null, is_time, block: blockLetter, rest_time_seconds }];
+      const { sets, reps, is_time, rest_time_seconds, notes } = getDiyPrescription(ex);
+      blocksMap[blockLetter] = [{ id: `diy_${idx}`, exercise: ex, sets, reps, rir: null, is_time, block: blockLetter, rest_time_seconds, patient_notes: notes }];
     });
   } else {
     displayedExercises.forEach((pe) => {
@@ -446,7 +448,7 @@ export function useWorkoutSession({
         lastWeightByAssign[activeAssign.id] ?? (previousWeight !== null ? String(previousWeight) : prescribedWeight > 0 ? String(prescribedWeight) : "")
       );
       exEndsAt.current = null;
-    setExTimer(null);
+      setExTimer(null);
       setIsExTimerRunning(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -531,14 +533,42 @@ export function useWorkoutSession({
 
   // --- Swipe gestures ---
 
-  // Swiping "forward" finishes the set — rightward in Hebrew (RTL), leftward
-  // in English. It used to fire on any 50px horizontal drift (wiping sweat,
-  // adjusting the phone, a diagonal scroll) and log a set the patient hadn't
-  // done, so now it needs a clearly horizontal gesture that's either a
-  // deliberate drag or a quick flick. A second finger cancels it.
+  // Swipe navigation — "forward" is rightward in Hebrew (RTL), leftward in
+  // English:
+  //   active set      → finish the set (to the rest / mid-superset screen)
+  //   rest            → end the rest
+  //   superset check  → on to the next exercise in the round
+  // "Back" (the other way) undoes the last set, when there is one.
+  // It used to fire on any 50px horizontal drift (wiping sweat, adjusting the
+  // phone, a diagonal scroll) and log a set the patient hadn't done, so it
+  // needs a clearly horizontal gesture that's either a deliberate drag or a
+  // quick flick. A second finger cancels it.
+  //
+  // While dragging, the stage (the player's main content, attached through
+  // attachSwipeStage) follows the finger. The transform is set directly on
+  // the element, not through state, so a drag doesn't re-render the player
+  // on every touchmove. A direction with nowhere to go only gives a little
+  // (rubber band). A setter function rather than the ref object itself is
+  // returned: a ref inside the returned object makes the React compiler
+  // treat all of `session` as a ref.
+  const swipeStage = useRef<HTMLDivElement | null>(null);
+  const attachSwipeStage = (el: HTMLDivElement | null) => {
+    swipeStage.current = el;
+  };
+  const setStageOffset = (px: number, animate: boolean) => {
+    const el = swipeStage.current;
+    if (!el) return;
+    el.style.transition = animate ? "transform 220ms cubic-bezier(0.32, 0.72, 0, 1)" : "none";
+    el.style.transform = px === 0 ? "" : `translateX(${px}px)`;
+  };
+  const forwardSign = lang === "he" ? 1 : -1;
+
   const onTouchStart = (e: TouchEvent) => {
     swipeLast.current = null;
-    if (e.touches.length > 1) {
+    // Sheets over the player (exercise info, swap) render through a portal
+    // but their touch events still bubble here through the React tree —
+    // a swipe inside them must not finish a set.
+    if (e.touches.length > 1 || !(e.currentTarget as Node).contains(e.target as Node)) {
       swipeStart.current = null;
       return;
     }
@@ -548,28 +578,41 @@ export function useWorkoutSession({
     if (!swipeStart.current) return;
     if (e.touches.length > 1) {
       swipeStart.current = null;
+      setStageOffset(0, true);
       return;
     }
     swipeLast.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    const dx = swipeLast.current.x - swipeStart.current.x;
+    const dy = swipeLast.current.y - swipeStart.current.y;
+    if (Math.abs(dx) < Math.abs(dy) * 2) return setStageOffset(0, false);
+    const canGo = dx * forwardSign > 0 || setHistory.length > 0;
+    setStageOffset(canGo ? dx * 0.6 : dx * 0.15, false);
   };
   const onTouchEnd = (e: TouchEvent) => {
     const start = swipeStart.current;
     const last = swipeLast.current;
     swipeStart.current = null;
     swipeLast.current = null;
-    if (!start || !last || isResting || isSupersetCheck) return;
+    setStageOffset(0, true);
+    if (!start || !last) return;
 
     const dx = last.x - start.x;
     const dy = last.y - start.y;
     const distance = Math.abs(dx);
     if (distance < Math.abs(dy) * 2) return; // not clearly horizontal
-    const isForward = lang === "he" ? dx > 0 : dx < 0;
-    if (!isForward) return;
 
     const velocity = distance / Math.max(1, e.timeStamp - start.t); // px/ms
     const isDeliberateDrag = distance >= 80;
     const isFlick = distance >= 40 && velocity > 0.5;
-    if (isDeliberateDrag || isFlick) handleFinishAction();
+    if (!isDeliberateDrag && !isFlick) return;
+
+    if (dx * forwardSign > 0) {
+      if (isSupersetCheck) handleContinueSuperset();
+      else if (isResting) handleEndRest();
+      else handleFinishAction();
+    } else if (setHistory.length > 0) {
+      goBack();
+    }
   };
 
   // --- Remaining actions ---
@@ -726,6 +769,13 @@ export function useWorkoutSession({
     updateLastPerformanceEntry({ reps: next });
   };
 
+  // Typed straight into the rest screen's reps/seconds field.
+  const setRestReps = (value: number) => {
+    const next = Math.max(0, Math.min(999, Math.round(value) || 0));
+    setActualRepsLogged(String(next));
+    updateLastPerformanceEntry({ reps: next });
+  };
+
   const selectRestRir = (value: number) => {
     triggerHaptic("light");
     setPendingSetRir(value);
@@ -760,14 +810,19 @@ export function useWorkoutSession({
         cancelLabel: "לא עכשיו",
       });
       if (keep) {
-        const inserts = diySelectedExercises.map((ex, idx) => ({
-          patient_id: loggedInPatient.id,
-          exercise_id: ex.id,
-          block: String.fromCharCode(65 + idx),
-          ...getDiyPrescription(ex),
-          week: activePatientWeek,
-          scheduled_days: diyScheduleDay,
-        }));
+        const inserts = diySelectedExercises.map((ex, idx) => {
+          // The patient's note goes to patient_notes — `notes` is the therapist's.
+          const { notes, ...prescription } = getDiyPrescription(ex);
+          return {
+            patient_id: loggedInPatient.id,
+            exercise_id: ex.id,
+            block: String.fromCharCode(65 + idx),
+            ...prescription,
+            patient_notes: notes?.trim() || null,
+            week: activePatientWeek,
+            scheduled_days: diyScheduleDay,
+          };
+        });
         await supabase.from("patient_exercises").insert(inserts);
       }
     }
@@ -901,6 +956,7 @@ export function useWorkoutSession({
     pendingSetWeight,
     setRestWeight,
     adjustRestReps,
+    setRestReps,
     selectRestRir,
     handleFinishAction,
     handleEndRest,
@@ -917,6 +973,7 @@ export function useWorkoutSession({
     sessionExerciseIds: new Set([...blocksKeys.flatMap((k) => blocksMap[k].map((se) => se.exercise.id)), ...Object.values(swappedExercises).map((e) => e.id)]),
     makeHarder,
     makeEasier,
+    attachSwipeStage,
     onTouchStart,
     onTouchMove,
     onTouchEnd,

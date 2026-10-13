@@ -52,7 +52,7 @@ function demo(): PlayerFixture {
   });
   return {
     title: "חיזוק רגליים",
-    exercises: [se(squat, "A", { reps: 10, weight_kg: 16, rir: 2 }), se(rdl, "B", { reps: 8 }), se(plank, "C", { is_time: true, reps: 45 })],
+    exercises: [se(squat, "A", { reps: 10, weight_kg: 16, rir: 2, notes: "ירידה איטית, 3 שניות למטה", patient_notes: "להתחיל עם 14 ק״ג" }), se(rdl, "B", { reps: 8, notes: "ימין בלבד · ברך מעט כפופה" }), se(plank, "C", { is_time: true, reps: 45 })],
     workoutLogs: [weightLog([{ exercise_id: "d1", weight_kg: 14 }])],
     catalogExtras: [
       ex("s1", "סקוואט במשקל גוף", { difficulty_level: "intermediate", equipment: ["bodyweight"], synergists: ["gluteal", "adductors"] }),

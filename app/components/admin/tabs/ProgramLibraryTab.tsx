@@ -103,7 +103,7 @@ export default function ProgramLibraryTab({ packages, exercises, patients, onRef
         reps: Number(pe.reps) || 0,
         rir: pe.rir,
         is_time: pe.is_time,
-        notes: "",
+        notes: pe.notes ?? "",
         scheduled_days: pe.scheduled_days,
         week: pe.week || 1,
         rest_time_seconds: pe.rest_time_seconds ?? 60,

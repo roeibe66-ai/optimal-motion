@@ -5,11 +5,12 @@ import { ArrowLeftRight, ArrowRight, Dumbbell, FlaskConical, Info, Minus, Pause,
 import { useAuth } from "@/app/context/AuthContext";
 import ExerciseInfoModal from "@/app/components/patient/workout/ExerciseInfoModal";
 import SwapExerciseSheet from "@/app/components/patient/workout/SwapExerciseSheet";
+import ExerciseNotes from "@/app/components/ExerciseNotes";
 import { ExerciseMediaPlayer } from "@/app/components/ExerciseMedia";
 import PreWorkoutFlow from "@/app/components/patient/PreWorkoutFlow";
 import WorkoutFinishFlow from "@/app/components/patient/workout/WorkoutFinishFlow";
 import Toast from "@/app/components/ui/Toast";
-import { formatRepTarget, formatTime, formatWeightKg, getExerciseName } from "@/app/utils/format";
+import { formatRepTarget, formatTime, formatWeightKg, getExerciseName, parseWeightInput } from "@/app/utils/format";
 import type { HapticType } from "@/app/hooks/useHaptics";
 import type { useWorkoutSession } from "@/app/hooks/useWorkoutSession";
 import { useBackDismiss } from "@/app/hooks/useBackDismiss";
@@ -104,6 +105,8 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
   const { lang } = useAuth();
   const dir = lang === "he" ? "rtl" : "ltr";
   const [isSwapOpen, setIsSwapOpen] = useState(false);
+  // Destructured: passing session.x to `ref` makes the compiler treat all of session as a ref.
+  const { attachSwipeStage } = session;
 
   // System Back inside a workout used to leave the app (and the session with
   // it). Now it asks first — the progress isn't saved until the feedback step.
@@ -276,6 +279,7 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
                 <ArrowLeftRight size={12} /> החלף תרגיל
               </button>
             </div>
+            <ExerciseNotes therapistNote={session.activeAssign?.notes} patientNote={session.activeAssign?.patient_notes} align="center" className="mt-2" />
             {/* Weight: what the patient used last time for this exercise
                 (from past logs) leads; the therapist's target, if set and
                 different, sits next to it. Neither set = nothing shown. */}
@@ -337,7 +341,8 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
           The primary controls are sticky to the bottom of this scroller, so
           they stay on screen either way. */}
       <div className="relative z-10 flex-1 min-h-0 w-full overflow-y-auto overscroll-contain">
-      <div className="min-h-full flex flex-col justify-center items-center pb-[max(1.5rem,env(safe-area-inset-bottom))] px-5 md:px-8 w-full max-w-md mx-auto">
+      {/* attachSwipeStage: follows the finger during a swipe (useWorkoutSession). */}
+      <div ref={attachSwipeStage} className="min-h-full flex flex-col justify-center items-center pb-[max(1.5rem,env(safe-area-inset-bottom))] px-5 md:px-8 w-full max-w-md mx-auto">
         {!isPostSet ? (
           <div className="w-full flex flex-col items-center gap-7">
             {/* Dynamic hero metric — a massive countdown for a timed set, or
@@ -452,7 +457,7 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
             </div>
           </div>
         ) : (
-          <div className="flex flex-col items-center text-center w-full gap-8">
+          <div className="flex flex-col items-center text-center w-full gap-5">
             {/* Hero square — the next exercise's media inside a rounded-rect
                 progress border (same stroke-dasharray technique the old
                 circular ring used, traced around a <rect>). No progress
@@ -464,8 +469,9 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
               if (!heroExercise) return null;
 
               return (
-                // Up to 200px, smaller on short screens (the SVG scales via its viewBox).
-                <div className="relative aspect-square" style={{ width: `min(${REST_SQUARE_SIZE}px, 26dvh)` }}>
+                // Up to 160px, smaller on short screens (the SVG scales via its
+                // viewBox) — leaves room for the reps/RIR/weight inputs below.
+                <div className="relative aspect-square" style={{ width: "min(160px, 20dvh)" }}>
                   <svg
                     viewBox={`0 0 ${REST_SQUARE_SIZE} ${REST_SQUARE_SIZE}`}
                     className="absolute inset-0 w-full h-full -rotate-90"
@@ -550,6 +556,7 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
                   <h3 className="text-xl font-black text-fg">{getExerciseName(next.exercise, lang)}</h3>
                   <Info size={14} className="text-muted" />
                 </button>
+                <ExerciseNotes therapistNote={next.notes} patientNote={next.patient_notes} align="center" />
               </div>
             ) : (
               <div className="flex flex-col items-center gap-2">
@@ -564,75 +571,111 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
                 changed. "Actual value" is reps for a countable exercise, or
                 seconds held for a timed one, since workout_logs already
                 stores seconds in this same field for timed exercises. */}
-            <div className="flex flex-col items-center gap-6">
-              <div className="flex items-center gap-6">
-                <button
-                  onClick={() => session.adjustRestReps(session.activeAssign?.is_time ? -5 : -1)}
-                  aria-label={session.activeAssign?.is_time ? "פחות שניות" : "פחות חזרות"}
-                  className="w-11 h-11 rounded-full bg-fg/10 border border-line flex items-center justify-center text-fg active:scale-90 transition-transform duration-150 ease-out"
-                >
-                  <Minus size={15} />
-                </button>
-                <div className="flex flex-col items-center">
-                  <span className="text-4xl font-black text-fg tabular-nums" dir="ltr">
-                    {session.actualRepsLogged}
-                  </span>
-                  <span className="text-[0.6875rem] font-bold text-muted mt-0.5">
-                    {session.activeAssign?.is_time ? "שניות שהוחזקו" : "חזרות שבוצעו"}
-                  </span>
-                </div>
-                <button
-                  onClick={() => session.adjustRestReps(session.activeAssign?.is_time ? 5 : 1)}
-                  aria-label={session.activeAssign?.is_time ? "יותר שניות" : "יותר חזרות"}
-                  className="w-11 h-11 rounded-full bg-accent/15 border border-accent/25 flex items-center justify-center text-accent-fg active:scale-90 transition-transform duration-150 ease-out"
-                >
-                  <Plus size={15} />
-                </button>
-              </div>
+            <div className="flex flex-col items-center gap-5 w-full">
+              {(() => {
+                const isTime = !!session.activeAssign?.is_time;
+                const step = isTime ? 5 : 1;
+                const planned = Number(session.effectiveTargetReps ?? session.activeAssign?.reps) || 0;
+                const current = parseInt(session.actualRepsLogged) || 0;
+                return (
+                  <div className="flex flex-col items-center gap-1.5">
+                    <div className="flex items-center gap-5">
+                      <button
+                        onClick={() => session.adjustRestReps(-step)}
+                        aria-label={isTime ? "פחות שניות" : "פחות חזרות"}
+                        className="w-14 h-14 rounded-full bg-fg/10 border border-line flex items-center justify-center text-fg active:scale-90 transition-transform duration-150 ease-out"
+                      >
+                        <Minus size={20} />
+                      </button>
+                      {/* Tap the number to type it (a big change is faster typed than tapped). */}
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        value={session.actualRepsLogged}
+                        onFocus={(e) => e.target.select()}
+                        onChange={(e) => session.setRestReps(parseInt(e.target.value.replace(/\D/g, "").slice(0, 3)) || 0)}
+                        aria-label={isTime ? "שניות שהוחזקו" : "חזרות שבוצעו"}
+                        className="w-24 bg-transparent text-center text-5xl font-black text-fg tabular-nums outline-none rounded-2xl focus:bg-fg/5 focus:ring-2 focus:ring-focus"
+                        dir="ltr"
+                      />
+                      <button
+                        onClick={() => session.adjustRestReps(step)}
+                        aria-label={isTime ? "יותר שניות" : "יותר חזרות"}
+                        className="w-14 h-14 rounded-full bg-accent/15 border border-accent/25 flex items-center justify-center text-accent-fg active:scale-90 transition-transform duration-150 ease-out"
+                      >
+                        <Plus size={20} />
+                      </button>
+                    </div>
+                    <span className="text-[0.6875rem] font-bold text-muted">{isTime ? "שניות שהוחזקו" : "חזרות שבוצעו"}</span>
+                    {/* Pre-filled from the plan; once changed, one tap puts it back. */}
+                    {planned > 0 && current !== planned && (
+                      <button onClick={() => session.setRestReps(planned)} className="text-[0.6875rem] font-bold text-accent-fg underline-offset-2 hover:underline">
+                        חזרה ליעד ({planned})
+                      </button>
+                    )}
+                  </div>
+                );
+              })()}
 
               {/* RIR ("reps in reserve") means nothing for a timed hold. */}
               {!session.activeAssign?.is_time && (
-              <div className="relative flex items-center gap-3">
-                <span className="text-[0.6875rem] font-bold text-muted uppercase tracking-wide">RIR</span>
-                <RirInfoButton />
+                <div className="flex flex-col items-center gap-2 w-full max-w-[320px]">
+                  <span className="relative flex items-center gap-1 text-[0.6875rem] font-bold text-muted">
+                    RIR · כמה חזרות נשארו לך <RirInfoButton />
+                  </span>
+                  <div className="flex w-full gap-1.5" role="group" aria-label="RIR">
+                    {RIR_OPTIONS.map((val) => {
+                      const isSelected = session.pendingSetRir === val;
+                      return (
+                        <button
+                          key={val}
+                          onClick={() => session.selectRestRir(val)}
+                          aria-pressed={isSelected}
+                          aria-label={`RIR ${val === 4 ? "4 ומעלה" : val}`}
+                          className={`flex-1 h-12 rounded-2xl text-base font-black tabular-nums transition-[scale,background-color,color,box-shadow] duration-150 ease-out active:scale-95 ${
+                            isSelected ? "bg-accent text-on-accent shadow-[0_4px_14px_-4px_color-mix(in_srgb,var(--accent)_55%,transparent)]" : "bg-fg/5 text-muted border border-line"
+                          }`}
+                        >
+                          {val === 4 ? "4+" : val}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
 
-                {RIR_OPTIONS.map((val) => {
-                  const isSelected = session.pendingSetRir === val;
-                  return (
-                    <button
-                      key={val}
-                      onClick={() => session.selectRestRir(val)}
-                      aria-pressed={isSelected}
-                      aria-label={`RIR ${val === 4 ? "4 ומעלה" : val}`}
-                      // 28px circle, 40×44 tap target (the after: inset, sized to the gap-3 so neighbours don't overlap) — tapped between sets with a raised pulse.
-                      className={`relative w-7 h-7 rounded-full flex items-center justify-center text-[0.6875rem] font-bold transition-[scale,background-color,color,box-shadow] duration-150 ease-out active:scale-90 after:absolute after:-inset-x-1.5 after:-inset-y-2 after:content-[''] ${
-                        isSelected ? "bg-accent text-on-accent scale-110 shadow-[0_2px_10px_-2px_color-mix(in_srgb,var(--accent)_50%,transparent)]" : "text-muted border border-line"
-                      }`}
-                    >
-                      {val === 4 ? "4+" : val}
+              {/* Optional weight used — left empty, nothing is logged. ±2.5 kg steps. */}
+              {!session.activeAssign?.is_time && (() => {
+                const stepWeight = (delta: number) => {
+                  triggerHaptic("light");
+                  const cur = parseWeightInput(session.pendingSetWeight) ?? 0;
+                  const next = Math.max(0, Math.round((cur + delta) * 10) / 10);
+                  session.setRestWeight(next > 0 ? String(next) : "");
+                };
+                return (
+                  <div className="flex items-center gap-2.5">
+                    <button onClick={() => stepWeight(-2.5)} aria-label="פחות 2.5 ק״ג" className="w-11 h-11 rounded-full bg-fg/10 border border-line flex items-center justify-center text-fg active:scale-90 transition-transform duration-150 ease-out">
+                      <Minus size={16} />
                     </button>
-                  );
-                })}
-              </div>
-              )}
-
-              {/* Optional weight used — left empty, nothing is logged. */}
-              {!session.activeAssign?.is_time && (
-                <label className="flex items-center gap-2">
-                  <span className="text-[0.6875rem] font-bold text-muted">משקל</span>
-                  <input
-                    type="text"
-                    inputMode="decimal"
-                    value={session.pendingSetWeight}
-                    onChange={(e) => session.setRestWeight(e.target.value)}
-                    placeholder="—"
-                    aria-label="משקל בקילוגרמים (לא חובה)"
-                    className="w-16 bg-fg/10 border border-line rounded-full px-2 py-1 text-center text-sm font-bold text-fg tabular-nums outline-none focus:border-focus focus:ring-2 focus:ring-focus placeholder:text-muted"
-                    dir="ltr"
-                  />
-                  <span className="text-[0.6875rem] font-bold text-muted">ק״ג</span>
-                </label>
-              )}
+                    <label className="flex items-center gap-1.5">
+                      <input
+                        type="text"
+                        inputMode="decimal"
+                        value={session.pendingSetWeight}
+                        onChange={(e) => session.setRestWeight(e.target.value)}
+                        placeholder="—"
+                        aria-label="משקל בקילוגרמים (לא חובה)"
+                        className="w-20 bg-fg/10 border border-line rounded-full px-2 py-2 text-center text-base font-bold text-fg tabular-nums outline-none focus:border-focus focus:ring-2 focus:ring-focus placeholder:text-muted"
+                        dir="ltr"
+                      />
+                      <span className="text-[0.6875rem] font-bold text-muted">ק״ג</span>
+                    </label>
+                    <button onClick={() => stepWeight(2.5)} aria-label="עוד 2.5 ק״ג" className="w-11 h-11 rounded-full bg-fg/10 border border-line flex items-center justify-center text-fg active:scale-90 transition-transform duration-150 ease-out">
+                      <Plus size={16} />
+                    </button>
+                  </div>
+                );
+              })()}
             </div>
 
             {/* Bottom controls — minimal media-control feel: a ghost
