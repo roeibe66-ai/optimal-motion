@@ -9,6 +9,7 @@ import { getLastUsedWeights, parsePerformance } from "@/app/utils/history";
 import type { DiyExercise, Exercise, PatientExercise, QueueLogRef, SessionPerformanceEntry, WorkoutFormat, WorkoutLog } from "@/app/types";
 import { confirmAction, notify } from "@/app/components/ui/feedback";
 import { getDiyPrescription } from "@/app/utils/diy";
+import { inferSwapSetting, type SwapSetting } from "@/app/utils/exerciseSwap";
 
 // A PatientExercise as it's actually consumed here: already joined with its
 // Exercise (that join happens in usePatientData, which filters out any
@@ -137,6 +138,9 @@ export function useWorkoutSession({
   const [feedbackPhase, setFeedbackPhase] = useState<FeedbackPhase>("rpe");
 
   const [swappedExercises, setSwappedExercises] = useState<Record<string, Exercise>>({});
+  // The patient's own gym/home/gear choice in the swap sheet, kept until the
+  // workout ends; null = inferred from the workout's exercises (swapSetting below).
+  const [swapSettingOverride, setSwapSettingOverride] = useState<SwapSetting | null>(null);
   const [viewingExInfo, setViewingExInfo] = useState<Exercise | null>(null);
 
   const [activeBlockIdx, setActiveBlockIdx] = useState(0);
@@ -254,6 +258,8 @@ export function useWorkoutSession({
   const activeAssign = activeBlockExercises[activeExInBlockIdx] as SessionExercise | undefined;
   const maxSetsInBlock = activeBlockExercises.length > 0 ? Math.max(...activeBlockExercises.map((e) => e.sets)) : 1;
 
+  const swapSetting = swapSettingOverride ?? inferSwapSetting(blocksKeys.flatMap((k) => blocksMap[k].map((se) => se.exercise)));
+
   // The exercise actually shown/played — a swap replaces it for this slot only.
   const displayedExercise = activeAssign ? swappedExercises[activeAssign.id] || activeAssign.exercise : undefined;
 
@@ -268,7 +274,7 @@ export function useWorkoutSession({
   // just another set of the *same* exercise, callers should show a plain
   // dark background alongside the "prepare for set N" card, rather than
   // re-showing the current exercise's own video.
-  const nextExercise: SessionExercise | undefined =
+  const nextSlot: SessionExercise | undefined =
     activeExInBlockIdx < activeBlockExercises.length - 1
       ? activeBlockExercises[activeExInBlockIdx + 1]
       : currentBlockSet < maxSetsInBlock
@@ -276,6 +282,8 @@ export function useWorkoutSession({
         : activeBlockIdx < blocksKeys.length - 1
           ? blocksMap[blocksKeys[activeBlockIdx + 1]][0]
           : undefined;
+  // A slot the patient swapped shows its replacement here too.
+  const nextExercise: SessionExercise | undefined = nextSlot && swappedExercises[nextSlot.id] ? { ...nextSlot, exercise: swappedExercises[nextSlot.id] } : nextSlot;
 
   // Per-exercise progress for the info sheet's Charts tab: one point per
   // session that logged this exercise — best set's reps (and the RIR reported
@@ -308,7 +316,7 @@ export function useWorkoutSession({
   // What the patient lifted for each exercise last time (from past logs),
   // shown during the set and used to prefill the rest screen's weight field.
   const lastUsedWeights = getLastUsedWeights(workoutLogs);
-  const previousWeight = activeAssign ? (lastUsedWeights[activeAssign.exercise.id] ?? null) : null;
+  const previousWeight = displayedExercise ? (lastUsedWeights[displayedExercise.id] ?? null) : null;
 
   // --- Actions used by effects below, declared first so nothing forward-references them ---
 
@@ -323,7 +331,8 @@ export function useWorkoutSession({
       setSessionPerformance((prev) => [
         ...prev,
         {
-          exercise_id: activeAssign.exercise.id,
+          // The exercise actually performed — the swap, if the patient made one.
+          exercise_id: (displayedExercise ?? activeAssign.exercise).id,
           set_number: currentBlockSet,
           reps: actualRepsLogged ? parseInt(actualRepsLogged) : Number(effectiveTargetReps ?? activeAssign.reps) || 0,
           rir: pendingSetRir ?? undefined,
@@ -435,12 +444,14 @@ export function useWorkoutSession({
   // Lock-screen media controls during a workout.
   useEffect(() => {
     if (isWorkoutMode && "mediaSession" in navigator && displayedExercise) {
-      navigator.mediaSession.metadata = new MediaMetadata({
+      // Object.assign rather than `navigator.mediaSession.metadata = ...`: the
+      // React Compiler lint rejects assigning to a global's property directly.
+      Object.assign(navigator.mediaSession, { metadata: new MediaMetadata({
         title: getExerciseName(displayedExercise, lang),
         artist: `סט ${currentBlockSet} מתוך ${maxSetsInBlock}`,
         album: "Eccentric",
         artwork: [{ src: "/icon.png", sizes: "512x512", type: "image/png" }],
-      });
+      }) });
 
       navigator.mediaSession.setActionHandler("nexttrack", () => {
         if (!isResting) handleFinishAction();
@@ -749,21 +760,28 @@ export function useWorkoutSession({
     else setFeedbackPhase("pain_after");
   };
 
-  const handleSwapExercise = () => {
-    triggerHaptic("light");
+  // Mid-workout swap (SwapExerciseSheet picks the replacement): replaces the
+  // exercise for this slot's remaining sets only — never the patient_exercises
+  // row. Passing the slot's own exercise undoes the swap. The weight field is
+  // reseeded for the new exercise, since the old one's weight means nothing for it.
+  const swapExercise = (pick: Exercise) => {
     if (!activeAssign) return;
-    const currentEx = swappedExercises[activeAssign.id] || activeAssign.exercise;
-    if (!currentEx.target_muscle) {
-      notify("לתרגיל זה לא מוגדר שריר מטרה מרכזי, ולכן המערכת לא יודעת מה להציע במקומו.", "info");
-      return;
-    }
-    const alternatives = exerciseCatalog.filter((e) => e.target_muscle === currentEx.target_muscle && e.id !== currentEx.id);
-    if (alternatives.length > 0) {
-      const pick = alternatives[Math.floor(Math.random() * alternatives.length)];
-      setSwappedExercises((prev) => ({ ...prev, [activeAssign.id]: pick }));
-    } else {
-      notify("לא נמצאו במאגר תרגילים חלופיים לאותו שריר מרכזי.", "info");
-    }
+    triggerHaptic("light");
+    setSwappedExercises((prev) => {
+      const next = { ...prev };
+      if (pick.id === activeAssign.exercise.id) delete next[activeAssign.id];
+      else next[activeAssign.id] = pick;
+      return next;
+    });
+    setLastWeightByAssign((prev) => {
+      const next = { ...prev };
+      delete next[activeAssign.id];
+      return next;
+    });
+    const last = lastUsedWeights[pick.id];
+    setPendingSetWeight(last != null ? String(last) : "");
+    setExTimer(null);
+    setIsExTimerRunning(false);
   };
 
   const closeWorkout = () => {
@@ -773,6 +791,7 @@ export function useWorkoutSession({
     setPainBefore(null);
     setRpeScore(null);
     setSwappedExercises({});
+    setSwapSettingOverride(null);
     setRepAdjustments({});
     setPendingSetRir(null);
     setPendingSetWeight("");
@@ -840,7 +859,14 @@ export function useWorkoutSession({
     handleContinueSuperset,
     goBack,
     canGoBack: setHistory.length > 0,
-    handleSwapExercise,
+    swapExercise,
+    exerciseCatalog,
+    swapSetting,
+    isSwapSettingInferred: swapSettingOverride === null,
+    setSwapSetting: setSwapSettingOverride,
+    // Every exercise id in this session (slots + swaps), so the swap sheet
+    // doesn't suggest something the patient is already doing today.
+    sessionExerciseIds: new Set([...blocksKeys.flatMap((k) => blocksMap[k].map((se) => se.exercise.id)), ...Object.values(swappedExercises).map((e) => e.id)]),
     makeHarder,
     makeEasier,
     onTouchStart,

@@ -29,7 +29,7 @@ const AUTH: AuthContextValue = {
 function Session({ fixture }: { fixture: PlayerFixture }) {
   const session = useWorkoutSession({
     patientExercises: [],
-    exerciseCatalog: fixture.exercises.map((e) => e.exercise),
+    exerciseCatalog: [...fixture.exercises.map((e) => e.exercise), ...(fixture.catalogExtras ?? [])],
     workoutLogs: fixture.workoutLogs,
     activePatientWeek: 1,
     selectedCategory: null,

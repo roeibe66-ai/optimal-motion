@@ -330,3 +330,16 @@ entirely, discarding an in-progress workout.
 (`app/hooks/useBackDismiss.ts`): it owns one history entry, Back closes only the top
 layer, and layers holding unsaved work pass a `guard` that asks first (the workout and
 AMRAP players). New full-screen/sheet UI must opt in.
+
+## 2026-10-12 — `exercises.equipment = {dumbbells}` is a catch-all for gym machines
+
+**What happened:** building the mid-workout swap's "at home" filter, Smith-machine squats,
+leg press, lat pulldown and cable exercises came back as home options for a patient with
+dumbbells: all 79 `gym`-tagged non-kettlebell exercises carry `equipment = {dumbbells}`
+whatever they really use. Also, the swap path logged the set under the *original*
+exercise id (`activeAssign.exercise.id`) instead of the one performed.
+**Rule:** don't trust `equipment` alone to mean "doable at home" — `fitsSetting`
+(`app/utils/exerciseSwap.ts`) also requires a `gym`-tagged "dumbbells" exercise to say
+dumbbell in its name. Fix the data (real machine/barbell/cable equipment ids) rather than
+adding more heuristics. Anything that records a set uses `displayedExercise`, not
+`activeAssign.exercise`.

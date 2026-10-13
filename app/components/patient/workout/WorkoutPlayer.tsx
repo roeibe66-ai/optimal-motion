@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowRight, Dumbbell, FlaskConical, Info, Minus, Pause, Play, Plus, SkipForward, Trophy, X } from "lucide-react";
+import { ArrowLeftRight, ArrowRight, Dumbbell, FlaskConical, Info, Minus, Pause, Play, Plus, SkipForward, Trophy, X } from "lucide-react";
 import { useAuth } from "@/app/context/AuthContext";
 import ExerciseInfoModal from "@/app/components/patient/workout/ExerciseInfoModal";
+import SwapExerciseSheet from "@/app/components/patient/workout/SwapExerciseSheet";
 import { ExerciseMediaPlayer } from "@/app/components/ExerciseMedia";
 import PreWorkoutFlow from "@/app/components/patient/PreWorkoutFlow";
 import WorkoutFinishFlow from "@/app/components/patient/workout/WorkoutFinishFlow";
@@ -102,6 +103,7 @@ function BackButton({ onClick }: { onClick: () => void }) {
 export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerProps) {
   const { lang } = useAuth();
   const dir = lang === "he" ? "rtl" : "ltr";
+  const [isSwapOpen, setIsSwapOpen] = useState(false);
 
   // System Back inside a workout used to leave the app (and the session with
   // it). Now it asks first — the progress isn't saved until the feedback step.
@@ -202,6 +204,23 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
         />
       )}
 
+      {isSwapOpen && ex && session.activeAssign && (
+        <SwapExerciseSheet
+          original={session.activeAssign.exercise}
+          current={ex}
+          catalog={session.exerciseCatalog}
+          excludeIds={session.sessionExerciseIds}
+          setting={session.swapSetting}
+          isSettingInferred={session.isSwapSettingInferred}
+          onChangeSetting={session.setSwapSetting}
+          onPick={(pick) => {
+            session.swapExercise(pick);
+            setIsSwapOpen(false);
+          }}
+          onClose={() => setIsSwapOpen(false)}
+        />
+      )}
+
       {session.isSimulation && <SimulationBanner onExit={session.closeWorkout} />}
       {session.simulationToast && <Toast message={session.simulationToast} onDismiss={session.dismissSimulationToast} />}
 
@@ -245,15 +264,26 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
             {/* Two lines max — the full name is one tap away (ⓘ); three lines of
                 this size pushed the controls off short screens. */}
             <h2 className="text-2xl md:text-3xl font-black text-fg tracking-tight leading-tight line-clamp-2 [overflow-wrap:anywhere]">{ex && getExerciseName(ex, lang)}</h2>
-            <p className="text-muted text-sm font-bold mt-1 tabular-nums">
-              סט {session.currentBlockSet} / {session.maxSetsInBlock}
-            </p>
+            <div className="flex items-center justify-center gap-2 mt-1">
+              <p className="text-muted text-sm font-bold tabular-nums">
+                סט {session.currentBlockSet} / {session.maxSetsInBlock}
+              </p>
+              {/* Swap this exercise for the rest of its sets (SwapExerciseSheet). */}
+              <button
+                onClick={() => setIsSwapOpen(true)}
+                className="inline-flex items-center gap-1 text-xs font-bold text-muted hover:text-fg border border-line rounded-full px-2.5 py-1 active:scale-95 transition-[scale,color,border-color] duration-150 ease-out"
+              >
+                <ArrowLeftRight size={12} /> החלף תרגיל
+              </button>
+            </div>
             {/* Weight: what the patient used last time for this exercise
                 (from past logs) leads; the therapist's target, if set and
                 different, sits next to it. Neither set = nothing shown. */}
             {(() => {
               const previous = formatWeightKg(session.previousWeight);
-              const target = formatWeightKg(session.activeAssign?.weight_kg);
+              // The prescribed weight belongs to the original exercise — not shown after a swap.
+              const isSwapped = !!ex && !!session.activeAssign && ex.id !== session.activeAssign.exercise.id;
+              const target = isSwapped ? null : formatWeightKg(session.activeAssign?.weight_kg);
               if (!previous && !target) return null;
               return (
                 <div className="flex flex-wrap items-center justify-center gap-2 mt-2">

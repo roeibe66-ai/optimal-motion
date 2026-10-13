@@ -14,6 +14,9 @@ export interface PlayerFixture {
   title: string;
   exercises: SessionExercise[];
   workoutLogs: WorkoutLog[];
+  // Extra library exercises (not in the session) so the swap sheet has
+  // something to suggest.
+  catalogExtras?: Exercise[];
 }
 
 function ex(id: string, nameHe: string, opts: Partial<Exercise> = {}): Exercise {
@@ -36,13 +39,25 @@ function weightLog(entries: { exercise_id: string; weight_kg: number }[]): Worko
 }
 
 function demo(): PlayerFixture {
-  const squat = ex("d1", "סקוואט גביע");
+  const squat = ex("d1", "סקוואט גביע", { difficulty_level: "intermediate", equipment: ["kettlebell"], synergists: ["gluteal", "adductors"] });
   const rdl = ex("d2", "דדליפט רומני", { target_muscle: "hamstring" });
   const plank = ex("d3", "פלאנק", { target_muscle: "abs" });
   return {
     title: "חיזוק רגליים",
     exercises: [se(squat, "A", { reps: 10, weight_kg: 16, rir: 2 }), se(rdl, "B", { reps: 8 }), se(plank, "C", { is_time: true, reps: 45 })],
     workoutLogs: [weightLog([{ exercise_id: "d1", weight_kg: 14 }])],
+    catalogExtras: [
+      ex("s1", "סקוואט במשקל גוף", { difficulty_level: "intermediate", equipment: ["bodyweight"], synergists: ["gluteal", "adductors"] }),
+      ex("s2", "לאנג' אחורי עם קטלבל", { difficulty_level: "intermediate", equipment: ["kettlebell"], synergists: ["gluteal"] }),
+      ex("s3", "עליות מדרגה", { difficulty_level: "intermediate", equipment: ["bodyweight"], synergists: ["gluteal", "hamstring"] }),
+      ex("s4", "לחיצת רגליים במכונה", { difficulty_level: "intermediate", equipment: ["dumbbells"], admin_tags: "gym", synergists: ["gluteal"] }),
+      ex("s5", "סקוואט ספליט בולגרי", { difficulty_level: "intermediate", equipment: ["dumbbells"], name_en: "Dumbbell Bulgarian Split Squat", synergists: ["gluteal", "adductors"] }),
+      ex("s6", "סקוואט גביע עם עצירה", { difficulty_level: "intermediate", equipment: ["kettlebell"], synergists: ["gluteal", "adductors", "abs"] }),
+      ex("s7", "סקוואט על רגל אחת (פיסטול)", { difficulty_level: "advanced", equipment: ["bodyweight"], synergists: ["gluteal"] }),
+      ex("s8", "סקוואט קפיצה", { difficulty_level: "advanced", equipment: ["bodyweight"], synergists: ["gluteal", "calves"] }),
+      ex("s9", "סקוואט לקופסה", { difficulty_level: "beginner", equipment: ["bodyweight"], synergists: ["gluteal"] }),
+      ex("s10", "ישיבה על הקיר", { difficulty_level: "beginner", equipment: ["bodyweight"] }),
+    ],
   };
 }
 
