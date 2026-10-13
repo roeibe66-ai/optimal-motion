@@ -3,6 +3,8 @@
 import { X } from "lucide-react";
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
 import { createPortal } from "react-dom";
+import { useBackDismiss } from "@/app/hooks/useBackDismiss";
+import { project, rubberband } from "@/app/utils/motion";
 
 interface ModalProps {
   onClose: () => void;
@@ -17,13 +19,8 @@ const SHEET_EXIT_MS = 250;
 // Swipe-to-dismiss tuning (Apple, "Designing Fluid Interfaces"):
 // - DRAG_SLOP: movement before a press on the header becomes a drag, so taps
 //   (the X button) still work.
-// - project(): where a flick would come to rest, scroll-deceleration style;
-//   the sheet closes if that projected point is past half its height.
-// - rubberband(): resistance when pulled up past its resting position.
+// - project() / rubberband(): app/utils/motion.ts.
 const DRAG_SLOP = 8;
-const project = (velocityPxPerSec: number, decelerationRate = 0.998) => ((velocityPxPerSec / 1000) * decelerationRate) / (1 - decelerationRate);
-const rubberband = (overshoot: number, dimension: number, constant = 0.55) =>
-  (overshoot * dimension * constant) / (dimension + constant * Math.abs(overshoot));
 
 // Shared modal chrome (overlay + panel + header + close button) for the
 // patient app — an elevated dark sheet (header) over a dimmed backdrop, with
@@ -65,6 +62,9 @@ export default function Modal({ onClose, title, icon, children }: ModalProps) {
     setIsClosing(true);
     closeTimer.current = setTimeout(onClose, SHEET_EXIT_MS);
   };
+
+  // System Back closes the sheet (with its normal exit), not the app.
+  useBackDismiss(!isClosing, handleClose);
 
   // Drag the sheet down by its handle/header. Positions are written straight
   // to the element's style (no re-render per pointermove) so it tracks the

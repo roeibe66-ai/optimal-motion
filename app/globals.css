@@ -413,6 +413,20 @@ html {
   }
 }
 
+/* Leaving the full-screen builder: back down the path it came up. "forwards"
+   holds it off-screen until the unmount (BUILDER_EXIT_MS). */
+@theme {
+  --animate-screen-down: screen-down 280ms var(--ease-drawer) forwards;
+
+  @keyframes screen-down {
+    to { transform: translateY(100%); }
+  }
+}
+
+@keyframes motion-fade-out {
+  to { opacity: 0; }
+}
+
 /* Reduced-motion stand-in for the celebrate, step-in and card-in animations above:
    same timing, opacity only. */
 @keyframes motion-fade {
@@ -426,6 +440,7 @@ html {
   .animate-step-back,
   .animate-screen-up,
   .animate-card-in { animation-name: motion-fade; }
+  .animate-screen-down { animation-name: motion-fade-out; }
   .animate-heart-pop { animation: none; }
 }
 

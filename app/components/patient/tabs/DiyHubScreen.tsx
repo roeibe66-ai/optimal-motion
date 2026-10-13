@@ -55,7 +55,7 @@ export default function DiyHubScreen({
         >
           <Folder size={14} className="text-accent-fg" />
           התוכניות שלי
-          {savedProgramCount > 0 && <span className="text-[0.625rem] rounded-full px-1.5 py-0.5 bg-fg/10 text-muted tabular-nums">{savedProgramCount}</span>}
+          {savedProgramCount > 0 && <span className="text-[0.6875rem] rounded-full px-1.5 py-0.5 bg-fg/10 text-muted tabular-nums">{savedProgramCount}</span>}
         </button>
       </div>
 

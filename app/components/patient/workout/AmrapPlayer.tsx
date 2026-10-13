@@ -12,6 +12,7 @@ import { SimulationBanner } from "@/app/components/patient/workout/WorkoutPlayer
 import type { HapticType } from "@/app/hooks/useHaptics";
 import type { Exercise, QueueLogRef } from "@/app/types";
 import { confirmAction, notify } from "@/app/components/ui/feedback";
+import { useBackDismiss } from "@/app/hooks/useBackDismiss";
 
 export interface AmrapStation {
   exercise: Exercise;
@@ -57,6 +58,13 @@ export default function AmrapPlayer({ config, triggerHaptic, onClose, onLogged, 
   const totalMs = config.timeCapSeconds * 1000;
 
   const [phase, setPhase] = useState<Phase>("ready");
+  // System Back asks before abandoning a running/paused AMRAP or an unsaved
+  // result; otherwise it just closes.
+  useBackDismiss(true, onClose, () =>
+    phase === "ready" || phase === "done"
+      ? Promise.resolve(true)
+      : confirmAction({ title: "לצאת מהאימון?", message: "התוצאה לא תישמר.", confirmLabel: "צא", cancelLabel: "המשך להתאמן", destructive: true })
+  );
   const [remainingMs, setRemainingMs] = useState(totalMs);
   const [rounds, setRounds] = useState(0);
   const [extraReps, setExtraReps] = useState(0);

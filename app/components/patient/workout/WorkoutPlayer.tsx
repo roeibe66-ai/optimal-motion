@@ -11,6 +11,8 @@ import Toast from "@/app/components/ui/Toast";
 import { formatRepTarget, formatTime, formatWeightKg, getExerciseName } from "@/app/utils/format";
 import type { HapticType } from "@/app/hooks/useHaptics";
 import type { useWorkoutSession } from "@/app/hooks/useWorkoutSession";
+import { useBackDismiss } from "@/app/hooks/useBackDismiss";
+import { confirmAction } from "@/app/components/ui/feedback";
 
 // Sticky warning strip shown for the whole duration of an admin Run/Test
 // session (both the live player and the finish flow) — amber for "this is a
@@ -100,6 +102,18 @@ function BackButton({ onClick }: { onClick: () => void }) {
 export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerProps) {
   const { lang } = useAuth();
   const dir = lang === "he" ? "rtl" : "ltr";
+
+  // System Back inside a workout used to leave the app (and the session with
+  // it). Now it asks first — the progress isn't saved until the feedback step.
+  useBackDismiss(session.showPreWorkout || session.isWorkoutMode, session.closeWorkout, () =>
+    confirmAction({
+      title: session.workoutFinished ? "לצאת בלי לשמור את האימון?" : "לצאת מהאימון?",
+      message: session.workoutFinished ? "המשוב לא נשלח עדיין, והאימון לא יירשם ביומן." : "ההתקדמות באימון הזה לא תישמר.",
+      confirmLabel: "צא",
+      cancelLabel: "המשך באימון",
+      destructive: true,
+    })
+  );
 
   if (session.showPreWorkout) {
     return (

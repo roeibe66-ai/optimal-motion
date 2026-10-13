@@ -32,6 +32,7 @@ import AnatomyHeatmap from "@/app/components/AnatomyHeatmap";
 import { ExerciseMediaPlayer } from "@/app/components/ExerciseMedia";
 import QuickLogSheet from "@/app/components/patient/workout/QuickLogSheet";
 import { getLastUsedWeights } from "@/app/utils/history";
+import { useBackDismiss } from "@/app/hooks/useBackDismiss";
 
 interface PlanTabProps {
   isLoading?: boolean; // first fetch still in flight — skeletons, not empty states
@@ -130,7 +131,9 @@ function CuratedFactCard({ fact }: { fact: CuratedFact }) {
       <p className={`relative text-fg text-[1.375rem] md:text-[1.625rem] font-black leading-snug ${isExpanded ? "" : "line-clamp-4"}`}>{fact.did_you_know_he}</p>
 
       <div className={`relative grid transition-[grid-template-rows] duration-300 ease-out ${isExpanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}>
-        <div className="overflow-hidden">
+        {/* inert while collapsed: hidden text and its link stay out of the
+            keyboard order and the screen reader until "קרא עוד". */}
+        <div className="overflow-hidden" inert={!isExpanded}>
           <p className="text-muted text-sm leading-relaxed pt-1">{fact.summary_he}</p>
           <a
             href={fact.paper_url || undefined}
@@ -200,6 +203,8 @@ export default function PlanTab({
     setNavDir("back");
     setSelectedCategory(null);
   };
+  // System Back from a program screen returns to the overview, not out of the app.
+  useBackDismiss(!!selectedCategory, closeProgram);
   const pushIn = navDir === "forward" ? "animate-step-in" : "";
   // Which "Did you know?" card is snapped into view — the carousel has no
   // scrollbar, so a "2/5" counter is the only cue that more facts exist.
@@ -495,7 +500,30 @@ export default function PlanTab({
                     <div className="p-3 flex flex-col gap-2">
                       <div className="font-bold text-[0.8125rem] leading-snug text-fg line-clamp-2 [overflow-wrap:anywhere]">{entry.name}</div>
                       <div className={`text-[0.6875rem] font-bold px-2.5 py-1 rounded-full w-fit tabular-nums ${done ? "bg-success/15 text-fg" : "bg-accent/15 text-accent-fg"}`}>
-                        {entry.isOneTime ? "חד-פעמי" : done ? "✓ יעד השבוע הושלם" : `השבוע ${entry.doneThisWeek}/${entry.weeklyTarget}`}
+                        {entry.isOneTime ? (
+                          "חד-פעמי"
+                        ) : done ? (
+                          "✓ יעד השבוע הושלם"
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5">
+                            {/* A small ring of the week's progress next to the count. */}
+                            <svg viewBox="0 0 16 16" className="w-3.5 h-3.5 -rotate-90 shrink-0" aria-hidden="true">
+                              <circle cx="8" cy="8" r="6" fill="none" strokeWidth="2.5" style={{ stroke: "color-mix(in srgb, var(--accent) 25%, transparent)" }} />
+                              <circle
+                                cx="8"
+                                cy="8"
+                                r="6"
+                                fill="none"
+                                strokeWidth="2.5"
+                                strokeLinecap="round"
+                                style={{ stroke: "var(--accent-fg)" }}
+                                strokeDasharray={2 * Math.PI * 6}
+                                strokeDashoffset={2 * Math.PI * 6 * (1 - Math.min(1, entry.doneThisWeek / Math.max(1, entry.weeklyTarget)))}
+                              />
+                            </svg>
+                            השבוע {entry.doneThisWeek}/{entry.weeklyTarget}
+                          </span>
+                        )}
                       </div>
                     </div>
                   </button>

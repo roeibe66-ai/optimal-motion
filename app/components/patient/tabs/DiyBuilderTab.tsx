@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type Dispatch, type SetStateAction } from "react";
+import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
 import { Bookmark, Check, ChevronRight, Dumbbell, Pencil, Plus, X } from "lucide-react";
 import { useAuth } from "@/app/context/AuthContext";
 import { getExerciseName } from "@/app/utils/format";
@@ -11,6 +11,9 @@ import { MAX_CATALOG_TITLE_LENGTH } from "@/app/utils/validation";
 import { countLabel } from "@/app/utils/format";
 import { notify } from "@/app/components/ui/feedback";
 import { tapHaptic } from "@/app/utils/haptics";
+import { useBackDismiss } from "@/app/hooks/useBackDismiss";
+
+const BUILDER_EXIT_MS = 280;
 
 interface DiyBuilderTabProps {
   exerciseCatalog: Exercise[];
@@ -107,16 +110,34 @@ export default function DiyBuilderTab({
     setView("plan");
   };
 
+  // Closing slides the builder back down the way it came up (it used to
+  // vanish), then unmounts. Must match the screen-down duration in globals.css.
+  const [closing, setClosing] = useState(false);
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => {
+    if (closeTimer.current) clearTimeout(closeTimer.current);
+  }, []);
+  const requestClose = () => {
+    if (closing) return;
+    setClosing(true);
+    closeTimer.current = setTimeout(onClose, BUILDER_EXIT_MS);
+  };
+
+  // System Back steps out one level at a time — picker -> plan -> close —
+  // instead of leaving the app.
+  useBackDismiss(!closing, requestClose);
+  useBackDismiss(view === "picker" && !closing, closePicker);
+
   // Escape steps back one level: picker -> plan -> close the builder.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "Escape" || document.querySelector(".sheet-panel")) return;
       if (view === "picker") closePicker();
-      else onClose();
+      else requestClose();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [view, onClose]);
+  });
 
   const countInActiveDay = (ex: Exercise) => activeDayExercises.filter((e) => e.id === ex.id).length;
 
@@ -246,7 +267,7 @@ export default function DiyBuilderTab({
     </div>
   );
 
-  const shell = "fixed inset-0 z-[120] bg-page text-fg flex flex-col overflow-hidden animate-screen-up print:hidden";
+  const shell = `fixed inset-0 z-[120] bg-page text-fg flex flex-col overflow-hidden print:hidden ${closing ? "animate-screen-down pointer-events-none" : "animate-screen-up"}`;
   const column = "max-w-2xl w-full mx-auto px-4";
   const header = "shrink-0 bg-page/95 backdrop-blur-md border-b border-line pt-[max(0.75rem,env(safe-area-inset-top))] pb-3";
   const footer = "shrink-0 bg-elevated/95 backdrop-blur-md border-t border-line pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]";
@@ -295,7 +316,7 @@ export default function DiyBuilderTab({
                   >
                     {added > 0 ? <Check size={18} strokeWidth={3} /> : <Plus size={18} />}
                     {added > 1 && (
-                      <span className="absolute -top-1 -left-1 min-w-5 h-5 px-1 rounded-full bg-fg text-page text-[0.625rem] font-black flex items-center justify-center">{added}</span>
+                      <span className="absolute -top-1 -left-1 min-w-5 h-5 px-1 rounded-full bg-fg text-page text-[0.6875rem] font-black flex items-center justify-center">{added}</span>
                     )}
                   </button>
                 );
@@ -329,7 +350,7 @@ export default function DiyBuilderTab({
       <header className={header}>
         <div className={column}>
           <div className="flex items-center gap-3">
-            <button onClick={onClose} aria-label="סגור את בניית האימון" className={iconButton}>
+            <button onClick={requestClose} aria-label="סגור את בניית האימון" className={iconButton}>
               <X size={18} />
             </button>
             <div className="flex-1 min-w-0">

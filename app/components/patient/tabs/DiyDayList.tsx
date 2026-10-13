@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, type KeyboardEvent, type PointerEvent as ReactPointerEvent } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent, type PointerEvent as ReactPointerEvent } from "react";
 import { ArrowLeftRight, GripVertical, Info, Minus, Plus, Trash2 } from "lucide-react";
 import { AVAILABLE_MUSCLES } from "@/app/constants/catalog";
 import { useAuth } from "@/app/context/AuthContext";
@@ -8,6 +8,7 @@ import { ExerciseThumb } from "@/app/components/ExerciseMedia";
 import type { DiyExercise, DiyPrescription, Exercise } from "@/app/types";
 import { getExerciseName } from "@/app/utils/format";
 import { tapHaptic } from "@/app/utils/haptics";
+import { prefersReducedMotion, rubberband } from "@/app/utils/motion";
 import { DIY_LIMITS, clampDiy, getDiyPrescription } from "@/app/utils/diy";
 
 interface DiyDayListProps {
@@ -45,12 +46,12 @@ function Stepper({ label, value, limit, onChange, labelAction }: { label: string
   return (
     <div className="on-light bg-surface-alt rounded-2xl px-1.5 pt-1.5 pb-1 flex flex-col items-center min-w-0">
       {labelAction ? (
-        <button onClick={labelAction.onClick} aria-label={labelAction.ariaLabel} className="flex items-center gap-1 text-[0.625rem] font-extrabold text-accent-fg hover:underline">
+        <button onClick={labelAction.onClick} aria-label={labelAction.ariaLabel} className="flex items-center gap-1 text-[0.6875rem] font-extrabold text-accent-fg hover:underline">
           {label}
           <ArrowLeftRight size={10} />
         </button>
       ) : (
-        <span className="text-[0.625rem] font-extrabold text-muted">{label}</span>
+        <span className="text-[0.6875rem] font-extrabold text-muted">{label}</span>
       )}
       <div className="flex items-center justify-between w-full">
         <button onClick={() => step(-1)} disabled={value <= limit.min} aria-label={`הפחת ${label}`} className={stepButton}>
@@ -90,31 +91,106 @@ export default function DiyDayList({ exercises, onChangePrescription, onReorder,
   const handleRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const [drag, setDrag] = useState<{ from: number; to: number; dy: number; startY: number; rects: DOMRect[] } | null>(null);
 
+  // Live drag bookkeeping outside React state, for the auto-scroll loop:
+  // the pointer's last position, and how far the scroller has moved since
+  // the grab (rects were measured before it moved).
+  const live = useRef({ clientY: 0, scroller: null as HTMLElement | null, scrollStart: 0, raf: 0 });
+  // Where the grabbed row was when released, so it can settle into its new
+  // slot from there instead of jumping (applied after the reorder renders).
+  const settle = useRef<{ to: number; fromTop: number } | null>(null);
+
+  const scrollerOf = (el: HTMLElement | null): HTMLElement => {
+    for (let n = el?.parentElement; n; n = n.parentElement) {
+      const oy = getComputedStyle(n).overflowY;
+      if ((oy === "auto" || oy === "scroll") && n.scrollHeight > n.clientHeight) return n;
+    }
+    return document.scrollingElement as HTMLElement;
+  };
+
+  // Position the grabbed row for the pointer's current Y (plus any
+  // auto-scroll), rubber-banding past the first/last slot instead of a hard stop.
+  const track = (clientY: number) => {
+    setDrag((d) => {
+      if (!d) return d;
+      const { rects } = d;
+      const self = rects[d.from];
+      const scrolled = (live.current.scroller?.scrollTop ?? 0) - live.current.scrollStart;
+      const raw = clientY - d.startY + scrolled;
+      const min = rects[0].top - self.top;
+      const max = rects[rects.length - 1].bottom - self.bottom;
+      const dy = raw < min ? min + rubberband(raw - min, self.height) : raw > max ? max + rubberband(raw - max, self.height) : raw;
+      const center = self.top + self.height / 2 + dy;
+      const to = rects.filter((r, i) => i !== d.from && r.top + r.height / 2 < center).length;
+      if (to !== d.to) tapHaptic();
+      return { ...d, to, dy };
+    });
+  };
+
+  // Near the top/bottom of the scroller, keep scrolling (faster the closer
+  // the finger is) so a row can be carried past what's on screen.
+  const EDGE = 72;
+  const autoScrollLoop = () => {
+    const { scroller, clientY } = live.current;
+    if (scroller) {
+      const box = scroller === document.scrollingElement ? { top: 0, bottom: window.innerHeight } : scroller.getBoundingClientRect();
+      const speed = clientY < box.top + EDGE ? -(box.top + EDGE - clientY) / EDGE : clientY > box.bottom - EDGE ? (clientY - (box.bottom - EDGE)) / EDGE : 0;
+      if (speed !== 0) {
+        scroller.scrollTop += Math.max(-1, Math.min(1, speed)) * 14;
+        track(clientY);
+      }
+    }
+    live.current.raf = requestAnimationFrame(autoScrollLoop);
+  };
+
   const onHandlePointerDown = (e: ReactPointerEvent<HTMLButtonElement>, idx: number) => {
     if (e.button !== 0 || exercises.length < 2) return;
     e.preventDefault();
     e.currentTarget.setPointerCapture(e.pointerId);
     const rects = itemRefs.current.slice(0, exercises.length).map((el) => el!.getBoundingClientRect());
+    const scroller = scrollerOf(itemRefs.current[idx]);
+    live.current = { clientY: e.clientY, scroller, scrollStart: scroller.scrollTop, raf: requestAnimationFrame(autoScrollLoop) };
     setDrag({ from: idx, to: idx, dy: 0, startY: e.clientY, rects });
     tapHaptic();
   };
 
   const onHandlePointerMove = (e: ReactPointerEvent<HTMLButtonElement>) => {
     if (!drag) return;
-    const { rects } = drag;
-    const self = rects[drag.from];
-    // Kept within the list: the row can't be dragged past the first/last slot.
-    const dy = Math.min(rects[rects.length - 1].bottom - self.bottom, Math.max(rects[0].top - self.top, e.clientY - drag.startY));
-    const center = self.top + self.height / 2 + dy;
-    const to = rects.filter((r, i) => i !== drag.from && r.top + r.height / 2 < center).length;
-    if (to !== drag.to) tapHaptic();
-    setDrag({ ...drag, to, dy });
+    live.current.clientY = e.clientY;
+    track(e.clientY);
   };
 
   const endDrag = () => {
-    if (drag && drag.to !== drag.from) onReorder(drag.from, drag.to);
+    cancelAnimationFrame(live.current.raf);
+    if (!drag) return;
+    const el = itemRefs.current[drag.from];
+    settle.current = el && !prefersReducedMotion() ? { to: drag.to, fromTop: el.getBoundingClientRect().top } : null;
+    if (drag.to !== drag.from) onReorder(drag.from, drag.to);
     setDrag(null);
   };
+
+  useEffect(() => () => cancelAnimationFrame(live.current.raf), []);
+
+  // FLIP: after the reorder lands, start the moved row where it was dropped
+  // and let it glide into its slot (it used to jump there).
+  useLayoutEffect(() => {
+    const s = settle.current;
+    if (!s || drag) return;
+    settle.current = null;
+    const el = itemRefs.current[s.to];
+    if (!el) return;
+    const delta = s.fromTop - el.getBoundingClientRect().top;
+    if (Math.abs(delta) < 1) return;
+    el.style.transition = "none";
+    el.style.transform = `translateY(${delta}px) scale(1.02)`;
+    void el.offsetHeight; // commit the start position before transitioning
+    el.style.transition = "transform 220ms var(--ease-drawer)";
+    el.style.transform = "";
+    const clear = () => {
+      el.style.transition = "";
+      el.removeEventListener("transitionend", clear);
+    };
+    el.addEventListener("transitionend", clear);
+  });
 
   const onHandleKeyDown = (e: KeyboardEvent<HTMLButtonElement>, idx: number) => {
     const to = e.key === "ArrowUp" ? idx - 1 : e.key === "ArrowDown" ? idx + 1 : null;
@@ -135,6 +211,15 @@ export default function DiyDayList({ exercises, onChangePrescription, onReorder,
     return 0;
   };
 
+  // Stable row keys across reorders and edits: the exercise id plus which
+  // copy of it this is (the same exercise can appear twice in a day). The
+  // index-based key used to remount every row a reorder touched.
+  const seen: Record<string, number> = {};
+  const rowKey = (ex: { id: string }) => {
+    seen[ex.id] = (seen[ex.id] ?? 0) + 1;
+    return `${ex.id}#${seen[ex.id]}`;
+  };
+
   return (
     <ol className="flex flex-col gap-2.5">
       {exercises.map((ex, idx) => {
@@ -144,7 +229,7 @@ export default function DiyDayList({ exercises, onChangePrescription, onReorder,
         const update = (patch: Partial<DiyPrescription>) => onChangePrescription(idx, { ...p, ...patch });
         return (
           <li
-            key={`${ex.id}-${idx}`}
+            key={rowKey(ex)}
             ref={(el) => {
               itemRefs.current[idx] = el;
             }}
@@ -178,7 +263,7 @@ export default function DiyDayList({ exercises, onChangePrescription, onReorder,
                   legacyFit="object-contain p-1"
                   fallback={<div className="on-light w-12 h-12 rounded-xl bg-surface-alt" />}
                 />
-                <span className="absolute -top-1.5 -right-1.5 min-w-5 h-5 px-1 rounded-full bg-fg text-page text-[0.625rem] font-black flex items-center justify-center tabular-nums">{idx + 1}</span>
+                <span className="absolute -top-1.5 -right-1.5 min-w-5 h-5 px-1 rounded-full bg-fg text-page text-[0.6875rem] font-black flex items-center justify-center tabular-nums">{idx + 1}</span>
               </div>
               <div className="flex-1 min-w-0">
                 <h4 className="font-extrabold text-fg text-sm leading-snug line-clamp-2">{getExerciseName(ex, lang)}</h4>

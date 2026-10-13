@@ -319,3 +319,14 @@ under the browser toolbar.
 **Rule:** a hook that fetches exposes `hasLoaded`; screens show a skeleton with the final
 layout's footprint until then, and an empty state only once the data says it's empty.
 Full-height pages use `min-h-dvh`, and bottom-pinned UI adds `env(safe-area-inset-bottom)`.
+
+## 2026-10-12 — System Back left the app from inside a workout, sheet or the builder
+
+**What happened:** the app is a single page whose screens are React state, with no history
+entries — so Android's back gesture (or the browser's back button) inside a sheet, the
+full-screen builder, a program screen or a running workout navigated away from the app
+entirely, discarding an in-progress workout.
+**Rule:** every layer that covers the screen calls `useBackDismiss(active, close, guard?)`
+(`app/hooks/useBackDismiss.ts`): it owns one history entry, Back closes only the top
+layer, and layers holding unsaved work pass a `guard` that asks first (the workout and
+AMRAP players). New full-screen/sheet UI must opt in.
