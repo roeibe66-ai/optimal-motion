@@ -2,9 +2,13 @@
 
 import { generateText, type ModelMessage } from "ai";
 import { anthropic } from "@ai-sdk/anthropic";
+import { verifyCaller } from "@/app/lib/serverAuth";
 import type { AIAssistantContext, AIAssistantRole, AIChatMessage } from "@/app/types";
 
 const MAX_HISTORY_MESSAGES = 20; // keeps a long-running chat session's prompt bounded
+// The client sends the whole history, so a caller could otherwise pad it with
+// huge messages; this bounds what one call can cost.
+const MAX_MESSAGE_CHARS = 4_000;
 
 export type AIAssistantResult = { ok: true; reply: string } | { ok: false; error: string };
 
@@ -62,10 +66,19 @@ function formatContextBlock(contextData?: AIAssistantContext): string {
  * (elite clinical peer for the admin, premium coach for the patient) and
  * `contextData` grounds the reply in whatever the caller already has on
  * screen (a plan being built, assigned exercises, recent logs). Safe to call
- * directly from a client component.
+ * directly from a client component, with the caller's Supabase access token:
+ * the admin persona requires an admin, the patient persona any signed-in user.
  */
-export async function chatWithAssistant(messages: AIChatMessage[], role: AIAssistantRole, contextData?: AIAssistantContext): Promise<AIAssistantResult> {
+export async function chatWithAssistant(
+  accessToken: string,
+  messages: AIChatMessage[],
+  role: AIAssistantRole,
+  contextData?: AIAssistantContext
+): Promise<AIAssistantResult> {
   if (messages.length === 0) return { ok: false, error: "לא נשלחה הודעה" };
+  if (messages.some((m) => typeof m.content !== "string" || m.content.length > MAX_MESSAGE_CHARS)) return { ok: false, error: "ההודעה ארוכה מדי" };
+  const caller = await verifyCaller(accessToken);
+  if (!caller || (role === "admin" && !caller.isAdmin)) return { ok: false, error: "אין הרשאה" };
 
   const basePrompt = role === "admin" ? ADMIN_SYSTEM_PROMPT : PATIENT_SYSTEM_PROMPT;
   const systemPrompt = basePrompt + formatContextBlock(contextData);

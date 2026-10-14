@@ -1,7 +1,7 @@
 "use server";
 
 import Anthropic from "@anthropic-ai/sdk";
-import { createClient } from "@supabase/supabase-js";
+import { verifyCaller } from "@/app/lib/serverAuth";
 import type { WorkoutFormat, WorkoutItem } from "@/app/types";
 
 // AI co-pilot for the admin workout builder (WorkoutBuilderTab): answers
@@ -116,26 +116,13 @@ function formatCatalog(catalog: BuilderCatalogEntry[]): string {
     .join("\n");
 }
 
-// Server actions are public endpoints: confirm the caller is a signed-in
-// admin (is_admin() checks patients.role for auth.uid()) before spending
-// API credits.
-async function callerIsAdmin(accessToken: string): Promise<boolean> {
-  if (!accessToken) return false;
-  const userClient = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
-    global: { headers: { Authorization: `Bearer ${accessToken}` } },
-    auth: { autoRefreshToken: false, persistSession: false },
-  });
-  const { data, error } = await userClient.rpc("is_admin");
-  return !error && data === true;
-}
-
 export async function askWorkoutBuilderAssistant(
   accessToken: string,
   history: BuilderChatTurn[],
   catalog: BuilderCatalogEntry[],
 ): Promise<BuilderAssistantResult> {
   if (history.length === 0 || history[history.length - 1].role !== "user") return { ok: false, error: "לא נשלחה הודעה" };
-  if (!(await callerIsAdmin(accessToken))) return { ok: false, error: "אין הרשאה" };
+  if (!(await verifyCaller(accessToken))?.isAdmin) return { ok: false, error: "אין הרשאה" };
 
   const catalogIds = new Set(catalog.map((e) => e.id));
   const client = new Anthropic();

@@ -4,6 +4,7 @@ import { generateObject } from "ai";
 import { anthropic } from "@ai-sdk/anthropic";
 import { z } from "zod";
 import { XMLParser } from "fast-xml-parser";
+import { verifyCaller } from "@/app/lib/serverAuth";
 import type { ResearchFinding } from "@/app/types";
 
 const SEMANTIC_SCHOLAR_SEARCH_URL = "https://api.semanticscholar.org/graph/v1/paper/search";
@@ -583,11 +584,14 @@ async function summarizePaperInHebrew(paper: { title: string; abstract: string; 
  * systematic reviews > RCTs > cohort studies > case reports) then citation
  * count, and the best 3 (at least one PubMed result when available) are
  * turned into a Hebrew summary + "Did you know?" fact each. Safe to call
- * directly from a client component (e.g. the admin research tab).
+ * directly from a client component (e.g. the admin research tab), with the
+ * caller's Supabase access token — admins only.
  */
-export async function generateResearchFacts(query: string): Promise<ResearchAgentResult> {
+export async function generateResearchFacts(accessToken: string, query: string): Promise<ResearchAgentResult> {
   const trimmed = query.trim();
   if (!trimmed) return { ok: false, error: "יש להזין נושא לחיפוש" };
+  if (trimmed.length > 500) return { ok: false, error: "הבקשה ארוכה מדי" };
+  if (!(await verifyCaller(accessToken))?.isAdmin) return { ok: false, error: "אין הרשאה" };
   // Without this every model call fails and the search surfaces only a
   // generic "summaries failed" — which is exactly how a missing key in the
   // Vercel project went unnoticed.

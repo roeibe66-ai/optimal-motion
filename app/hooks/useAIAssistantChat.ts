@@ -2,6 +2,7 @@
 
 import { useCallback, useState } from "react";
 import { chatWithAssistant } from "@/app/actions/aiAssistant";
+import { supabase } from "@/app/lib/supabase";
 import type { AIAssistantContext, AIAssistantRole, AIChatMessage } from "@/app/types";
 
 // Shared state/send logic behind both chat surfaces (the admin builder's
@@ -23,7 +24,8 @@ export function useAIAssistantChat(role: AIAssistantRole, contextData?: AIAssist
       setIsLoading(true);
       setError("");
 
-      const result = await chatWithAssistant(nextMessages, role, contextData);
+      const { data } = await supabase.auth.getSession();
+      const result = await chatWithAssistant(data.session?.access_token ?? "", nextMessages, role, contextData);
       setIsLoading(false);
       if (!result.ok) {
         setError(result.error);

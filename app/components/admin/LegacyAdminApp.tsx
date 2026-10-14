@@ -314,7 +314,8 @@ export default function LegacyAdminApp() {
     setResearchInterpretation(null);
     setSavedFactUrls(new Set());
     try {
-      const result = await generateResearchFacts(query);
+      const { data } = await supabase.auth.getSession();
+      const result = await generateResearchFacts(data.session?.access_token ?? "", query);
       if (!result.ok) {
         setResearchError(result.error);
         return;

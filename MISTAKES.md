@@ -10,6 +10,12 @@ the rule going forward. No fix commentary, no praise, no filler.
 
 ---
 
+## 2026-10-14 — AI server actions had no auth check
+
+**What happened:** `chatWithAssistant` (admin co-pilot + patient coach) and `generateResearchFacts` accepted calls from anyone, signed in or not, and spent Anthropic credits on them. Only `askWorkoutBuilderAssistant` checked the caller.
+**Why:** a `"use server"` export looks like an internal function, but it is a public POST endpoint whose id ships in the client bundle; the UI only being shown to admins protects nothing.
+**Rule:** every server action that costs money or touches data takes the caller's access token and checks it with `verifyCaller` (`app/lib/serverAuth.ts`) before doing anything — `isAdmin` for admin tools, a verified user for patient tools. Cap input sizes too.
+
 ## 2026-08 — Reps/sets fallback used string concatenation instead of numeric addition
 
 **What happened:** `handleFinishAction`'s fallback for reps used string concatenation
