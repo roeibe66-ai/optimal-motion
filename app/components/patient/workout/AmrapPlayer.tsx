@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Dumbbell, Minus, Pause, Play, Plus, Timer, Trophy, X } from "lucide-react";
+import { Dumbbell, Minus, Pause, Play, Plus, Timer, X } from "lucide-react";
 import { supabase } from "@/app/lib/supabase";
 import { useAuth } from "@/app/context/AuthContext";
-import RatingScale from "@/app/components/ui/RatingScale";
-import { getRPEColor } from "@/app/utils/scoring";
+import EccoRpeScale from "@/app/components/ui/EccoRpeScale";
+import { FEEDBACK_DONE_IMAGES } from "@/app/constants/ecco";
 import { countLabel, formatRepTarget, getExerciseName } from "@/app/utils/format";
 import { ExerciseMediaPlayer } from "@/app/components/ExerciseMedia";
 import { SimulationBanner } from "@/app/components/patient/workout/WorkoutPlayer";
@@ -69,6 +69,7 @@ export default function AmrapPlayer({ config, triggerHaptic, onClose, onLogged, 
   const [rounds, setRounds] = useState(0);
   const [extraReps, setExtraReps] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
+  const [doneImage] = useState(() => FEEDBACK_DONE_IMAGES[Math.floor(Math.random() * FEEDBACK_DONE_IMAGES.length)]);
   // Wall-clock end time while running, so the countdown stays accurate even
   // if the tab is throttled; the remaining time is derived from it each tick.
   const endAtRef = useRef<number | null>(null);
@@ -184,10 +185,10 @@ export default function AmrapPlayer({ config, triggerHaptic, onClose, onLogged, 
         <h2 className="text-3xl md:text-4xl font-black mb-3">
           {rounds} סבבים{extraReps > 0 ? ` + ${extraReps} חזרות` : ""}
         </h2>
-        <p className="text-lg text-muted mb-10">
-          <strong className="text-fg">עד כמה קשה היה לך האימון (RPE)?</strong>
+        <p className="text-lg text-muted mb-6">
+          <strong className="text-fg">איך הרגיש האימון?</strong>
         </p>
-        <RatingScale values={[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]} getColor={getRPEColor} onSelect={saveWithRpe} />
+        <EccoRpeScale onSelect={saveWithRpe} />
       </div>
     );
   }
@@ -196,8 +197,8 @@ export default function AmrapPlayer({ config, triggerHaptic, onClose, onLogged, 
     return (
       <div data-toast-top className={`${shell} items-center justify-center p-6 text-center`} dir={dir}>
         {/* Same one-shot celebration as WorkoutFinishFlow's done screen
-            (trophy pop, then text rises in) — not an endless bounce. */}
-        <Trophy size={80} className="text-warm-fg mb-8 animate-celebrate-pop" />
+            (Ecco pops in, then text rises in) — not an endless bounce. */}
+        <img src={doneImage} alt="" className="w-56 h-56 rounded-[2rem] object-cover shadow-card mb-8 animate-celebrate-pop" />
         <h2 className="text-4xl font-black mb-4 animate-celebrate-rise" style={{ animationDelay: "100ms" }}>
           כל הכבוד!
         </h2>

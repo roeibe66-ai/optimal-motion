@@ -3,10 +3,11 @@
 import { useState } from "react";
 import { Check, ClipboardCheck, Loader2, Minus, Plus } from "lucide-react";
 import Modal from "@/app/components/ui/Modal";
+import EccoRpeScale from "@/app/components/ui/EccoRpeScale";
 import { useAuth } from "@/app/context/AuthContext";
 import { supabase } from "@/app/lib/supabase";
 import { formatRepTarget, formatWeightKg, getExerciseName, parseWeightInput } from "@/app/utils/format";
-import { getPainColor, getRPEColor } from "@/app/utils/scoring";
+import { getPainColor } from "@/app/utils/scoring";
 import type { QueueLogRef, SessionPerformanceEntry } from "@/app/types";
 import type { SessionExercise } from "@/app/hooks/useWorkoutSession";
 import { notify } from "@/app/components/ui/feedback";
@@ -272,19 +273,8 @@ export default function QuickLogSheet({ title, blocksMap, blocksKeys, isAmrap, p
       </div>
 
       <div className="mb-5">
-        <div className="text-sm font-black text-fg mb-2.5">עד כמה קשה היה האימון? (RPE)</div>
-        <div className="grid grid-cols-5 gap-2">
-          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
-            <button
-              key={n}
-              onClick={() => setRpe(n)}
-              aria-pressed={rpe === n}
-              className={`h-11 rounded-xl text-base font-black transition-ui duration-150 ease-out-ui ${getRPEColor(n)} ${rpe === n ? "ring-4 ring-focus scale-105" : rpe !== null ? "opacity-50" : ""} active:scale-[0.97]`}
-            >
-              {n}
-            </button>
-          ))}
-        </div>
+        <div className="text-sm font-black text-fg mb-2.5">איך הרגיש האימון?</div>
+        <EccoRpeScale layout="row" value={rpe} onSelect={setRpe} />
       </div>
 
       {isClinical && (
@@ -313,7 +303,7 @@ export default function QuickLogSheet({ title, blocksMap, blocksKeys, isAmrap, p
         {isSaving ? <Loader2 size={18} className="animate-spin" /> : <ClipboardCheck size={18} />}
         שמור למעקב
       </button>
-      {rpe === null && <p className="text-center text-xs text-muted mt-2">בחר RPE כדי לשמור</p>}
+      {rpe === null && <p className="text-center text-xs text-muted mt-2">בחר איך הרגיש האימון כדי לשמור</p>}
     </Modal>
   );
 }

@@ -1,9 +1,12 @@
 "use client";
 
-import { Activity, Flame, Trophy } from "lucide-react";
+import { useState } from "react";
+import { Activity } from "lucide-react";
 import { useAuth } from "@/app/context/AuthContext";
 import RatingScale from "@/app/components/ui/RatingScale";
-import { getPainColor, getRPEColor } from "@/app/utils/scoring";
+import EccoRpeScale from "@/app/components/ui/EccoRpeScale";
+import { FEEDBACK_DONE_IMAGES } from "@/app/constants/ecco";
+import { getPainColor } from "@/app/utils/scoring";
 import type { FeedbackPhase } from "@/app/hooks/useWorkoutSession";
 
 interface WorkoutFinishFlowProps {
@@ -22,6 +25,8 @@ interface WorkoutFinishFlowProps {
 export default function WorkoutFinishFlow({ feedbackPhase, onSelectRpe, onSubmitPainAfter, onClose }: WorkoutFinishFlowProps) {
   const { lang } = useAuth();
   const dir = lang === "he" ? "rtl" : "ltr";
+  // Picked once per finish flow, so it doesn't flip on re-render.
+  const [doneImage] = useState(() => FEEDBACK_DONE_IMAGES[Math.floor(Math.random() * FEEDBACK_DONE_IMAGES.length)]);
 
   if (feedbackPhase === "rpe") {
     return (
@@ -30,12 +35,11 @@ export default function WorkoutFinishFlow({ feedbackPhase, onSelectRpe, onSubmit
         dir={dir}
       >
         <div key="rpe" className="animate-step-in w-full flex flex-col items-center">
-          <Flame size={60} className="text-warm-fg mb-6" />
-          <h2 className="text-3xl md:text-5xl font-black text-fg mb-4">כל הכבוד! סיימת.</h2>
-          <p className="text-lg md:text-xl text-muted mb-12 max-w-lg mx-auto">
-            <strong className="text-fg">עד כמה קשה היה לך האימון (RPE)?</strong>
+          <h2 className="text-3xl md:text-5xl font-black text-fg mb-2">כל הכבוד! סיימת.</h2>
+          <p className="text-lg md:text-xl text-muted mb-6 max-w-lg mx-auto">
+            <strong className="text-fg">איך הרגיש האימון?</strong>
           </p>
-          <RatingScale values={[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]} getColor={getRPEColor} onSelect={onSelectRpe} />
+          <EccoRpeScale onSelect={onSelectRpe} />
         </div>
       </div>
     );
@@ -67,7 +71,7 @@ export default function WorkoutFinishFlow({ feedbackPhase, onSelectRpe, onSubmit
       className="fixed inset-0 z-[100] bg-page flex flex-col items-center justify-center p-6 text-center"
       dir={dir}
     >
-      <Trophy size={80} className="text-warm-fg mb-8 animate-celebrate-pop" />
+      <img src={doneImage} alt="" className="w-56 h-56 rounded-[2rem] object-cover shadow-card mb-8 animate-celebrate-pop" />
       <h2 className="text-4xl md:text-5xl font-black text-fg mb-4 animate-celebrate-rise" style={{ animationDelay: "100ms" }}>
         הפידבק נשלח!
       </h2>

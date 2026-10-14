@@ -16,7 +16,6 @@ import {
   Sparkles,
   Timer,
   User,
-  Wind,
 } from "lucide-react";
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip as RechartsTooltip, XAxis, YAxis } from "recharts";
 import { useAuth } from "@/app/context/AuthContext";
@@ -24,6 +23,7 @@ import { countLabel, formatRepTarget, formatTime, formatWeightKg, getExerciseNam
 import { AVAILABLE_MUSCLES, DEFAULT_TRACK_GLOW, EQUIPMENT_LIST, TRACK_GLOW_TINTS } from "@/app/constants/catalog";
 import { EquipmentIcon } from "@/app/components/ui/EquipmentIcon";
 import MuscleThumb, { exerciseMuscles } from "@/app/components/MuscleThumb";
+import { ECCO_EMPTY } from "@/app/constants/ecco";
 import ExerciseNotes from "@/app/components/ExerciseNotes";
 import type { AIAssistantContext, CuratedFact, Exercise, ExploreProgram, QueueLogRef, WorkoutLog } from "@/app/types";
 import { blocksOf, DAY_NAMES, dayNameOfKey, plannedLabel, queueRefFor, type PlannedWorkout, type ProgramQueueEntry } from "@/app/utils/programQueue";
@@ -368,8 +368,8 @@ export default function PlanTab({
             </button>
           </div>
         ) : weekComplete ? (
-          <div className="on-light rounded-[2rem] p-10 text-center flex flex-col items-center justify-center mb-6 bg-surface shadow-card">
-            <CheckCircle2 size={44} className="text-accent-fg mb-4" />
+          <div className="on-light rounded-[2rem] p-6 pb-9 text-center flex flex-col items-center justify-center mb-6 bg-surface shadow-card">
+            <img src={ECCO_EMPTY.weekComplete} alt="" className="w-full max-w-sm aspect-[3/2] object-cover rounded-[1.5rem] mb-5" />
             <h3 className="text-xl font-black text-fg mb-2">כל האימונים של השבוע בוצעו</h3>
             <p className="text-muted text-sm">כל הכבוד! התוכנית של השבוע הבא תופיע כאן ביום ראשון.</p>
           </div>
@@ -402,8 +402,8 @@ export default function PlanTab({
             </div>
           </div>
         ) : (
-          <div className="on-light rounded-[2rem] p-10 text-center h-[280px] flex flex-col items-center justify-center relative overflow-hidden mb-10 bg-surface shadow-card">
-            <Wind size={44} className="text-accent-fg mb-4" />
+          <div className="on-light rounded-[2rem] p-6 pb-9 text-center flex flex-col items-center justify-center relative overflow-hidden mb-10 bg-surface shadow-card">
+            <img src={ECCO_EMPTY.noPlan} alt="" className="w-full max-w-sm aspect-[3/2] object-cover rounded-[1.5rem] mb-5" />
             <h3 className="text-xl font-black text-fg mb-2">אין תוכנית פעילה</h3>
             <p className="text-muted text-sm">כשתשויך לך תוכנית אימון, האימון הבא שלך יופיע כאן.</p>
           </div>
@@ -542,7 +542,8 @@ export default function PlanTab({
           {recentLogs.length === 0 && isLoading ? (
             <div aria-hidden="true" className="h-[15.5rem] rounded-[1.75rem] bg-surface-alt animate-pulse motion-reduce:animate-none" />
           ) : recentLogs.length === 0 ? (
-            <div className="on-light bg-surface p-10 rounded-[2rem] shadow-card text-center">
+            <div className="on-light bg-surface p-6 pb-8 rounded-[2rem] shadow-card text-center flex flex-col items-center">
+              <img src={ECCO_EMPTY.noData} alt="" className="w-full max-w-xs aspect-[3/2] object-cover rounded-[1.5rem] mb-4" />
               <p className="text-muted text-sm">הנתונים יופיעו כאן ברגע שתסיים את האימון הראשון.</p>
             </div>
           ) : (

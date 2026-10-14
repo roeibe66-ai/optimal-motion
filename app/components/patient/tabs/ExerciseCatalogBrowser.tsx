@@ -6,15 +6,15 @@ import {
   AVAILABLE_MUSCLES,
   BODY_PART_GROUPS,
   BODY_PART_STYLES,
-  CATEGORY_IMAGES,
   DEFAULT_BODY_PART_STYLE,
-  DEFAULT_COURSE_IMG,
   DEFAULT_DIY_CATEGORY_STYLE,
   DIY_CATEGORY_STYLES,
   EQUIPMENT_LIST,
   MUSCLE_TO_BODY_PARTS,
 } from "@/app/constants/catalog";
 import { useAuth } from "@/app/context/AuthContext";
+import { ECCO_CATEGORY_IMAGES, ECCO_MUSCLE_GROUPS_IMAGE, ECCO_REGION_IMAGES } from "@/app/constants/ecco";
+import { MEDIA_STUDIO_BG } from "@/app/utils/media";
 import { ExerciseThumb } from "@/app/components/ExerciseMedia";
 import type { Exercise } from "@/app/types";
 import { countLabel, getExerciseName } from "@/app/utils/format";
@@ -96,11 +96,11 @@ export default function ExerciseCatalogBrowser({
   // live catalog (not hardcoded), so an exercise tagged with a category
   // outside that set still gets a working tab instead of becoming
   // unreachable — it just falls back to DEFAULT_DIY_CATEGORY_STYLE's
-  // neutral color and DEFAULT_COURSE_IMG's header image.
+  // neutral color and the muscle-groups Ecco art as its header image.
   const availableCategories = Array.from(new Set(exerciseCatalog.flatMap((ex) => ex.categories).filter(Boolean)));
   const topLevelTabs = [
-    { id: MUSCLE_GROUPS_TAB_ID, label: "קבוצות שרירים", image: DEFAULT_COURSE_IMG },
-    ...availableCategories.map((cat) => ({ id: cat, label: cat, image: CATEGORY_IMAGES[cat] ?? DEFAULT_COURSE_IMG })),
+    { id: MUSCLE_GROUPS_TAB_ID, label: "קבוצות שרירים", image: ECCO_MUSCLE_GROUPS_IMAGE },
+    ...availableCategories.map((cat) => ({ id: cat, label: cat, image: ECCO_CATEGORY_IMAGES[cat] ?? ECCO_MUSCLE_GROUPS_IMAGE })),
   ];
 
   const toggleTab = (tabId: string) => {
@@ -243,16 +243,11 @@ export default function ExerciseCatalogBrowser({
 
               return (
                 <div key={tab.id} className="on-light rounded-[1.75rem] overflow-hidden bg-surface border border-line shadow-sm">
-                  <button onClick={() => toggleTab(tab.id)} aria-expanded={isExpanded} className="w-full flex items-center gap-3 p-4.5 text-start transition-ui duration-150 ease-out active:scale-[0.99]">
+                  <button onClick={() => toggleTab(tab.id)} aria-expanded={isExpanded} className="w-full flex items-center gap-3 p-3 pe-4.5 text-start transition-ui duration-150 ease-out active:scale-[0.99]">
+                    {/* Ecco for this category. */}
+                    <img src={tab.image} alt="" className="shrink-0 w-14 h-14 rounded-2xl object-cover" style={{ background: MEDIA_STUDIO_BG }} />
                     {tabStyle && <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: tabStyle.solid }} />}
                     <span className="flex-1 font-black text-base text-fg truncate">{tab.label}</span>
-                    <div
-                      className={`shrink-0 w-12 h-12 overflow-hidden rounded-2xl shadow-md transition-[opacity,scale] duration-200 ease-out-strong ${
-                        isExpanded ? "opacity-100 scale-100" : "opacity-0 scale-95"
-                      }`}
-                    >
-                      <img src={tab.image} alt="" className="w-12 h-12 object-cover" />
-                    </div>
                     <ChevronDown size={18} className={`shrink-0 text-muted transition-transform duration-300 ease-out ${isExpanded ? "rotate-180" : ""}`} />
                   </button>
 
@@ -271,12 +266,15 @@ export default function ExerciseCatalogBrowser({
                                 <button
                                   key={region.id}
                                   onClick={() => setBodyPartFilter(region.id)}
-                                  className="on-light flex flex-col items-start gap-1 rounded-2xl p-3.5 bg-surface-alt border border-line hover:bg-line transition-ui duration-150 ease-out text-start active:scale-[0.97]"
+                                  className="on-light flex flex-col items-start gap-1 rounded-2xl p-1.5 pb-3 bg-surface-alt border border-line hover:bg-line transition-ui duration-150 ease-out text-start active:scale-[0.97]"
                                 >
-                                  <span className="font-extrabold text-sm" style={{ color: regionStyle.text }}>
+                                  {ECCO_REGION_IMAGES[region.id] && (
+                                    <img src={ECCO_REGION_IMAGES[region.id]} alt="" className="w-full aspect-[3/2] object-cover rounded-xl mb-1" style={{ background: MEDIA_STUDIO_BG }} />
+                                  )}
+                                  <span className="font-extrabold text-sm px-2" style={{ color: regionStyle.text }}>
                                     {region.label}
                                   </span>
-                                  <span className="text-[0.6875rem] font-bold text-muted">{countLabel(count, "תרגיל אחד", "תרגילים")}</span>
+                                  <span className="text-[0.6875rem] font-bold text-muted px-2">{countLabel(count, "תרגיל אחד", "תרגילים")}</span>
                                 </button>
                               );
                             })}
