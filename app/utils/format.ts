@@ -57,7 +57,9 @@ export function formatCueLines(text: string | null | undefined, emoji: "✅" | "
   if (!text) return [];
   return text
     .split("\n")
-    .map((line) => line.trim())
+    // Many rows were entered as a "- " bulleted list; the ✅/❌ is the bullet
+    // here, so a leading dash would show up as "✅ - ...".
+    .map((line) => line.trim().replace(/^[-–•*]\s*/, ""))
     .filter((line) => line.length > 0)
     .map((line) => ({ emoji, text: line }));
 }

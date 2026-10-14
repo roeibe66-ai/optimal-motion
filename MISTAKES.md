@@ -363,3 +363,16 @@ still bubbles their touch events up the component tree to the player. A horizont
 inside a sheet could log a set the patient hadn't done.
 **Rule:** gesture handlers on a parent that hosts portal children check
 `e.currentTarget.contains(e.target)` (real DOM containment) before acting.
+
+## 2026-10-14 — Exercise content: placeholders, run-on lines and wrong muscles
+
+**What happened:** a full review of the 289 exercises found 26 with "לא צוין" as the
+mistakes text, ~60 gym exercises with all cues on one line (shown as one long ✅ instead
+of a list), English/jargon in patient-facing text, one exercise carrying another's cues,
+and wrong muscles in the map (pull-ups with "rotator cuff" as the main muscle, biceps and
+traps listed on every press, chest/triceps on every row, forearm *extensors* for grip).
+About 180 rows also store lines as "- …", which rendered as "✅ - …".
+**Rule:** cues/mistakes are one point per line, no bullets (the UI adds ✅/❌ and now strips
+a leading "-"), Hebrew only, no "לא צוין". Muscles follow the movement: prime_movers =
+what the exercise trains, synergists = what assists — and the muscle map shows exactly
+those two, so a wrong id is a visible error. Fixed in 20261014120000_exercise_content_review.sql.
