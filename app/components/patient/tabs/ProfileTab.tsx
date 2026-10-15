@@ -185,7 +185,7 @@ export default function ProfileTab({
               <Bell size={18} className="text-muted" />
               <div className="text-right">
                 <h4 className="font-bold text-fg text-sm">תזכורות אימון</h4>
-                <p className="text-xs text-muted">שעה נפרדת לכל יום. התזכורת מופיעה כשהאפליקציה פתוחה.</p>
+                <p className="text-xs text-muted">שעה נפרדת לכל יום. התזכורת מגיעה כהתראה, גם כשהאפליקציה סגורה, ולא ביום שכבר התאמנתם.</p>
               </div>
             </div>
 

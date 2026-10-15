@@ -5,6 +5,16 @@ import { supabase } from "@/app/lib/supabase";
 import { useAuth } from "@/app/context/AuthContext";
 import type { HapticType } from "@/app/hooks/useHaptics";
 import { notify } from "@/app/components/ui/feedback";
+import { enablePush, getPushStatus, type PushStatus } from "@/app/utils/pushClient";
+
+// Why a saved reminder can't reach this device.
+const PUSH_HINT: Record<PushStatus, string> = {
+  on: "",
+  off: "ההתראות לא הופעלו, אז התזכורות לא יגיעו",
+  "needs-install": "באייפון תזכורות מגיעות רק לאפליקציה שעל מסך הבית",
+  denied: "ההתראות חסומות בהגדרות הטלפון",
+  unsupported: "המכשיר הזה לא תומך בהתראות",
+};
 
 // The reminder schedule — a time per weekday, {"1": "17:00", "3": "08:00"}
 // (patients.reminder_schedule) — is derived from `loggedInPatient`
@@ -22,7 +32,6 @@ export function useReminders(triggerHaptic: (type: HapticType) => void) {
   const { loggedInPatient, setLoggedInPatient } = useAuth();
 
   const [reminderSchedule, setReminderSchedule] = useState<Record<string, string>>({});
-  const [lastNotificationDate, setLastNotificationDate] = useState("");
 
   useEffect(() => {
     if (!loggedInPatient) return;
@@ -39,53 +48,29 @@ export function useReminders(triggerHaptic: (type: HapticType) => void) {
       return next;
     });
 
-  // Checked every minute: fire a local notification once per day, at that
-  // day's own time.
-  useEffect(() => {
-    if (!loggedInPatient || Object.keys(reminderSchedule).length === 0) return;
-
-    const checkReminder = () => {
-      const now = new Date();
-      const todayTime = reminderSchedule[now.getDay().toString()];
-      const currentTimeStr = `${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}`;
-      const todayDateStr = now.toDateString();
-
-      if (todayTime && currentTimeStr === todayTime && lastNotificationDate !== todayDateStr) {
-        if ("Notification" in window && Notification.permission === "granted") {
-          const title = "הגיע הזמן להתאמן! 💪";
-          const options = { body: "התוכנית שלך באופטימל מושן מחכה לך. בוא נתחיל!", icon: "/icon.png" };
-          // iPhone has no `new Notification()`: it goes through the service
-          // worker (public/sw.js) when one is registered.
-          const viaWorker = "serviceWorker" in navigator ? navigator.serviceWorker.getRegistration() : Promise.resolve(undefined);
-          viaWorker
-            .then((registration) => {
-              if (registration) return registration.showNotification(title, options);
-              new Notification(title, options);
-            })
-            .catch(() => {});
-          setLastNotificationDate(todayDateStr);
-        }
-      }
-    };
-
-    const interval = setInterval(checkReminder, 60000);
-    return () => clearInterval(interval);
-  }, [loggedInPatient, reminderSchedule, lastNotificationDate]);
-
   const handleSaveSettings = async () => {
     if (!loggedInPatient) return;
 
-    if ("Notification" in window) {
-      if (Notification.permission !== "granted" && Notification.permission !== "denied") {
-        await Notification.requestPermission();
+    // Days whose time was cleared are dropped rather than saved empty.
+    const cleaned = Object.fromEntries(Object.entries(reminderSchedule).filter(([, time]) => /^\d{2}:\d{2}$/.test(time)));
+
+    // Reminders are Web Push from the server (supabase/functions/daily-reminders),
+    // so this device has to be subscribed. Runs from the save tap, which iOS
+    // needs for the permission prompt.
+    let pushNote: string | null = null;
+    if (Object.keys(cleaned).length > 0) {
+      const status = await getPushStatus();
+      if (status === "off") {
+        const result = await enablePush();
+        if (!result.ok) pushNote = PUSH_HINT[result.status];
+      } else if (status !== "on") {
+        pushNote = PUSH_HINT[status];
       }
     }
 
-    // Days whose time was cleared are dropped rather than saved empty.
-    const cleaned = Object.fromEntries(Object.entries(reminderSchedule).filter(([, time]) => /^\d{2}:\d{2}$/.test(time)));
     const { data, error } = await supabase
       .from("patients")
-      .update({ reminder_schedule: cleaned })
+      .update({ reminder_schedule: cleaned, reminder_timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "Asia/Jerusalem" })
       .eq("id", loggedInPatient.id)
       .select()
       .single();
@@ -99,7 +84,8 @@ export function useReminders(triggerHaptic: (type: HapticType) => void) {
     setLoggedInPatient(data);
     localStorage.setItem("optimalMotionUser", JSON.stringify(data));
     triggerHaptic("success");
-    notify("ההגדרות נשמרו");
+    if (pushNote) notify(`התזכורות נשמרו, אבל ${pushNote}`, "error");
+    else notify("ההגדרות נשמרו");
   };
 
   return { reminderSchedule, setReminderDayTime, handleSaveSettings };

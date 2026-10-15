@@ -6,14 +6,15 @@ import { disablePush, enablePush, getPushStatus, type PushStatus } from "@/app/u
 import { notify } from "@/app/components/ui/feedback";
 
 const HINTS: Record<PushStatus, string> = {
-  on: "תקבלו התראה כשהמנוחה נגמרת, גם כשיוצאים מהאפליקציה.",
-  off: "התראה כשהמנוחה נגמרת, גם כשיוצאים מהאפליקציה.",
+  on: "סוף מנוחה ותזכורות אימון מגיעים גם כשהאפליקציה סגורה.",
+  off: "כדי לקבל התראה בסוף מנוחה ותזכורות אימון, גם כשהאפליקציה סגורה.",
   "needs-install": "באייפון זה עובד רק מהאפליקציה שעל מסך הבית: שתף ← הוסף למסך הבית.",
   denied: "ההתראות חסומות. אפשר להפעיל אותן בהגדרות הטלפון ← התראות ← Eccentric.",
   unsupported: "הדפדפן הזה לא תומך בהתראות.",
 };
 
-// Profile row: turns Web Push on/off for this device (app/utils/pushClient.ts).
+// Profile row: turns Web Push on/off for this device (app/utils/pushClient.ts)
+// — both the rest-end alert and the daily reminders depend on it.
 export default function RestAlertSetting() {
   const [status, setStatus] = useState<PushStatus | null>(null);
   const [isBusy, setIsBusy] = useState(false);
@@ -50,7 +51,7 @@ export default function RestAlertSetting() {
       <div className="flex items-center gap-3 min-w-0">
         <BellRing size={18} className="text-muted shrink-0" />
         <div className="text-right min-w-0">
-          <h4 className="font-bold text-fg text-sm">התראה בסוף מנוחה</h4>
+          <h4 className="font-bold text-fg text-sm">התראות</h4>
           <p className="text-xs text-muted">{status ? HINTS[status] : " "}</p>
         </div>
       </div>
@@ -60,7 +61,7 @@ export default function RestAlertSetting() {
           type="button"
           role="switch"
           aria-checked={status === "on"}
-          aria-label="התראה בסוף מנוחה"
+          aria-label="התראות"
           onClick={toggle}
           disabled={isBusy}
           className={`w-[46px] h-[26px] shrink-0 rounded-full transition-[background-color,scale] duration-200 ease-out relative flex items-center active:scale-95 disabled:opacity-60 ${
