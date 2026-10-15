@@ -334,6 +334,11 @@ export interface ResearchFinding {
   venue: string | null;
   isTopTierJournal: boolean;
   sampleSizeHe: string | null; // e.g. "124 משתתפים" / "23 מחקרים", when the abstract states it
+  // How well the paper matched the *specific* question asked, from the
+  // relevance screener: "direct" = its results address the exact aspect,
+  // "related" = same topic only (shown with a warning badge). Undefined when
+  // screening failed or for findings saved before this field existed.
+  matchLevel?: "direct" | "related";
 }
 
 // A ResearchFinding the admin has approved and published — the curated_facts
@@ -347,7 +352,21 @@ export interface CuratedFact {
   year: number | null;
   summary_he: string;
   did_you_know_he: string;
-  is_hidden: boolean; // hidden from patients, still listed in the admin research tab
+  is_hidden: boolean; // hidden from patients (and from the AI coach), still listed in the admin
+  created_at: string;
+  // Knowledge-card fields (the AI coach reads these facts too): see
+  // 20261014150000_coach_knowledge.sql and app/constants/knowledgeTags.ts.
+  takeaway_he: string | null;
+  tags: string[];
+  evidence_grade: "A" | "B" | "C" | null;
+  updated_at: string | null;
+}
+
+// One saved version of the AI coach's principles (coach_principles); the
+// newest row is the live one.
+export interface CoachPrinciplesVersion {
+  id: number;
+  body: string;
   created_at: string;
 }
 

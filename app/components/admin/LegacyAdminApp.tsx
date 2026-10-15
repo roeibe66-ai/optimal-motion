@@ -14,8 +14,6 @@ import {
   Dumbbell,
   Edit3,
   Eraser,
-  Eye,
-  EyeOff,
   Filter,
   GripVertical,
   HeartPulse,
@@ -44,6 +42,7 @@ import { ADMIN_CATEGORY_STYLES, ADMIN_TAGS, AVAILABLE_MUSCLES, DAYS_OF_WEEK, DEF
 import AdminSidebar from "@/app/components/admin/AdminSidebar";
 import ExerciseNoteEditor from "@/app/components/ExerciseNoteEditor";
 import AdminCoPilotDrawer from "@/app/components/admin/AdminCoPilotDrawer";
+import CoachKnowledgeTab from "@/app/components/admin/tabs/CoachKnowledgeTab";
 import WorkoutBuilderTab from "@/app/components/admin/tabs/WorkoutBuilderTab";
 import ProgramLibraryTab from "@/app/components/admin/tabs/ProgramLibraryTab";
 import PatientProgramMeta from "@/app/components/admin/PatientProgramMeta";
@@ -344,6 +343,7 @@ export default function LegacyAdminApp() {
         year: finding.year,
         summary_he: finding.summaryHe,
         did_you_know_he: finding.didYouKnowHe,
+        evidence_grade: finding.evidenceGrade,
       },
     ]);
     if (error) {
@@ -352,19 +352,6 @@ export default function LegacyAdminApp() {
     }
     setSavedFactUrls((prev) => new Set(prev).add(finding.paperUrl));
     fetchAdminData();
-  };
-
-  const handleToggleCuratedFactHidden = async (fact: CuratedFact) => {
-    const { error } = await supabase.from("curated_facts").update({ is_hidden: !fact.is_hidden }).eq("id", fact.id);
-    if (error) alert("שגיאה בעדכון: " + error.message);
-    else fetchAdminData();
-  };
-
-  const handleDeleteCuratedFact = async (id: string) => {
-    if (!confirm("למחוק את העובדה לצמיתות? אם רק רוצים שמטופלים לא יראו אותה, עדיף להסתיר.")) return;
-    const { error } = await supabase.from("curated_facts").delete().eq("id", id);
-    if (error) alert("שגיאה במחיקה: " + error.message);
-    else fetchAdminData();
   };
 
   const handleRenameProgram = async (program: PatientProgram) => {
@@ -1672,6 +1659,8 @@ export default function LegacyAdminApp() {
           </div>
         )}
 
+        {adminTab === "knowledge" && <CoachKnowledgeTab />}
+
         {adminTab === "research" && (
           <div className="max-w-6xl mx-auto">
             <header className="mb-10 hidden md:block">
@@ -1749,6 +1738,12 @@ export default function LegacyAdminApp() {
                 {researchInterpretation && (
                   <div className="mb-5 text-[12px] text-muted space-y-1">
                     <p dir="ltr" className="text-right">{researchInterpretation.focusEn}</p>
+                    {researchInterpretation.aspectEn && (
+                      <p dir="ltr" className="text-right">
+                        <span className="font-bold">Specific aspect: </span>
+                        {researchInterpretation.aspectEn}
+                      </p>
+                    )}
                     <p>
                       שאילתת PubMed: <code dir="ltr" className="text-muted bg-page border border-line px-2 py-0.5 rounded-md">{researchInterpretation.pubmedQuery}</code>
                     </p>
@@ -1780,6 +1775,17 @@ export default function LegacyAdminApp() {
                               <span className="on-light inline-flex items-center bg-surface-alt text-muted text-[10px] font-bold px-3 py-1.5 rounded-full border border-line">
                                 {finding.citationLabelHe}
                               </span>
+                              {finding.matchLevel === "direct" && (
+                                <span className="inline-flex items-center bg-success/10 text-accent-fg text-[10px] font-extrabold px-3 py-1.5 rounded-full border border-success/20">עונה ישירות על השאלה</span>
+                              )}
+                              {finding.matchLevel === "related" && (
+                                <span
+                                  title="המאמר עוסק בנושא אבל לא בוחן את ההיבט הספציפי שחיפשת"
+                                  className="inline-flex items-center bg-danger/10 text-danger-fg text-[10px] font-extrabold px-3 py-1.5 rounded-full border border-danger/20"
+                                >
+                                  קרוב לנושא, לא עונה ישירות
+                                </span>
+                              )}
                             </div>
                             <p className="text-fg font-bold text-[15px] leading-relaxed mt-3">{finding.didYouKnowHe}</p>
                           </div>
@@ -1842,46 +1848,20 @@ export default function LegacyAdminApp() {
               </div>
             )}
 
-            <div>
-              <h2 className="text-lg font-extrabold text-fg mb-5 border-b-2 border-success pb-3 inline-block">
-                עובדות &quot;הידעת?&quot; <span className="text-success">({curatedFacts.filter((f) => !f.is_hidden).length} פעילות</span>
-                {curatedFacts.some((f) => f.is_hidden) && <span className="text-muted"> · {curatedFacts.filter((f) => f.is_hidden).length} מוסתרות</span>}
-                <span className="text-success">)</span>
-              </h2>
-              {curatedFacts.length === 0 ? (
-                <div className="text-center p-10 text-muted bg-page rounded-3xl border border-line">עדיין לא נשמרו עובדות. חפש נושא למעלה כדי להתחיל.</div>
-              ) : (
-                <div className="space-y-3">
-                  {curatedFacts.map((fact) => (
-                    <div key={fact.id} className={`on-light bg-surface border border-line rounded-2xl p-5 flex items-start justify-between gap-4 ${fact.is_hidden ? "opacity-60" : ""}`}>
-                      <div className="flex-1">
-                        {fact.is_hidden && (
-                          <span className="inline-flex items-center gap-1 bg-surface-alt text-muted text-[10px] font-extrabold px-2.5 py-1 rounded-full border border-line mb-2">
-                            <EyeOff size={11} /> מוסתר מהמטופלים
-                          </span>
-                        )}
-                        <p className="text-fg font-bold text-sm mb-1">{fact.did_you_know_he}</p>
-                        <p className="text-muted text-xs">
-                          {fact.paper_title} {fact.year ? `· ${fact.year}` : ""}
-                        </p>
-                      </div>
-                      <div className="shrink-0 flex gap-2">
-                        <button
-                          onClick={() => handleToggleCuratedFactHidden(fact)}
-                          title={fact.is_hidden ? "הצג שוב במטופלים" : "הסתר מהמטופלים (נשאר כאן)"}
-                          aria-label={fact.is_hidden ? "הצג שוב במטופלים" : "הסתר מהמטופלים"}
-                          className="bg-surface-alt border border-line text-fg p-2.5 rounded-xl hover:bg-line transition-colors"
-                        >
-                          {fact.is_hidden ? <Eye size={16} /> : <EyeOff size={16} />}
-                        </button>
-                        <button onClick={() => handleDeleteCuratedFact(fact.id)} title="מחק לצמיתות" aria-label="מחק לצמיתות" className="bg-danger text-on-danger p-2.5 rounded-xl hover:brightness-110 transition-colors">
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+            {/* Published facts are managed (edited, tagged, graded, hidden) in
+                the knowledge tab, alongside the coach's principles. */}
+            <div className="on-light bg-surface border border-line rounded-2xl p-5 flex flex-wrap items-center justify-between gap-3">
+              <p className="text-sm text-fg font-bold">
+                {curatedFacts.filter((f) => !f.is_hidden).length} עובדות &quot;הידעת?&quot; פעילות
+                {curatedFacts.some((f) => f.is_hidden) && <span className="text-muted font-medium"> · {curatedFacts.filter((f) => f.is_hidden).length} מוסתרות</span>}
+              </p>
+              <button
+                type="button"
+                onClick={() => setAdminTab("knowledge")}
+                className="bg-btn-primary text-btn-primary-fg px-5 py-2.5 rounded-xl font-black text-sm hover:bg-btn-primary-hover transition-colors"
+              >
+                עריכה ותיוג בספריית הידע
+              </button>
             </div>
           </div>
         )}

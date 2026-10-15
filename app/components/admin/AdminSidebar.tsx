@@ -1,7 +1,7 @@
 "use client";
 
 import { BrandLockup } from "@/app/components/brand/Brand";
-import { Activity, BookOpen, Image as ImageIcon, Library, LogOut, Menu, Settings, Timer, Users, Video, Wand2, X } from "lucide-react";
+import { Activity, BookOpen, BrainCircuit, Image as ImageIcon, Library, LogOut, Menu, Settings, Timer, Users, Video, Wand2, X } from "lucide-react";
 
 interface AdminSidebarProps {
   adminTab: string;
@@ -21,6 +21,7 @@ const NAV_ITEMS: { id: string; label: string; icon: typeof Activity }[] = [
   { id: "workout_builder", label: "יצירת אימונים", icon: Timer },
   { id: "manage_plans", label: "עריכת תוכניות", icon: Settings },
   { id: "research", label: "מחקר ועדכוני הידעת", icon: BookOpen },
+  { id: "knowledge", label: "ידע ועקרונות", icon: BrainCircuit },
 ];
 
 // The dark practitioner-console sidebar shared across every admin tab (see

@@ -16,6 +16,12 @@ the rule going forward. No fix commentary, no praise, no filler.
 **Why:** a `"use server"` export looks like an internal function, but it is a public POST endpoint whose id ships in the client bundle; the UI only being shown to admins protects nothing.
 **Rule:** every server action that costs money or touches data takes the caller's access token and checks it with `verifyCaller` (`app/lib/serverAuth.ts`) before doing anything — `isAdmin` for admin tools, a verified user for patient tools. Cap input sizes too.
 
+## 2026-10-15 — Fitness workouts saved with RPE null (stale state read in the same handler)
+
+**What happened:** 10 of 12 full workouts in `workout_logs` had `rpe = null`. For fitness patients `handleRpeSelect` called `setRpeScore(num)` and then `submitFinalFeedback()` in the same handler, which read `rpeScore` from the closure — still the previous render's `null`. Clinical patients were unaffected only because they go through one more screen (pain after) first.
+**Why:** React state set in a handler isn't visible until the next render; reading it right after `setX` reads the old value.
+**Rule:** when a handler both sets state and immediately uses the value, pass the value along as an argument (`submitFinalFeedback(null, num)`) — never read the state variable back in the same tick.
+
 ## 2026-08 — Reps/sets fallback used string concatenation instead of numeric addition
 
 **What happened:** `handleFinishAction`'s fallback for reps used string concatenation
@@ -177,6 +183,12 @@ the nav (`fixed z-50`, a sibling of `<main>`).
 **Rule:** any full-screen overlay/sheet that can be opened from a patient tab must render
 through `createPortal(..., document.body)` (as `Modal` and `PatientCoachSheet` now do) —
 don't try to win with a higher z-index.
+
+## 2026-10-05 — Research agent answered the topic, not the specific question
+
+**What happened:** Asking the admin research tab a specific question ("what is the optimal eccentric phase") returned papers about eccentric training in general, and the "הידעת" headline reflected a general finding instead of the question.
+**Why:** The planner collapsed the request into topic keywords (the qualifier "optimal"/duration/tempo was dropped), the original wording never reached the screener or summarizer, the screener's "2 = same phenomenon" tier let general-topic papers through, only one query per index was run on a ~25-paper pool, screening saw only the first 600 chars of each abstract, and the "guarantee one PubMed result" swap could replace a relevant paper with a less relevant one.
+**Rule:** a retrieval pipeline must carry the user's exact question end to end and treat "same topic" and "answers the question" as different tiers. In `researchAgent.ts` the planner now emits a separate `aspectEn`/`aspectTerms`, runs up to 3 PubMed queries, screens with the original request, shows only direct matches when any exist, and tags the rest `matchLevel: "related"`.
 
 ## 2026-10 — Reading localStorage in a useState initializer caused a hydration mismatch
 

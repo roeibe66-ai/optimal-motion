@@ -12,7 +12,7 @@ const PUBMED_ESEARCH_URL = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearc
 const PUBMED_EFETCH_URL = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi";
 const NCBI_TOOL_NAME = "OptimalMotionResearchAgent"; // NCBI's usage guidelines ask requests to self-identify via `tool`
 
-const SEMANTIC_SCHOLAR_POOL_SIZE = 15; // fetched by relevance, re-ranked (evidence tier, then citation count) when the pool is combined below
+const SEMANTIC_SCHOLAR_POOL_SIZE = 20; // fetched by relevance, re-ranked (evidence tier, then citation count) when the pool is combined below
 const PUBMED_POOL_SIZE = 10;
 const TOP_PAPERS_COUNT = 3;
 const FETCH_TIMEOUT_MS = 15_000;
@@ -64,6 +64,10 @@ export interface ResearchInterpretation {
   focusEn: string;
   pubmedQuery: string;
   semanticScholarQuery: string;
+  // The specific variable/aspect the request asks about (e.g. "optimal
+  // duration of the eccentric phase"), as distinct from the general topic —
+  // optional so older consumers of this type keep compiling.
+  aspectEn?: string;
 }
 
 export type ResearchAgentResult =
@@ -75,9 +79,19 @@ const SUMMARY_MODEL = "claude-sonnet-5";
 // critical path before summarization even starts — the fast model keeps the
 // whole search inside a reasonable wait.
 const ROUTING_MODEL = "claude-haiku-4-5-20251001";
+// Screening is the step that decides whether a paper answers the *specific*
+// question or just sits on the same general topic, so it gets the stronger
+// model and the full abstract (a 600-char cut routinely dropped the
+// results/conclusion sentences, which is where the answer lives). Admin-only
+// tool, one screening call per search — the cost is a few cents at most.
+// Switch back to ROUTING_MODEL here if latency matters more than precision.
+const SCREENING_MODEL = SUMMARY_MODEL;
 const MIN_POOL_BEFORE_BROADENING = 4;
-const MIN_RELEVANCE_SCORE = 2;
-const SCREENING_ABSTRACT_CHARS = 600;
+const MIN_RELEVANCE_SCORE = 2; // 2 = related to the topic, 3 = directly answers the specific question
+const DIRECT_MATCH_SCORE = 3;
+const SCREENING_ABSTRACT_CHARS = 1400;
+const SCREENING_POOL_LIMIT = 40; // how many pooled candidates go to the screener (pre-ranked by aspect-term hits)
+const PUBMED_QUERY_POOL_SIZE = 15; // per query; several queries are unioned before a single efetch
 
 async function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -244,22 +258,43 @@ function ncbiCommonParams(): Record<string, string> {
 // abstract/year/journal/publication types) for those ids. The second call
 // necessarily happens after the first resolves, which already spaces the two
 // PubMed requests out in time — no separate throttling needed on top of that.
-async function fetchPubMedCandidates(query: string): Promise<CandidatePaper[]> {
+//
+// Accepts several queries (precise → broad): a single query is a single point
+// of failure for a specific question — one wrong boolean group and the right
+// paper never enters the pool. Each query's PMIDs are unioned (precise-query
+// hits first) and fetched in one efetch. esearch calls run one after another,
+// not in parallel, to stay under NCBI's 3 requests/second keyless limit.
+async function fetchPubMedCandidates(queryOrQueries: string | string[]): Promise<CandidatePaper[]> {
+  const queries = Array.from(new Set((Array.isArray(queryOrQueries) ? queryOrQueries : [queryOrQueries]).map((q) => q.trim()).filter(Boolean)));
   const currentYear = new Date().getFullYear();
-  const searchParams = new URLSearchParams({
-    db: "pubmed",
-    term: query,
-    retmax: String(PUBMED_POOL_SIZE),
-    sort: "relevance",
-    retmode: "json",
-    datetype: "pdat",
-    mindate: `${currentYear - RECENCY_YEARS_LIMIT}`,
-    maxdate: `${currentYear}`,
-    ...ncbiCommonParams(),
-  });
-  const searchRes = await fetchWithRetry(`${PUBMED_ESEARCH_URL}?${searchParams.toString()}`, {}, "חיפוש PubMed");
-  const searchJson = await searchRes.json();
-  const pmids: string[] = searchJson?.esearchresult?.idlist ?? [];
+  const retmax = queries.length > 1 ? PUBMED_QUERY_POOL_SIZE : PUBMED_POOL_SIZE;
+  const pmids: string[] = [];
+  let lastError: unknown = null;
+  let succeeded = 0;
+  for (const query of queries) {
+    const searchParams = new URLSearchParams({
+      db: "pubmed",
+      term: query,
+      retmax: String(retmax),
+      sort: "relevance",
+      retmode: "json",
+      datetype: "pdat",
+      mindate: `${currentYear - RECENCY_YEARS_LIMIT}`,
+      maxdate: `${currentYear}`,
+      ...ncbiCommonParams(),
+    });
+    try {
+      const searchRes = await fetchWithRetry(`${PUBMED_ESEARCH_URL}?${searchParams.toString()}`, {}, "חיפוש PubMed");
+      const searchJson = await searchRes.json();
+      const ids: string[] = searchJson?.esearchresult?.idlist ?? [];
+      for (const id of ids) if (!pmids.includes(id)) pmids.push(id);
+      succeeded++;
+    } catch (err) {
+      lastError = err;
+    }
+  }
+  // Only fail if every query failed; one bad query shouldn't sink the rest.
+  if (succeeded === 0 && lastError) throw lastError;
   if (pmids.length === 0) return [];
 
   const fetchParams = new URLSearchParams({
@@ -443,8 +478,11 @@ function selectTopPapers(pool: CandidatePaper[], count: number, relevanceOf: (p:
   const top = ranked.slice(0, count);
   if (top.some((p) => p.source === "pubmed")) return top;
 
+  // Only swap a PubMed paper in when it is at least as relevant as the slot it
+  // takes — otherwise "guarantee one PubMed result" silently trades a paper
+  // that answers the question for one that doesn't.
   const bestPubMed = ranked.find((p) => p.source === "pubmed");
-  if (bestPubMed && top.length > 0) top[top.length - 1] = bestPubMed;
+  if (bestPubMed && top.length > 0 && relevanceOf(bestPubMed) >= relevanceOf(top[top.length - 1])) top[top.length - 1] = bestPubMed;
   return top;
 }
 
@@ -459,11 +497,25 @@ function selectTopPapers(pool: CandidatePaper[], count: number, relevanceOf: (p:
 // both, plus a broader fallback used when the precise query comes back thin.
 const queryPlanSchema = z.object({
   topicHe: z.string().describe("תיאור קצר בעברית (עד 10 מילים) של מה שהבנת שהמשתמש מחפש"),
-  focusEn: z.string().describe("The underlying research question in one English sentence"),
-  pubmedQuery: z
+  focusEn: z
     .string()
-    .describe('PubMed esearch term in English using boolean syntax, e.g. (kinesiophobia OR "fear of movement") AND (rehabilitation OR exercise). No field tags other than [MeSH Terms]/[tiab].'),
-  semanticScholarQuery: z.string().describe("3-8 English keywords for Semantic Scholar relevance search, no boolean operators or quotes"),
+    .describe("The user's research question in one English sentence. Keep EVERY qualifier the user stated (optimal, best, duration, tempo, load, frequency, comparison, population) — never generalize it to the bare topic."),
+  aspectEn: z
+    .string()
+    .describe(
+      'The specific variable/aspect the user wants answered, in English, as a short phrase — what must be IN a paper for it to answer the question, not just the topic. E.g. request "what is the optimal eccentric phase" -> "optimal duration/tempo (time under tension) of the eccentric phase". If the request is just a bare topic with no specific aspect, repeat the topic.'
+    ),
+  aspectTerms: z
+    .array(z.string())
+    .describe("4-10 lowercase English words/short phrases that a paper answering the aspect would contain in its title or abstract (synonyms included), e.g. [\"duration\", \"tempo\", \"slow\", \"fast\", \"time under tension\", \"velocity\", \"seconds\"]. Not the general topic words."),
+  pubmedQueries: z
+    .array(z.string())
+    .min(1)
+    .max(3)
+    .describe(
+      'Up to 3 PubMed esearch terms in English with boolean syntax, ordered from MOST SPECIFIC to broadest. #1 must combine the topic AND the aspect terms (e.g. ("eccentric" AND (tempo OR duration OR "time under tension" OR velocity) AND (strength OR hypertrophy))); #2 the topic with a looser aspect; #3 the general topic only. No field tags other than [MeSH Terms]/[tiab].'
+    ),
+  semanticScholarQuery: z.string().describe("4-8 English keywords for Semantic Scholar relevance search that INCLUDE the aspect words (not only the topic), no boolean operators or quotes"),
   broadQuery: z.string().describe("2-4 English keywords for a broader fallback search on the same topic"),
 });
 
@@ -471,12 +523,14 @@ type QueryPlan = z.infer<typeof queryPlanSchema>;
 
 const QUERY_PLANNER_SYSTEM_PROMPT = `You route free-text research requests for a physiotherapy / strength-training / rehabilitation app to academic search engines (PubMed and Semantic Scholar).
 
-The request may be in Hebrew or English, a single term or a full question, casual or clinical. Infer the underlying research question in the context of exercise, sports medicine, physiotherapy, pain science and rehabilitation, and translate it into precise English search queries using standard scientific terminology (e.g. "שרירים תפוסים אחרי אימון" -> delayed onset muscle soreness; "כאבי גב" -> low back pain).
+The request may be in Hebrew or English, a single term or a full question, casual or clinical. Infer the underlying research question in the context of exercise, sports medicine, physiotherapy, pain science and rehabilitation, and translate it into precise English search queries using standard scientific terminology (e.g. "שרירים תפוסים אחרי אימון" -> delayed onset muscle soreness; "כאבי גב" -> low back pain; "פייז אקסצנטרי" -> eccentric phase / eccentric contraction).
 
-Keep the PubMed query focused enough to return on-topic papers but not so narrow that it returns nothing — prefer OR-grouped synonyms over long AND chains (at most 2-3 AND-ed concepts). Always wrap every OR group in parentheses and quote multi-word phrases — PubMed evaluates AND/OR strictly left to right, so an unparenthesized query silently means something else.`;
+The most important job: separate the TOPIC from the SPECIFIC ASPECT being asked. "מה הפייז האקסצנטרי האופטימלי" has topic "eccentric training" but the aspect is "optimal duration/tempo of the eccentric phase" — a paper on eccentric training in general does NOT answer it. Never drop the qualifiers the user typed ("optimal", "best", "how long", "how often", "vs", a body part, a population); they are the question. The first PubMed query and the Semantic Scholar query must contain the aspect words, not only the topic.
+
+Keep each PubMed query focused enough to return on-topic papers but not so narrow that it returns nothing — prefer OR-grouped synonyms over long AND chains (at most 3 AND-ed concepts). Always wrap every OR group in parentheses and quote multi-word phrases — PubMed evaluates AND/OR strictly left to right, so an unparenthesized query silently means something else.`;
 
 function fallbackPlan(input: string): QueryPlan {
-  return { topicHe: input, focusEn: input, pubmedQuery: input, semanticScholarQuery: input, broadQuery: input };
+  return { topicHe: input, focusEn: input, aspectEn: input, aspectTerms: [], pubmedQueries: [input], semanticScholarQuery: input, broadQuery: input };
 }
 
 async function planQuery(input: string): Promise<QueryPlan> {
@@ -498,35 +552,53 @@ async function planQuery(input: string): Promise<QueryPlan> {
 
 const relevanceSchema = z.object({
   scores: z
-    .array(z.object({ index: z.number().int(), score: z.number().int().min(0).max(3) }))
+    .array(
+      z.object({
+        index: z.number().int(),
+        score: z.number().int().min(0).max(3),
+      })
+    )
     .describe(
-      "One entry per paper: 3 = its main finding directly answers the question, 2 = studies the same specific phenomenon and adds useful insight on it, 1 = same general topic but a different question (e.g. a supplement trial when the question is about mechanism), 0 = off-topic. Be strict: most papers in a keyword search are 1."
+      "One entry per paper. 3 = the paper's own results/conclusion address the SPECIFIC aspect asked about (it measured, compared or concluded something about exactly that variable). 2 = same topic and the specific aspect appears only incidentally or is partly covered (e.g. a general review that mentions it). 1 = same general topic but the specific aspect is NOT addressed — a paper on the broad subject does not answer a narrower question. 0 = off-topic. Be strict: for a specific question most papers in a keyword search are 1."
     ),
 });
 
+// How many of the planner's aspect terms appear in the paper's own text — a
+// cheap deterministic signal used to decide which pooled candidates are worth
+// sending to the (expensive, size-limited) LLM screener, so a pool of 50 isn't
+// truncated arbitrarily and the one paper that actually measured the aspect
+// isn't left out.
+function aspectTermHits(paper: CandidatePaper, aspectTerms: string[]): number {
+  if (aspectTerms.length === 0) return 0;
+  const text = `${paper.title} ${paper.abstract}`.toLowerCase();
+  return aspectTerms.reduce((n, term) => (term.trim() && text.includes(term.trim().toLowerCase()) ? n + 1 : n), 0);
+}
+
 // The evidence-tier sort in selectTopPapers knows nothing about the
 // question — left alone it happily picks an unrelated meta-analysis over an
-// on-topic RCT. This screens the pool against the planner's research
-// question first, so the tier ranking only chooses among relevant papers.
-// Returns null when screening fails, meaning "don't filter".
-async function scoreRelevance(focusEn: string, pool: CandidatePaper[]): Promise<Map<number, number> | null> {
+// on-topic RCT. This screens the pool against the user's own wording and the
+// specific aspect they asked about, so the tier ranking only chooses among
+// papers that genuinely answer it. Returns null when screening fails,
+// meaning "don't filter".
+async function scoreRelevance(userRequest: string, focusEn: string, aspectEn: string, pool: CandidatePaper[]): Promise<Map<CandidatePaper, number> | null> {
   const listing = pool.map((p, i) => `[${i}] ${p.title}\n${p.abstract.slice(0, SCREENING_ABSTRACT_CHARS)}`).join("\n\n");
   try {
     const { object } = await generateObject({
-      model: anthropic(ROUTING_MODEL),
+      model: anthropic(SCREENING_MODEL),
       schema: relevanceSchema,
-      system: "You screen academic papers for relevance to a research question. Score every paper listed, judging only from the title and abstract excerpt.",
-      prompt: `Research question: ${focusEn}\n\nPapers:\n\n${listing}`,
+      system:
+        "You screen academic papers against a SPECIFIC research question. A paper only scores 3 if its results/conclusion speak to the specific aspect asked about — being on the same general topic is not enough (that is a 1). Score every paper listed, judging only from the title and abstract excerpt.",
+      prompt: `The user's original request: ${userRequest}\nResearch question: ${focusEn}\nSpecific aspect the paper must address: ${aspectEn}\n\nPapers:\n\n${listing}`,
     });
-    return new Map(object.scores.map((s) => [s.index, s.score]));
+    return new Map(object.scores.filter((s) => s.index >= 0 && s.index < pool.length).map((s) => [pool[s.index], s.score]));
   } catch (err) {
     console.error("Research relevance screening failed:", err);
     return null;
   }
 }
 
-async function fetchPool(pubmedQuery: string, semanticScholarQuery: string) {
-  const [s2Result, pubmedResult] = await Promise.allSettled([fetchSemanticScholarCandidates(semanticScholarQuery), fetchPubMedCandidates(pubmedQuery)]);
+async function fetchPool(pubmedQueries: string[], semanticScholarQuery: string) {
+  const [s2Result, pubmedResult] = await Promise.allSettled([fetchSemanticScholarCandidates(semanticScholarQuery), fetchPubMedCandidates(pubmedQueries)]);
   if (s2Result.status === "rejected") console.error("Semantic Scholar fetch failed:", s2Result.reason);
   if (pubmedResult.status === "rejected") console.error("PubMed fetch failed:", pubmedResult.reason);
   return {
@@ -562,14 +634,25 @@ const RESEARCH_AGENT_SYSTEM_PROMPT = `את/ה עוזר/ת מחקר עבור אפ
 - התבסס אך ורק על התוכן שסופק. אל תמציא נתונים, מספרים או פרטים שלא מופיעים בתקציר.
 - אל תיתן ייעוץ רפואי אישי או המלצת טיפול - רק עובדה כללית מהמחקר.
 - אל תטען בשום צורה שהמאמר פורסם בכתב עת "Q1" או בעל "Impact Factor" גבוה - מידע כזה לא סופק לך ואסור להמציא אותו.
-- כתוב בעברית תקנית וטבעית בלבד, ללא מילים באנגלית.`;
+- כתוב בעברית תקנית וטבעית בלבד, ללא מילים באנגלית.
+- כשהמאמר עונה ישירות על ההיבט הספציפי שנשאל, כותרת ה"הידעת" חייבת לענות עליו עצמו. אם התשובה היא מספר או טווח שמופיע בתקציר (למשל משך בשניות), מותר ורצוי לכלול אותו, כי הוא הממצא המרכזי ולא פרט משני. אם התקציר לא מציין ערך מדויק, אל תמציא אחד, וכתוב במפורש מה כן נמצא.
+- אל תכתוב "הידעת" שנשמעת כמו תשובה לשאלה אם המאמר לא באמת עונה עליה.`;
 
-async function summarizePaperInHebrew(paper: { title: string; abstract: string; year: number | null }, focusEn: string) {
+async function summarizePaperInHebrew(
+  paper: { title: string; abstract: string; year: number | null },
+  context: { userRequest: string; focusEn: string; aspectEn: string; matchLevel: "direct" | "related" | undefined }
+) {
+  const matchInstructions =
+    context.matchLevel === undefined
+      ? ""
+      : context.matchLevel === "direct"
+      ? `המאמר סומן כעונה ישירות על ההיבט הספציפי. כתוב את ה"הידעת" כך שתשקף בדיוק את הממצא שלו לגבי ההיבט הזה, ובסיכום פרט מה נבדק ומה נמצא לגביו.`
+      : `המאמר סומן כקרוב לנושא אך לא כעונה ישירות על ההיבט הספציפי. כתוב את ה"הידעת" כממצא המרכזי של המאמר עצמו, בלי לנסח אותו כתשובה לשאלה. את משפט הסיכום האחרון הקדש לציין בקצרה שהמאמר אינו בוחן את ההיבט הספציפי שנשאל.`;
   const { object } = await generateObject({
     model: anthropic(SUMMARY_MODEL),
     schema: paperFactSchema,
     system: RESEARCH_AGENT_SYSTEM_PROMPT,
-    prompt: `השאלה שהמשתמש התעניין בה (באנגלית): ${focusEn}\nאם המאמר עונה עליה, הדגש בעובדת ה"הידעת" את הזווית הזו. אם לא — כתוב פשוט את הממצא המעניין ביותר שלו, בלי להזכיר את השאלה ובלי לציין שהמאמר לא עונה עליה.\n\nכותרת: ${paper.title}\nשנת פרסום: ${paper.year ?? "לא ידוע"}\nתקציר: ${paper.abstract}`,
+    prompt: `הבקשה המקורית של המשתמש: ${context.userRequest}\nהשאלה (באנגלית): ${context.focusEn}\nההיבט הספציפי שנשאל: ${context.aspectEn}\n\n${matchInstructions}\n\nכותרת: ${paper.title}\nשנת פרסום: ${paper.year ?? "לא ידוע"}\nתקציר: ${paper.abstract}`,
   });
   return object;
 }
@@ -599,10 +682,11 @@ export async function generateResearchFacts(accessToken: string, query: string):
 
   const plan = await planQuery(trimmed);
 
-  let fetched = await fetchPool(plan.pubmedQuery, plan.semanticScholarQuery);
+  const primaryPubmedQuery = plan.pubmedQueries[0] ?? trimmed;
+  let fetched = await fetchPool(plan.pubmedQueries, plan.semanticScholarQuery);
   let combinedPool = dedupeCandidates(fetched.candidates);
-  if (combinedPool.length < MIN_POOL_BEFORE_BROADENING && plan.broadQuery && plan.broadQuery !== plan.pubmedQuery) {
-    const broad = await fetchPool(plan.broadQuery, plan.broadQuery);
+  if (combinedPool.length < MIN_POOL_BEFORE_BROADENING && plan.broadQuery && plan.broadQuery !== primaryPubmedQuery) {
+    const broad = await fetchPool([plan.broadQuery], plan.broadQuery);
     combinedPool = dedupeCandidates([...combinedPool, ...broad.candidates]);
     if (!broad.bothFailed) fetched = { ...fetched, bothFailed: false };
   }
@@ -614,22 +698,39 @@ export async function generateResearchFacts(accessToken: string, query: string):
   }
   if (combinedPool.length === 0) return { ok: false, error: `לא נמצאו מאמרים עם תקציר זמין בנושא "${plan.topicHe}" ב-20 השנים האחרונות. נסה ניסוח רחב יותר.` };
 
-  const relevance = await scoreRelevance(plan.focusEn, combinedPool);
-  let screenedPool = combinedPool;
+  // Pre-rank by how many of the aspect terms a paper's own text contains, so
+  // the screener's size-limited slice holds the papers most likely to address
+  // the specific question rather than whichever happened to be fetched first.
+  const screeningPool = combinedPool
+    .map((paper, order) => ({ paper, order, hits: aspectTermHits(paper, plan.aspectTerms) }))
+    .sort((a, b) => b.hits - a.hits || a.order - b.order)
+    .slice(0, SCREENING_POOL_LIMIT)
+    .map((x) => x.paper);
+
+  const relevance = await scoreRelevance(trimmed, plan.focusEn, plan.aspectEn, screeningPool);
+  let selectionPool = screeningPool;
   if (relevance) {
-    const relevant = combinedPool.filter((_, i) => (relevance.get(i) ?? 0) >= MIN_RELEVANCE_SCORE);
-    if (relevant.length === 0) {
+    const related = screeningPool.filter((p) => (relevance.get(p) ?? 0) >= MIN_RELEVANCE_SCORE);
+    if (related.length === 0) {
       return { ok: false, error: `נמצאו מאמרים, אך אף אחד מהם לא עוסק ישירות ב"${plan.topicHe}". נסה ניסוח אחר או רחב יותר.` };
     }
-    screenedPool = relevant;
+    // If anything answers the specific question directly, show only those —
+    // fewer results beats padding with general-topic papers, which is what made
+    // specific searches feel off. Only when nothing answers it directly do the
+    // topic-level papers come through, and they're labeled as such.
+    const direct = related.filter((p) => (relevance.get(p) ?? 0) >= DIRECT_MATCH_SCORE);
+    selectionPool = direct.length > 0 ? direct : related;
   }
 
-  const relevanceByPaper = new Map(combinedPool.map((p, i) => [p, relevance?.get(i) ?? 0]));
-  const papers = selectTopPapers(screenedPool, TOP_PAPERS_COUNT, (p) => relevanceByPaper.get(p) ?? 0);
+  const papers = selectTopPapers(selectionPool, TOP_PAPERS_COUNT, (p) => relevance?.get(p) ?? 0);
 
   const settled = await Promise.allSettled(
     papers.map(async (paper): Promise<ResearchFinding> => {
-      const facts = await summarizePaperInHebrew({ title: paper.title, abstract: paper.abstract, year: paper.year }, plan.focusEn);
+      const matchLevel: "direct" | "related" | undefined = relevance ? ((relevance.get(paper) ?? 0) >= DIRECT_MATCH_SCORE ? "direct" : "related") : undefined;
+      const facts = await summarizePaperInHebrew(
+        { title: paper.title, abstract: paper.abstract, year: paper.year },
+        { userRequest: trimmed, focusEn: plan.focusEn, aspectEn: plan.aspectEn, matchLevel }
+      );
       const tier = classifyEvidence(paper);
       const evidenceLabelHe = EVIDENCE_LABEL_HE[tier];
       return {
@@ -648,6 +749,7 @@ export async function generateResearchFacts(accessToken: string, query: string):
         venue: paper.venue,
         isTopTierJournal: isTopTierJournal(paper.venue),
         sampleSizeHe: extractSampleSizeHe(paper.abstract, tier === "meta_analysis" || tier === "systematic_review"),
+        matchLevel,
       };
     })
   );
@@ -662,6 +764,6 @@ export async function generateResearchFacts(accessToken: string, query: string):
   return {
     ok: true,
     findings,
-    interpretation: { topicHe: plan.topicHe, focusEn: plan.focusEn, pubmedQuery: plan.pubmedQuery, semanticScholarQuery: plan.semanticScholarQuery },
+    interpretation: { topicHe: plan.topicHe, focusEn: plan.focusEn, pubmedQuery: primaryPubmedQuery, semanticScholarQuery: plan.semanticScholarQuery, aspectEn: plan.aspectEn },
   };
 }

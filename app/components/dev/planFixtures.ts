@@ -62,7 +62,7 @@ function log(daysAgo: number, rpe: number | null, category: string, hour = 9): W
 }
 
 function fact(id: string, didYouKnow: string, summary: string, paperTitle: string, year: number | null, url: string | null): CuratedFact {
-  return { id, did_you_know_he: didYouKnow, summary_he: summary, paper_title: paperTitle, year, paper_url: url, is_hidden: false, created_at: "2026-10-01T00:00:00Z" };
+  return { id, did_you_know_he: didYouKnow, summary_he: summary, paper_title: paperTitle, year, paper_url: url, is_hidden: false, created_at: "2026-10-01T00:00:00Z", takeaway_he: null, tags: [], evidence_grade: null, updated_at: null };
 }
 
 const starter = (id: string, title: string): ExploreProgram => ({ id, title, status: "published", is_free: true, exercises: [] });
