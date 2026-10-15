@@ -1,3 +1,4 @@
+import { GYM_ONLY_EQUIPMENT } from "@/app/constants/catalog";
 import type { DifficultyLevel, Exercise } from "@/app/types";
 
 // Mid-workout "swap this exercise" suggestions (SwapExerciseSheet). Pure
@@ -19,7 +20,7 @@ export const SWAP_BATCH_SIZE = 5;
 
 const LEVEL_RANK: Record<DifficultyLevel, number> = { clinical: 0, beginner: 1, intermediate: 2, advanced: 3 };
 // An exercise with no difficulty set is treated as intermediate when deciding
-// what's harder/easier than it (about 40% of the catalog has none yet).
+// what's harder/easier than it (a newly added exercise may have none yet).
 const UNKNOWN_RANK = LEVEL_RANK.intermediate;
 
 const levelRank = (ex: Exercise): number | null => (ex.difficulty_level ? LEVEL_RANK[ex.difficulty_level] : null);
@@ -38,14 +39,10 @@ function assistingMuscles(ex: Exercise): Set<string> {
   return all;
 }
 
-const isRealDumbbellExercise = (ex: Exercise) => /dumbbell/i.test(ex.name_en ?? "") || /משקולות? יד/.test(ex.name_he ?? "");
-
-// Needs a gym. In the catalog, "dumbbells" on a gym-tagged exercise is a
-// catch-all for machines, cables and barbells too (Smith machine, lat
-// pulldown, ...), so only the ones whose name actually says dumbbell count as
-// doable at home with dumbbells.
-const isGymOnly = (ex: Exercise) =>
-  splitIds(ex.admin_tags).includes("gym") && (ex.equipment ?? []).includes("dumbbells") && !isRealDumbbellExercise(ex);
+// Needs a gym: it uses a barbell, a machine or a cable (EQUIPMENT_LIST
+// gymOnly). Until 2026-10-15 those were all tagged "dumbbells" and a name
+// heuristic told them apart (MISTAKES.md); the catalog now says it directly.
+const isGymOnly = (ex: Exercise) => (ex.equipment ?? []).some((id) => GYM_ONLY_EQUIPMENT.has(id));
 
 export function fitsSetting(ex: Exercise, setting: SwapSetting): boolean {
   if (setting.mode === "gym") return true;

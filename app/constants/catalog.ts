@@ -114,7 +114,9 @@ export const BODY_PART_STYLES: Record<string, { text: string; bg: string; border
 };
 export const DEFAULT_BODY_PART_STYLE = NEUTRAL_TAG;
 
-export const EQUIPMENT_LIST = [
+// gymOnly: gym equipment — never offered as home gear (the mid-workout swap's
+// "at home with..." toggles), and an exercise that needs it is gym-only.
+export const EQUIPMENT_LIST: { id: string; label: string; gymOnly?: boolean }[] = [
   { id: "pullup_bar", label: "מתח" },
   { id: "parallettes", label: "פרלטים" },
   { id: "dip_bar", label: "מקבילים" },
@@ -125,7 +127,12 @@ export const EQUIPMENT_LIST = [
   { id: "ab_wheel", label: "Ab Wheel" },
   { id: "resistance_band", label: "גומיית התנגדות" },
   { id: "jump_rope", label: "חבל קפיצה" },
+  { id: "barbell", label: "מוט", gymOnly: true },
+  { id: "machine", label: "מכונה", gymOnly: true },
+  { id: "cable", label: "כבל / פולי", gymOnly: true },
 ];
+
+export const GYM_ONLY_EQUIPMENT = new Set(EQUIPMENT_LIST.filter((e) => e.gymOnly).map((e) => e.id));
 
 export const DAYS_OF_WEEK = [
   { id: "0", label: "ראשון", short: "Su", he_short: "א'" }, { id: "1", label: "שני", short: "Mo", he_short: "ב'" }, { id: "2", label: "שלישי", short: "Tu", he_short: "ג'" },

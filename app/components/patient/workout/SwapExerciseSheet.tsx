@@ -23,7 +23,7 @@ interface SwapExerciseSheetProps {
 }
 
 // Every accessory a patient might have at home (bodyweight is always assumed).
-const HOME_GEAR = EQUIPMENT_LIST.filter((e) => e.id !== "bodyweight");
+const HOME_GEAR = EQUIPMENT_LIST.filter((e) => e.id !== "bodyweight" && !e.gymOnly);
 
 const TIER_LABEL: Record<SwapTier, string> = {
   same: "באותה רמה",
