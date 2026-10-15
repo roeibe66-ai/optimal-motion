@@ -1,7 +1,7 @@
 "use client";
 
 import type { CSSProperties, Dispatch, SetStateAction } from "react";
-import { Activity, Bell, ChevronLeft, CheckCircle, Crown, Flame, Globe, LogOut, Medal, Receipt, SunMoon } from "lucide-react";
+import { Activity, Bell, ChevronLeft, ClipboardList, CheckCircle, Crown, Flame, Globe, LogOut, Medal, Receipt, SunMoon } from "lucide-react";
 import { useTheme } from "@/app/components/ThemeProvider";
 import type { ThemeSetting } from "@/app/lib/theme";
 import { useAuth } from "@/app/context/AuthContext";
@@ -21,6 +21,7 @@ interface ProfileTabProps {
   hapticsEnabled: boolean;
   setHapticsEnabled: Dispatch<SetStateAction<boolean>>;
   triggerHaptic: (type: HapticType) => void;
+  onOpenOnboarding?: () => void; // fitness patients: reopen the onboarding questionnaire
 }
 
 // The gamification hub: streak/rank/practice stats, then the settings list
@@ -41,6 +42,7 @@ export default function ProfileTab({
   hapticsEnabled,
   setHapticsEnabled,
   triggerHaptic,
+  onOpenOnboarding,
 }: ProfileTabProps) {
   const { loggedInPatient, lang, setLang, handleLogout } = useAuth();
   const { setting: themeSetting, setSetting: setThemeSetting } = useTheme();
@@ -176,6 +178,23 @@ export default function ProfileTab({
           </div>
 
           {/* Note: the mockup drops the "edit personal details" row entirely (Premium/Invoices/Notifications/Haptics/Logout only) — removed to match; it was a non-functional placeholder with no onClick either way, so nothing behavioral is lost. */}
+
+          {onOpenOnboarding && (
+            <button
+              type="button"
+              onClick={onOpenOnboarding}
+              className="w-full flex items-center justify-between gap-3 px-5 py-4 border-b border-line text-start active:bg-fg/5 transition-colors"
+            >
+              <span className="flex items-center gap-3">
+                <ClipboardList size={18} className="text-muted" />
+                <span className="text-right">
+                  <span className="block font-bold text-fg text-sm">שאלון היכרות</span>
+                  <span className="block text-xs text-muted">מטרות, ניסיון, זמן, ציוד ומגבלות</span>
+                </span>
+              </span>
+              <ChevronLeft size={16} className="text-muted shrink-0" />
+            </button>
+          )}
 
           <RestAlertSetting />
 

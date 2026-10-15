@@ -32,7 +32,7 @@ export async function loadSharedKnowledge(client: SupabaseClient): Promise<Share
 
 export async function loadPatientContext(client: SupabaseClient, patientId: string, exercises: Exercise[]): Promise<CoachPatientContext | null> {
   const [patient, programs, rows, logs] = await Promise.all([
-    client.from("patients").select("id, first_name, full_name, patient_type").eq("id", patientId).maybeSingle(),
+    client.from("patients").select("*").eq("id", patientId).maybeSingle(),
     client.from("patient_programs").select("id, name, weekly_target").eq("patient_id", patientId),
     client
       .from("patient_exercises")
@@ -73,9 +73,27 @@ export async function loadPatientContext(client: SupabaseClient, patientId: stri
     });
 
   const firstName = (patient.data.first_name as string | null)?.trim() || (patient.data.full_name as string | null)?.trim().split(/\s+/)[0] || null;
+  const row = patient.data as Record<string, unknown>;
+  const profile = row.onboarding_completed_at
+    ? {
+        goals: (row.training_goals as string[] | null) ?? [],
+        experience: (row.training_experience as string | null) ?? null,
+        days: (row.training_days as number | null) ?? null,
+        minutes: (row.session_minutes as number | null) ?? null,
+        location: (row.training_location as string | null) ?? null,
+        homeEquipment: (row.home_equipment as string[] | null) ?? [],
+        addressForm: (row.address_form as string | null) ?? null,
+        birthYear: (row.birth_year as number | null) ?? null,
+        heightCm: (row.height_cm as number | null) ?? null,
+        weightKg: row.weight_kg != null ? Number(row.weight_kg) : null,
+        limitationAreas: (row.limitation_areas as string[] | null) ?? [],
+        recentSurgery: (row.recent_surgery as boolean | null) ?? null,
+      }
+    : null;
   return {
     firstName,
     patientType: (patient.data.patient_type as string | null) ?? null,
+    profile,
     programs: programRows,
     logs: (logs.data ?? []) as WorkoutLog[],
     exerciseNames,

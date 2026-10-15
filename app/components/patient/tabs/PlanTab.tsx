@@ -65,6 +65,9 @@ interface PlanTabProps {
   onOpenProgram: (entry: ProgramQueueEntry, item: PlannedWorkout) => void;
   onEditProgram: (entry: ProgramQueueEntry) => void;
   queueLogRef: QueueLogRef | null;
+  // Set while a fitness patient deferred the onboarding questionnaire: shows
+  // a card that opens it (useOnboarding).
+  onCompleteOnboarding?: () => void;
 }
 
 
@@ -193,6 +196,7 @@ export default function PlanTab({
   onOpenProgram,
   onEditProgram,
   queueLogRef,
+  onCompleteOnboarding,
 }: PlanTabProps) {
   const { loggedInPatient, lang } = useAuth();
   const [isQuickLogOpen, setIsQuickLogOpen] = useState(false);
@@ -483,6 +487,22 @@ export default function PlanTab({
             onLogged={onWorkoutLogged}
             queueLogRef={queueRefFor(quickLogFor.entry, quickLogFor.item)}
           />
+        )}
+
+        {/* Deferred onboarding questionnaire: one tap reopens it. */}
+        {onCompleteOnboarding && (
+          <button
+            type="button"
+            onClick={onCompleteOnboarding}
+            className="on-light w-full mb-10 flex items-center gap-4 bg-surface rounded-[2rem] shadow-card p-4 text-start active:scale-[0.98] transition-transform duration-150 ease-out"
+          >
+            <img src="/ecco/feedback-thumbs.webp" alt="" className="w-16 h-16 rounded-2xl object-cover shrink-0" />
+            <span className="flex-1 min-w-0">
+              <span className="block font-black text-fg">בואו נכיר עוד קצת</span>
+              <span className="block text-xs text-muted mt-0.5">6 שאלות קצרות, כדי שהתוכנית וההצעות יתאימו לכם</span>
+            </span>
+            <ChevronLeft size={18} className="text-muted shrink-0" />
+          </button>
         )}
 
         {/* "Did you know?" — admin-curated research facts (curated_facts,

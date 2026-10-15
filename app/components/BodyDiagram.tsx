@@ -7,6 +7,7 @@ const BodyModel = dynamic(() => import("react-body-highlighter"), { ssr: false }
 interface BodyDiagramProps {
   highlightedMuscles: string[];
   onMuscleClick: (muscle: string) => void;
+  view?: "anterior" | "posterior"; // front (default) or back
 }
 
 // Thin wrapper around react-body-highlighter's client-only body model,
@@ -14,9 +15,10 @@ interface BodyDiagramProps {
 // applies these via inline `style.fill`, so CSS variables work. Selected
 // pain areas use --warning (not --danger, which is reserved for errors,
 // and not the teal muscle-primary, which means "muscles this exercise works").
-export default function BodyDiagram({ highlightedMuscles, onMuscleClick }: BodyDiagramProps) {
+export default function BodyDiagram({ highlightedMuscles, onMuscleClick, view = "anterior" }: BodyDiagramProps) {
   return (
     <BodyModel
+      type={view}
       data={[{ name: "Pain Areas", muscles: highlightedMuscles as never }]}
       onClick={({ muscle }: { muscle: string }) => onMuscleClick(muscle)}
       bodyColor="var(--muscle-inactive)"

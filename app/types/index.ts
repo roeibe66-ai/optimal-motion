@@ -28,10 +28,27 @@ export interface Patient {
   reminder_days?: string; // legacy: comma-separated DAYS_OF_WEEK ids
   reminder_schedule?: Record<string, string> | null; // DAYS_OF_WEEK id -> "HH:MM", a time per day
   onboarding_completed_at?: string | null; // null = hasn't finished the onboarding wizard yet
+  // Onboarding questionnaire answers (fitness patients; OnboardingFlow,
+  // 20261015190000_onboarding_profile.sql). All optional.
+  onboarding_skipped_at?: string | null; // "אמלא אחר כך": a home card offers it until completed
+  training_goals?: string[];
+  training_experience?: TrainingExperience | null;
+  training_days?: number | null;
+  session_minutes?: number | null;
+  training_location?: "gym" | "home" | "both" | null;
+  home_equipment?: string[];
+  address_form?: "m" | "f" | "n" | null; // Hebrew form of address; "n" = no preference
+  birth_year?: number | null;
+  height_cm?: number | null;
+  weight_kg?: number | null;
+  limitation_areas?: string[]; // body-map muscle ids, like workout_logs.pain_areas
+  recent_surgery?: boolean | null;
   created_at?: string;
 }
 
 export type DifficultyLevel = "beginner" | "intermediate" | "advanced" | "clinical";
+
+export type TrainingExperience = "none" | "beginner" | "intermediate" | "advanced";
 
 // Which name(s) getExerciseName() shows for this exercise, independent of the
 // viewer's own UI language — an explicit authorial override, not a fallback.

@@ -8,6 +8,8 @@ import { useReminders } from "@/app/hooks/useReminders";
 import { usePatientData } from "@/app/hooks/usePatientData";
 import { useCuratedFacts } from "@/app/hooks/useCuratedFacts";
 import { registerServiceWorker } from "@/app/utils/pushClient";
+import { useOnboarding } from "@/app/hooks/useOnboarding";
+import OnboardingFlow from "@/app/components/patient/onboarding/OnboardingFlow";
 import { usePlanSelection } from "@/app/hooks/usePlanSelection";
 import { useWorkoutSession } from "@/app/hooks/useWorkoutSession";
 import { useSavedPrograms } from "@/app/hooks/useSavedPrograms";
@@ -65,6 +67,7 @@ export default function PatientShell() {
 
   const { hapticsEnabled, setHapticsEnabled, triggerHaptic } = useHaptics();
   const reminders = useReminders(triggerHaptic);
+  const onboarding = useOnboarding();
   const patientData = usePatientData();
   const planSelection = usePlanSelection(patientData.patientExercises);
   const savedProgramsData = useSavedPrograms();
@@ -380,6 +383,7 @@ export default function PatientShell() {
         <AmrapPlayer config={amrapConfig} triggerHaptic={triggerHaptic} onClose={() => setAmrapConfig(null)} onLogged={patientData.refetch} />
       )}
       <PasskeyPrompt />
+      {onboarding.isOpen && <OnboardingFlow patient={loggedInPatient} onFinish={onboarding.finish} onLater={onboarding.later} triggerHaptic={triggerHaptic} />}
       {assignedDraft && (
         <DiyBuilderTab
           variant="assigned"
@@ -610,6 +614,7 @@ export default function PatientShell() {
               hapticsEnabled={hapticsEnabled}
               setHapticsEnabled={setHapticsEnabled}
               triggerHaptic={triggerHaptic}
+              onOpenOnboarding={onboarding.canEdit ? onboarding.open : undefined}
             />
           )}
 
@@ -640,6 +645,7 @@ export default function PatientShell() {
               onOpenProgram={handleOpenProgram}
               onEditProgram={handleEditAssignedProgram}
               queueLogRef={session.queueLogRef}
+              onCompleteOnboarding={onboarding.shouldOffer ? onboarding.open : undefined}
             />
           )}
 

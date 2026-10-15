@@ -1,5 +1,6 @@
 import { AVAILABLE_MUSCLES, DIFFICULTY_LEVELS, EQUIPMENT_LIST } from "@/app/constants/catalog";
 import { KNOWLEDGE_TAG_LABELS } from "@/app/constants/knowledgeTags";
+import { TRAINING_EXPERIENCE, TRAINING_GOALS, TRAINING_LOCATIONS } from "@/app/constants/onboarding";
 import { parsePerformance } from "@/app/utils/history";
 import type { CuratedFact, Exercise, SessionPerformanceEntry, WorkoutLog } from "@/app/types";
 
@@ -69,9 +70,26 @@ export interface CoachProgramRow {
   patientNote: string | null;
 }
 
+// Onboarding questionnaire answers (patients columns, OnboardingFlow).
+export interface CoachPatientProfile {
+  goals: string[];
+  experience: string | null;
+  days: number | null;
+  minutes: number | null;
+  location: string | null;
+  homeEquipment: string[];
+  addressForm: string | null;
+  birthYear: number | null;
+  heightCm: number | null;
+  weightKg: number | null;
+  limitationAreas: string[];
+  recentSurgery: boolean | null;
+}
+
 export interface CoachPatientContext {
   firstName: string | null;
   patientType: string | null;
+  profile: CoachPatientProfile | null;
   programs: CoachProgramRow[];
   logs: WorkoutLog[]; // newest first
   exerciseNames: Record<string, string>; // exercise id -> name, for performance_data
@@ -88,8 +106,32 @@ function formatSets(sets: SessionPerformanceEntry[]): string {
 export function formatPatientContext(ctx: CoachPatientContext): string {
   const lines: string[] = [`--- המתאמן/ת ---`, `היום: ${ctx.today}`];
   if (ctx.firstName) lines.push(`שם פרטי: ${ctx.firstName}`);
-  // No gender field exists; a name doesn't tell it.
-  lines.push(`לשון פנייה: לא ידועה. פנו בלשון רבים ("נסו", "כדאי לכם"), גם כשפונים בשם.`);
+  // Only what they chose in the questionnaire; a name doesn't tell it.
+  const form = ctx.profile?.addressForm;
+  lines.push(
+    form === "m"
+      ? "לשון פנייה: זכר."
+      : form === "f"
+        ? "לשון פנייה: נקבה."
+        : `לשון פנייה: לא ידועה. פנו בלשון רבים ("נסו", "כדאי לכם"), גם כשפונים בשם.`
+  );
+  const p = ctx.profile;
+  if (p) {
+    const level = TRAINING_EXPERIENCE.find((e) => e.id === p.experience);
+    const profileLines = [
+      p.goals.length ? `מטרות: ${p.goals.map((g) => TRAINING_GOALS.find((x) => x.id === g)?.label ?? g).join(", ")}` : null,
+      level ? `ניסיון: ${level.label}${level.hint ? ` (${level.hint})` : ""}` : "ניסיון: לא צוין, להניח מתחילים",
+      p.days ? `זמין ${p.days} ימים בשבוע` : null,
+      p.minutes ? `כ-${p.minutes} דקות לאימון` : null,
+      p.location ? `מתאמן ${TRAINING_LOCATIONS.find((l) => l.id === p.location)?.label ?? p.location}${p.location !== "gym" && p.homeEquipment.length ? `; בבית יש: ${p.homeEquipment.map((e) => EQUIPMENT_LABEL[e] ?? e).join(", ")}` : ""}` : null,
+      p.birthYear ? `גיל: כ-${new Date().getFullYear() - p.birthYear}` : null,
+      p.heightCm ? `גובה: ${p.heightCm} ס"מ` : null,
+      p.weightKg ? `משקל: ${p.weightKg} ק"ג` : null,
+      p.limitationAreas.length ? `אזורים רגישים או מגבלות שסימן בשאלון: ${p.limitationAreas.join(", ")}` : null,
+      p.recentSurgery ? "עבר ניתוח בשנה האחרונה (להתייעץ עם רועי לפני התאמות)" : null,
+    ].filter(Boolean);
+    lines.push("", "משאלון ההיכרות:", ...profileLines.map((l) => `• ${l}`));
+  }
   lines.push(`סוג: ${ctx.patientType === "clinical" ? "שיקומי (התוכנית של רועי קובעת, לא בונים תוכנית חדשה)" : "כושר"}`);
 
   if (ctx.programs.length === 0) {

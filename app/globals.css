@@ -389,6 +389,17 @@ html {
   }
 }
 
+/* A small horizontal shake: "you can't do that" (the onboarding goal counter
+   when a third goal is tapped). Short, no layout. */
+@theme {
+  --animate-nudge: nudge 240ms ease-out;
+
+  @keyframes nudge {
+    25% { transform: translateX(-4px); }
+    75% { transform: translateX(4px); }
+  }
+}
+
 /* Drill-down "back" (the reverse of step-in): the previous screen returns
    from the opposite side it left by. Both use fill "backwards", not "both":
    a transform animation that stays in effect after it ends makes its
@@ -442,6 +453,7 @@ html {
   .animate-card-in { animation-name: motion-fade; }
   .animate-screen-down { animation-name: motion-fade-out; }
   .animate-heart-pop { animation: none; }
+  .animate-nudge { animation: none; }
 }
 
 /* Horizontal carousels (Explore, PlanTab, DiyBuilder, admin) scroll by
