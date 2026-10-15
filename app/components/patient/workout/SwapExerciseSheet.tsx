@@ -83,7 +83,7 @@ export default function SwapExerciseSheet({ original, current, catalog, excludeI
 
       {/* Where am I training — filters by equipment. */}
       {isSettingInferred && (
-        <p className="text-start text-[0.6875rem] font-bold text-muted mb-1.5">זוהה לפי התרגילים באימון שלך — אפשר לשנות:</p>
+        <p className="text-start text-[0.6875rem] font-bold text-muted mb-1.5">זוהה לפי האימון ולפי מה שענית בשאלון — אפשר לשנות:</p>
       )}
       <div className="flex flex-wrap gap-2 mb-2">
         <button onClick={() => changeSetting({ ...setting, mode: "gym" })} aria-pressed={setting.mode === "gym"} className={chip(setting.mode === "gym")}>

@@ -11,6 +11,7 @@ import { getPainColor } from "@/app/utils/scoring";
 import type { QueueLogRef, SessionPerformanceEntry } from "@/app/types";
 import type { SessionExercise } from "@/app/hooks/useWorkoutSession";
 import { notify } from "@/app/components/ui/feedback";
+import { useAddress } from "@/app/hooks/useAddress";
 
 interface QuickLogSheetProps {
   title: string; // program name — logged as workout_logs.category, same as the player
@@ -41,6 +42,7 @@ interface ExerciseDraft {
 // history charts and the therapist's view read it the same way.
 export default function QuickLogSheet({ title, blocksMap, blocksKeys, isAmrap, previousWeights, onClose, onLogged, queueLogRef = null }: QuickLogSheetProps) {
   const { loggedInPatient, lang } = useAuth();
+  const t = useAddress();
   const isClinical = loggedInPatient?.patient_type !== "fitness";
   const exercises = blocksKeys.flatMap((k) => blocksMap[k] ?? []);
 
@@ -188,7 +190,7 @@ export default function QuickLogSheet({ title, blocksMap, blocksKeys, isAmrap, p
                 <button
                   onClick={() => toggleDone(se.id)}
                   aria-pressed={draft.done}
-                  aria-label={draft.done ? "סמן כלא בוצע" : "סמן כבוצע"}
+                  aria-label={draft.done ? t("סמן כלא בוצע") : t("סמן כבוצע")}
                   className={`w-7 h-7 shrink-0 rounded-full flex items-center justify-center border transition-ui duration-150 ease-out ${
                     draft.done ? "bg-accent border-accent text-on-accent" : "border-line-input text-transparent"
                   } active:scale-[0.97]`}
@@ -301,9 +303,9 @@ export default function QuickLogSheet({ title, blocksMap, blocksKeys, isAmrap, p
         className="w-full flex items-center justify-center gap-2 bg-btn-primary text-btn-primary-fg hover:bg-btn-primary-hover active:bg-btn-primary-active font-black text-lg py-4 rounded-full disabled:bg-disabled disabled:text-disabled-fg disabled:pointer-events-none"
       >
         {isSaving ? <Loader2 size={18} className="animate-spin" /> : <ClipboardCheck size={18} />}
-        שמור למעקב
+        {t("שמור למעקב")}
       </button>
-      {rpe === null && <p className="text-center text-xs text-muted mt-2">בחר איך הרגיש האימון כדי לשמור</p>}
+      {rpe === null && <p className="text-center text-xs text-muted mt-2">{t("בחר איך הרגיש האימון כדי לשמור")}</p>}
     </Modal>
   );
 }

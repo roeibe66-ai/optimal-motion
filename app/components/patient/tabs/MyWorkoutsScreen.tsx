@@ -6,6 +6,7 @@ import ExportPdfButton from "@/app/components/patient/ExportPdfButton";
 import type { Exercise, SavedProgram } from "@/app/types";
 import { confirmAction } from "@/app/components/ui/feedback";
 import { countLabel } from "@/app/utils/format";
+import { useAddress } from "@/app/hooks/useAddress";
 
 interface MyWorkoutsScreenProps {
   savedPrograms: SavedProgram[];
@@ -40,6 +41,7 @@ function relativeCreatedLabel(createdAt: string): string {
 // "start" is a row of day pills rather than one button — picking a pill
 // starts that specific day's exercises as a live session.
 export default function MyWorkoutsScreen({ savedPrograms, exerciseCatalog, onBack, onBuildNew, onStartProgramDay, onEditProgram, onDeleteProgram }: MyWorkoutsScreenProps) {
+  const t = useAddress();
   const handleDelete = async (program: SavedProgram) => {
     const confirmed = await confirmAction({
       title: "למחוק את האימון?",
@@ -84,7 +86,7 @@ export default function MyWorkoutsScreen({ savedPrograms, exerciseCatalog, onBac
               className="mt-4 bg-btn-primary hover:bg-btn-primary-hover active:bg-btn-primary-active text-btn-primary-fg font-black text-[0.8125rem] px-6 py-3.5 rounded-2xl flex items-center justify-center gap-2 transition-colors"
             >
               <Plus size={16} />
-              בנה תוכנית חדשה
+              {t("בנה תוכנית חדשה")}
             </button>
           </div>
         ) : (

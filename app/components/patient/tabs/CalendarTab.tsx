@@ -9,6 +9,7 @@ import { countLabel } from "@/app/utils/format";
 import { getLastUsedWeights } from "@/app/utils/history";
 import { blocksOf, buildWeekPlan, DAY_NAMES, dayNameOfKey, queueRefFor, sundayOf, type PlannedWorkout, type ProgramQueueEntry } from "@/app/utils/programQueue";
 import QuickLogSheet from "@/app/components/patient/workout/QuickLogSheet";
+import { useAddress } from "@/app/hooks/useAddress";
 
 interface CalendarTabProps {
   patientExercises: HydratedPatientExercise[];
@@ -32,6 +33,7 @@ type DayItem = { entry: ProgramQueueEntry; item: PlannedWorkout };
 // here (the quick log), and logging it on another day still completes its
 // own planned day (app/utils/programQueue.ts).
 export default function CalendarTab({ patientExercises, programs, workoutLogs, patientId, onOpenPlanned, onLogged, onBrowsePrograms }: CalendarTabProps) {
+  const t = useAddress();
   const [viewedMonth, setViewedMonth] = useState(() => {
     const d = new Date();
     d.setDate(1);
@@ -189,13 +191,13 @@ export default function CalendarTab({ patientExercises, programs, workoutLogs, p
           position:fixed), so a long list just grows and the page scrolls. */}
       <div className="on-light -mx-4 md:-mx-8 bg-surface rounded-t-[2rem] px-5 pt-5 pb-10 shadow-[0_-8px_30px_-8px_color-mix(in_srgb,var(--shadow-ink)_10%,transparent)]">
         <div className="flex items-center justify-between mb-4">
-          <h4 className="font-black text-fg text-base">{selectedDate ? (selectedKey === todayKey ? "היום" : `יום ${DAY_NAMES[selectedDate.getDay()]}`) : "בחר יום"}</h4>
+          <h4 className="font-black text-fg text-base">{selectedDate ? (selectedKey === todayKey ? "היום" : `יום ${DAY_NAMES[selectedDate.getDay()]}`) : t("בחר יום")}</h4>
           {selectedDate && <span className="text-xs font-bold text-muted">{selectedDate.toLocaleDateString("he-IL", { day: "numeric", month: "long" })}</span>}
         </div>
 
         {patientExercises.length === 0 && ownLogs.length === 0 ? (
           <div className="text-center py-6 flex flex-col items-center gap-3">
-            <p className="text-muted text-sm">עדיין אין לך תוכנית אימון — כשתוסיף אחת, הימים שלה יופיעו כאן.</p>
+            <p className="text-muted text-sm">{t("עדיין אין לך תוכנית אימון — כשתוסיף אחת, הימים שלה יופיעו כאן.")}</p>
             {onBrowsePrograms && (
               <button onClick={onBrowsePrograms} className="text-accent-fg font-bold text-sm px-4 py-2 rounded-full bg-accent/10 hover:bg-accent/15 active:scale-95 transition-ui duration-150 ease-out">
                 גלה תוכניות
@@ -203,7 +205,7 @@ export default function CalendarTab({ patientExercises, programs, workoutLogs, p
             )}
           </div>
         ) : !selectedDate ? (
-          <p className="text-muted text-sm text-center py-6">בחר יום כדי לראות את האימונים שלו.</p>
+          <p className="text-muted text-sm text-center py-6">{t("בחר יום כדי לראות את האימונים שלו.")}</p>
         ) : (
           <div className="flex flex-col gap-2">
             {selectedItems.map((dayItem) => {
@@ -233,7 +235,7 @@ export default function CalendarTab({ patientExercises, programs, workoutLogs, p
                       onClick={() => setQuickLogFor(dayItem)}
                       className="shrink-0 flex items-center gap-1.5 text-xs font-bold text-accent-fg bg-accent/10 hover:bg-accent/15 px-3 py-2 rounded-full active:scale-95 transition-ui duration-150 ease-out"
                     >
-                      <ClipboardCheck size={14} /> סמן כבוצע
+                      <ClipboardCheck size={14} /> {t("סמן כבוצע")}
                     </button>
                   )}
                 </div>

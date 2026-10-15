@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { Send, Sparkles, X } from "lucide-react";
 import { useAIAssistantChat } from "@/app/hooks/useAIAssistantChat";
 import type { AIAssistantContext } from "@/app/types";
+import { useAddress } from "@/app/hooks/useAddress";
 
 interface PatientCoachSheetProps {
   contextData?: AIAssistantContext;
@@ -20,6 +21,7 @@ interface PatientCoachSheetProps {
 // `isPremiumUser` check can wrap this component's usage. Renders
 // unconditionally for now — no gating of any kind exists here today.
 export default function PatientCoachSheet({ contextData }: PatientCoachSheetProps) {
+  const t = useAddress();
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState("");
   const { messages, isLoading, error, sendMessage } = useAIAssistantChat("patient", contextData);
@@ -95,7 +97,7 @@ export default function PatientCoachSheet({ contextData }: PatientCoachSheetProp
         <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
           {messages.length === 0 && (
             <div className="text-center text-muted text-[0.8125rem] font-medium mt-6 px-4 leading-relaxed">
-              כואב לך באיזשהו תרגיל? רוצה גרסה קלה או מאתגרת יותר? יש לך שאלה על האימון? שאל אותי כל דבר.
+              {t("כואב לך באיזשהו תרגיל? רוצה גרסה קלה או מאתגרת יותר? יש לך שאלה על האימון? שאל אותי כל דבר.")}
             </div>
           )}
           {messages.map((m, i) => (
@@ -122,7 +124,7 @@ export default function PatientCoachSheet({ contextData }: PatientCoachSheetProp
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="שאל את המאמן שלך..."
+            placeholder={t("שאל את המאמן שלך...")}
             className="on-light flex-1 bg-surface border border-line rounded-2xl px-4 py-3 text-fg text-sm placeholder:text-muted outline-none focus:border-focus focus:ring-2 focus:ring-focus"
           />
           <button

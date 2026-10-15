@@ -7,6 +7,7 @@ import { useDevDataMode } from "@/app/components/dev/devDataMode";
 import { exploreFixture } from "@/app/components/dev/exploreFixtures";
 import type { ExploreProgram, Package, PackageExercise, Workout } from "@/app/types";
 import { notify } from "@/app/components/ui/feedback";
+import { useAddress } from "@/app/hooks/useAddress";
 
 // The Explore tab's catalog: every program template (packages) and single
 // workout (workouts, from the admin workout builder) the admin has
@@ -15,6 +16,7 @@ import { notify } from "@/app/components/ui/feedback";
 // templates are already in their programs (patient_programs.source_package_id).
 export function useExplorePrograms() {
   const { loggedInPatient } = useAuth();
+  const t = useAddress();
   const [programs, setPrograms] = useState<ExploreProgram[]>([]);
   const [likedProgramIds, setLikedProgramIds] = useState<Set<string>>(new Set());
   const [workouts, setWorkouts] = useState<Workout[]>([]);
@@ -108,11 +110,11 @@ export function useExplorePrograms() {
   const addWorkoutToDay = useCallback(async (workoutId: string, dayId: string, date?: string): Promise<boolean> => {
     const { error } = await supabase.rpc("add_published_workout_to_my_programs", { p_workout_id: workoutId, p_day: dayId, p_date: date ?? null });
     if (error) {
-      notify(error.message.includes("premium") ? "זה אימון פרימיום — צור קשר כדי לפתוח אותו." : "לא הצלחנו להוסיף את האימון. נסה שוב.", error.message.includes("premium") ? "info" : "error");
+      notify(error.message.includes("premium") ? t("זה אימון פרימיום — צור קשר כדי לפתוח אותו.") : t("לא הצלחנו להוסיף את האימון. נסה שוב."), error.message.includes("premium") ? "info" : "error");
       return false;
     }
     return true;
-  }, []);
+  }, [t]);
 
   // Copies a free published template into the patient's programs. The
   // published/free check runs server-side in the RPC.
@@ -120,13 +122,13 @@ export function useExplorePrograms() {
     async (programId: string): Promise<boolean> => {
       const { error } = await supabase.rpc("add_published_package_to_my_programs", { p_package_id: Number(programId) });
       if (error) {
-        notify(error.message.includes("premium") ? "זו תוכנית פרימיום — צור קשר כדי לפתוח אותה." : "לא הצלחנו להוסיף את התוכנית. נסה שוב.", error.message.includes("premium") ? "info" : "error");
+        notify(error.message.includes("premium") ? t("זו תוכנית פרימיום — צור קשר כדי לפתוח אותה.") : t("לא הצלחנו להוסיף את התוכנית. נסה שוב."), error.message.includes("premium") ? "info" : "error");
         return false;
       }
       await fetchPatientState();
       return true;
     },
-    [fetchPatientState]
+    [fetchPatientState, t]
   );
 
   // Only programs the patient added themselves can be removed (RLS enforces it too).
@@ -136,13 +138,13 @@ export function useExplorePrograms() {
       if (!added?.isSelfAdded) return false;
       const { error } = await supabase.from("patient_programs").delete().eq("id", added.programId);
       if (error) {
-        notify("לא הצלחנו להסיר את התוכנית. נסה שוב.", "error");
+        notify(t("לא הצלחנו להסיר את התוכנית. נסה שוב."), "error");
         return false;
       }
       await fetchPatientState();
       return true;
     },
-    [addedPrograms, fetchPatientState]
+    [addedPrograms, fetchPatientState, t]
   );
 
   // Dev-only `?data=worst|empty|one|huge` swap (break-ui stress test). Real

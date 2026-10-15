@@ -15,6 +15,7 @@ import type { HapticType } from "@/app/hooks/useHaptics";
 import type { useWorkoutSession } from "@/app/hooks/useWorkoutSession";
 import { useBackDismiss } from "@/app/hooks/useBackDismiss";
 import { confirmAction } from "@/app/components/ui/feedback";
+import { useAddress } from "@/app/hooks/useAddress";
 
 // Sticky warning strip shown for the whole duration of an admin Run/Test
 // session (both the live player and the finish flow) — amber for "this is a
@@ -75,6 +76,7 @@ function NextExerciseName({ name, onInfo }: { name: string; onInfo: () => void }
 // the player (the active-set target and the rest screen's RIR picker) — a
 // brief explainer, not a full Modal.
 function RirInfoButton() {
+  const t = useAddress();
   const [isOpen, setIsOpen] = useState(false);
   return (
     <span className="relative inline-flex normal-case tracking-normal">
@@ -88,7 +90,7 @@ function RirInfoButton() {
           <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 z-50 w-64 bg-elevated text-fg rounded-2xl shadow-elevated border border-line p-4 text-start font-normal block origin-bottom transition-[opacity,scale] duration-150 ease-out-strong starting:opacity-0 starting:scale-95">
             <span className="block font-black text-fg text-[0.8125rem] mb-1.5">מהו RIR?</span>
             <span className="block text-xs leading-relaxed">
-              Reps In Reserve — כמה חזרות נוספות היית יכול לבצע בטכניקה תקינה. לדוגמה, RIR 2 אומר שצריך לעצור את הסט כשאתה מרגיש שנשארו לך עוד 2 חזרות בלבד עד הכשל.
+              {t("Reps In Reserve — כמה חזרות נוספות היית יכול לבצע בטכניקה תקינה. לדוגמה, RIR 2 אומר שצריך לעצור את הסט כשאתה מרגיש שנשארו לך עוד 2 חזרות בלבד עד הכשל.")}
             </span>
           </span>
         </>
@@ -100,13 +102,14 @@ function RirInfoButton() {
 // Undo an accidental "next": back to the previous set's screen (only shown
 // once at least one set has been marked done).
 function BackButton({ onClick }: { onClick: () => void }) {
+  const t = useAddress();
   return (
     <button
       onClick={onClick}
-      aria-label="חזור לסט הקודם"
+      aria-label={t("חזור לסט הקודם")}
       className={`h-9 shrink-0 rounded-full px-3.5 flex items-center gap-1.5 text-fg text-xs font-bold hover:bg-line active:scale-95 transition-[scale,background-color,color,border-color] duration-150 ease-out ${GLASS}`}
     >
-      <ArrowRight size={15} /> חזור
+      <ArrowRight size={15} /> {t("חזור")}
     </button>
   );
 }
@@ -117,6 +120,7 @@ function BackButton({ onClick }: { onClick: () => void }) {
 // unconditionally alongside the patient's tabs.
 export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerProps) {
   const { lang } = useAuth();
+  const t = useAddress();
   const dir = lang === "he" ? "rtl" : "ltr";
   const [isSwapOpen, setIsSwapOpen] = useState(false);
   // Destructured: passing session.x to `ref` makes the compiler treat all of session as a ref.
@@ -330,12 +334,12 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
             {session.activeProgression && (
               <div className="mx-auto mt-3 max-w-sm bg-accent/15 border border-accent/30 rounded-2xl px-4 py-3 text-start">
                 <p className="flex items-center gap-1.5 text-sm font-extrabold text-fg">
-                  <TrendingUp size={15} className="text-accent-fg shrink-0" /> מוכן להתקדם?
+                  <TrendingUp size={15} className="text-accent-fg shrink-0" /> {t("מוכן להתקדם?")}
                 </p>
                 <p className="text-xs text-muted mt-1 leading-relaxed">
-                  {session.activeProgression.kind === "weight"
+                  {t(session.activeProgression.kind === "weight"
                     ? `2 האימונים האחרונים עם ${formatWeightKg(session.activeProgression.fromKg)} היו קלים (נשארו לך בממוצע ${Math.round(session.activeProgression.avgRir)} חזרות). נסה היום ${formatWeightKg(session.activeProgression.toKg)}.`
-                    : "2 האימונים האחרונים בתרגיל הזה היו קלים. אפשר להעלות קושי."}
+                    : "2 האימונים האחרונים בתרגיל הזה היו קלים. אפשר להעלות קושי.")}
                 </p>
                 <div className="flex flex-wrap gap-2 mt-2.5">
                   {(session.activeProgression.kind === "weight" || session.activeProgression.canAddReps) && (

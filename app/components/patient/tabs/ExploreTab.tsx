@@ -13,6 +13,7 @@ import { useAuth } from "@/app/context/AuthContext";
 import type { Exercise, ExploreProgram, Workout } from "@/app/types";
 import { notify } from "@/app/components/ui/feedback";
 import { tapHaptic } from "@/app/utils/haptics";
+import { useAddress } from "@/app/hooks/useAddress";
 
 interface ExploreTabProps {
   freePrograms: ExploreProgram[];
@@ -265,6 +266,7 @@ export default function ExploreTab({
   onAddWorkoutToDay,
 }: ExploreTabProps) {
   const { lang, loggedInPatient } = useAuth();
+  const t = useAddress();
   const [preview, setPreview] = useState<ExploreProgram | null>(null);
   const [workoutPreview, setWorkoutPreview] = useState<Workout | null>(null);
   // The "add to a day in my plan" picker inside the workout preview.
@@ -315,7 +317,7 @@ export default function ExploreTab({
 
   const contactForPremium = (title: string) => {
     if (!loggedInPatient?.email_verified) {
-      return notify("עליך לאמת את כתובת המייל שלך לפני שתוכל לרכוש תוכניות. בדוק את תיבת הדואר הנכנס שלך.", "info");
+      return notify(t("עליך לאמת את כתובת המייל שלך לפני שתוכל לרכוש תוכניות. בדוק את תיבת הדואר הנכנס שלך."), "info");
     }
     window.open(`https://wa.me/972504441094?text=${encodeURIComponent(`היי רועי, אני באפליקציה ואשמח לפתוח את: ${title}.`)}`, "_blank");
   };
@@ -372,9 +374,9 @@ export default function ExploreTab({
       {process.env.NODE_ENV === "development" && <DevDataToggle />}
       <div className="mb-6">
         <h2 className="text-2xl md:text-3xl font-black text-fg tracking-tight mb-1.5 flex items-center gap-2">
-          <Compass size={24} className="text-accent-fg" /> גלה אימונים ותוכניות
+          <Compass size={24} className="text-accent-fg" /> {t("גלה אימונים ותוכניות")}
         </h2>
-        <p className="text-muted text-[0.8125rem] md:text-sm">אימונים לביצוע מיידי ותוכניות מוכנות — הוסף לתוכנית שלך והם יופיעו במסך הבית.</p>
+        <p className="text-muted text-[0.8125rem] md:text-sm">{t("אימונים לביצוע מיידי ותוכניות מוכנות — הוסף לתוכנית שלך והם יופיעו במסך הבית.")}</p>
       </div>
 
       <ProgramCarousel<Workout> title="אימונים שאהבתי" icon={<Heart size={13} className="fill-accent text-accent-fg" />} list={likedWorkouts} render={renderWorkoutCard} />
@@ -387,7 +389,7 @@ export default function ExploreTab({
       {freePrograms.length === 0 && premiumPrograms.length === 0 && workouts.length === 0 && (
         <div className="on-light bg-surface p-10 rounded-[2rem] shadow-card text-center flex flex-col items-center gap-2">
           <Flame size={26} className="text-muted" />
-          <p className="text-muted text-sm">אין עדיין אימונים או תוכניות זמינים לעיון. חזור בקרוב!</p>
+          <p className="text-muted text-sm">{t("אין עדיין אימונים או תוכניות זמינים לעיון. חזור בקרוב!")}</p>
         </div>
       )}
 
@@ -438,7 +440,7 @@ export default function ExploreTab({
               disabled={isBusy}
               className="w-full bg-btn-primary hover:bg-btn-primary-hover active:bg-btn-primary-active text-btn-primary-fg font-black text-sm py-3.5 rounded-2xl transition-colors flex items-center justify-center gap-2 disabled:bg-disabled disabled:text-disabled-fg disabled:hover:bg-disabled"
             >
-              <Plus size={16} /> הוסף לתוכניות שלי
+              <Plus size={16} /> {t("הוסף לתוכניות שלי")}
             </button>
           ) : (
             <button
@@ -519,7 +521,7 @@ export default function ExploreTab({
                     disabled={isBusy || !pickedDate || pickedDate < todayKey}
                     className="w-full bg-btn-primary hover:bg-btn-primary-hover active:bg-btn-primary-active text-btn-primary-fg font-black text-sm py-3 rounded-2xl transition-colors disabled:bg-disabled disabled:text-disabled-fg"
                   >
-                    הוסף ללו&quot;ז
+                    {t("הוסף ללו\"ז")}
                   </button>
                 </div>
               ) : (
@@ -549,7 +551,7 @@ export default function ExploreTab({
                 disabled={isBusy || pickedDays.length === 0}
                 className="w-full bg-btn-primary hover:bg-btn-primary-hover active:bg-btn-primary-active text-btn-primary-fg font-black text-sm py-3 rounded-2xl transition-colors disabled:bg-disabled disabled:text-disabled-fg"
               >
-                {pickedDays.length === 0 ? "בחר לפחות יום אחד" : `אישור (${pickedDays.length} ${pickedDays.length === 1 ? "יום" : "ימים"})`}
+                {pickedDays.length === 0 ? t("בחר לפחות יום אחד") : `אישור (${pickedDays.length} ${pickedDays.length === 1 ? "יום" : "ימים"})`}
               </button>
               </>
               )}
@@ -566,7 +568,7 @@ export default function ExploreTab({
                 }}
                 className="w-full bg-btn-primary hover:bg-btn-primary-hover active:bg-btn-primary-active text-btn-primary-fg font-black text-sm py-3.5 rounded-2xl transition-colors flex items-center justify-center gap-2"
               >
-                <Play size={16} /> התחל עכשיו
+                <Play size={16} /> {t("התחל עכשיו")}
               </button>
               <button
                 onClick={() => {
@@ -577,7 +579,7 @@ export default function ExploreTab({
                 }}
                 className="w-full bg-transparent border-[1.5px] border-btn-secondary text-accent-fg hover:bg-btn-secondary-hover font-bold text-sm py-3 rounded-2xl transition-ui duration-150 ease-out flex items-center justify-center gap-2 active:scale-[0.97]"
               >
-                <CalendarPlus size={16} /> הוסף ללו&quot;ז שלי
+                <CalendarPlus size={16} /> {t("הוסף ללו\"ז שלי")}
               </button>
             </div>
           )}

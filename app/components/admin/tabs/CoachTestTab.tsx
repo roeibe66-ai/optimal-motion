@@ -1,13 +1,26 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
-import { AlertTriangle, FlaskConical, Loader2, RotateCcw, Send, Siren } from "lucide-react";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { AlertTriangle, Check, FlaskConical, Loader2, RotateCcw, Send, Siren } from "lucide-react";
+import RestAlertSetting from "@/app/components/patient/RestAlertSetting";
 import { supabase } from "@/app/lib/supabase";
 import { askCoach, type CoachRedFlag } from "@/app/actions/coach";
 import type { AIChatMessage, Patient } from "@/app/types";
 
 interface CoachTestTabProps {
   patients: Patient[];
+}
+
+interface CoachFlag {
+  id: string;
+  patient_id: number;
+  level: "urgent" | "emergency";
+  patient_message: string;
+  coach_reply: string;
+  is_test: boolean;
+  created_at: string;
+  seen_at: string | null;
+  patients: { full_name: string | null } | null;
 }
 
 interface ChatEntry extends AIChatMessage {
@@ -63,6 +76,75 @@ function FlagBadge({ flag }: { flag?: CoachRedFlag }) {
 // patients; here the admin talks to it as a chosen patient — the coach sees
 // that patient's real plan and sessions — or runs the fixed test set. Nothing
 // is saved and nothing reaches the patient.
+// Red flags the coach raised (coach_flags): newest first, unhandled on top.
+function CoachFlags() {
+  const [flags, setFlags] = useState<CoachFlag[]>([]);
+  const [showHandled, setShowHandled] = useState(false);
+
+  const load = useCallback(async () => {
+    const { data } = await supabase.from("coach_flags").select("*, patients(full_name)").order("created_at", { ascending: false }).limit(50);
+    setFlags((data ?? []) as CoachFlag[]);
+  }, []);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetching from Supabase, an external system, on mount
+    load();
+  }, [load]);
+
+  const markHandled = async (id: string) => {
+    await supabase.from("coach_flags").update({ seen_at: new Date().toISOString() }).eq("id", id);
+    load();
+  };
+
+  const open = flags.filter((f) => !f.seen_at);
+  const shown = showHandled ? flags : open;
+
+  return (
+    <section className="on-light bg-surface rounded-[1.75rem] border border-line mb-6">
+      <div className="flex flex-wrap items-center justify-between gap-2 px-5 py-3 border-b border-line">
+        <h2 className="text-sm font-extrabold text-fg">
+          דגלים אדומים מהמאמן {open.length > 0 && <span className="text-danger-fg">({open.length} פתוחים)</span>}
+        </h2>
+        {flags.length > open.length && (
+          <button type="button" onClick={() => setShowHandled((v) => !v)} className="text-[12px] font-bold text-muted hover:text-fg">
+            {showHandled ? "רק פתוחים" : "הצג גם שטופלו"}
+          </button>
+        )}
+      </div>
+      <RestAlertSetting title="התראה למכשיר הזה" hintOn="דגל אדום מהמאמן יגיע כהתראה, גם כשהאתר סגור." hintOff="קבל התראה כשהמאמן מזהה דגל אדום אצל מתאמן." />
+      {shown.length === 0 ? (
+        <p className="px-5 py-6 text-sm text-muted text-center">אין דגלים פתוחים.</p>
+      ) : (
+        <ul className="divide-y divide-line">
+          {shown.map((f) => (
+            <li key={f.id} className={`px-5 py-4 ${f.seen_at ? "opacity-60" : ""}`}>
+              <div className="flex flex-wrap items-center gap-2 mb-1.5">
+                <FlagBadge flag={f.level} />
+                {f.is_test && <span className="text-[10px] font-extrabold text-muted bg-surface-alt border border-line px-2 py-0.5 rounded-full">בדיקה</span>}
+                <span className="text-sm font-bold text-fg">{f.patients?.full_name ?? `#${f.patient_id}`}</span>
+                <span className="text-[11px] text-muted tabular-nums">{new Date(f.created_at).toLocaleString("he-IL", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</span>
+                {!f.seen_at && (
+                  <button type="button" onClick={() => markHandled(f.id)} className="ms-auto flex items-center gap-1 text-[12px] font-bold text-accent-fg hover:underline">
+                    <Check size={13} /> סמן כטופל
+                  </button>
+                )}
+              </div>
+              <p className="text-[13px] text-fg">
+                <span className="font-bold">המתאמן: </span>
+                {f.patient_message}
+              </p>
+              <p className="text-[12px] text-muted mt-1 line-clamp-3">
+                <span className="font-bold">המאמן: </span>
+                {f.coach_reply}
+              </p>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
 export default function CoachTestTab({ patients }: CoachTestTabProps) {
   const [patientId, setPatientId] = useState<string>("");
   const [messages, setMessages] = useState<ChatEntry[]>([]);
@@ -126,6 +208,8 @@ export default function CoachTestTab({ patients }: CoachTestTabProps) {
           המאמן האישי כבוי למתאמנים. כאן מדברים איתו בתור מתאמן שבוחרים: הוא רואה את התוכנית והאימונים האמיתיים שלו, את העקרונות ואת ספריית הידע. שום דבר לא נשמר ולא מגיע למתאמן.
         </p>
       </header>
+
+      <CoachFlags />
 
       <div className="on-light bg-surface rounded-[1.75rem] border border-line p-5 md:p-6 mb-6 flex flex-wrap items-end gap-4">
         <label className="flex-1 min-w-[14rem]">

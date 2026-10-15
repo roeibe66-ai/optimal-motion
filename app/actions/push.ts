@@ -1,9 +1,9 @@
 "use server";
 
-import webpush from "web-push";
 import { after } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { verifyCaller } from "@/app/lib/serverAuth";
+import { ensureVapid, sendPush, type PushTarget } from "@/app/lib/webPush";
 
 // Web Push for the workout player's rest timer (iPhone home-screen PWA, iOS
 // 16.4+): when a rest starts, the app schedules a rest_alarms row; this
@@ -24,19 +24,6 @@ export type ScheduleResult = { ok: true; alarmId: string } | { ok: false; error:
 export interface PushSubscriptionInput {
   endpoint: string;
   keys: { p256dh: string; auth: string };
-}
-
-let vapidReady = false;
-function ensureVapid(): boolean {
-  if (vapidReady) return true;
-  const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
-  const privateKey = process.env.VAPID_PRIVATE_KEY;
-  if (!publicKey || !privateKey) return false;
-  // The contact the push services see: the site itself, not a personal address.
-  const site = process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : "https://localhost";
-  webpush.setVapidDetails(site, publicKey, privateKey);
-  vapidReady = true;
-  return true;
 }
 
 async function ownPatientId(client: SupabaseClient, userId: string): Promise<number | null> {
@@ -96,22 +83,9 @@ async function runAlarm(client: SupabaseClient, alarmId: string, deadline: numbe
   if (!claimed) return; // cancelled in the meantime
 
   const { data: subs } = await client.from("push_subscriptions").select("endpoint, p256dh, auth").eq("patient_id", claimed.patient_id);
-  const payload = JSON.stringify({ title: claimed.title, body: claimed.body, tag: "rest-timer", url: "/" });
-  let delivered = 0;
-  for (const sub of subs ?? []) {
-    try {
-      await webpush.sendNotification({ endpoint: sub.endpoint as string, keys: { p256dh: sub.p256dh as string, auth: sub.auth as string } }, payload, {
-        TTL: 60, // a rest alert that arrives a minute late is useless
-        urgency: "high",
-      });
-      delivered++;
-    } catch (err) {
-      const status = (err as { statusCode?: number }).statusCode;
-      // 404/410: the device unsubscribed or the subscription expired.
-      if (status === 404 || status === 410) await client.from("push_subscriptions").delete().eq("endpoint", sub.endpoint);
-      else console.error("Rest alarm push failed:", status, err);
-    }
-  }
+  // A rest alert that arrives a minute late is useless.
+  const { delivered, gone } = await sendPush((subs ?? []) as PushTarget[], { title: claimed.title as string, body: claimed.body as string, tag: "rest-timer" }, 60);
+  if (gone.length) await client.from("push_subscriptions").delete().in("endpoint", gone);
   if (delivered === 0) await client.from("rest_alarms").update({ status: "failed" }).eq("id", alarmId);
 }
 

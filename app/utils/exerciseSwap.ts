@@ -55,9 +55,21 @@ export function fitsSetting(ex: Exercise, setting: SwapSetting): boolean {
 // exercise means they're at the gym; otherwise they're at home with exactly
 // the accessories this workout already uses (a kettlebell exercise → they
 // have a kettlebell, rings → rings, ...). Bodyweight is always assumed.
-export function inferSwapSetting(workoutExercises: Exercise[]): SwapSetting {
-  const gear = Array.from(new Set(workoutExercises.flatMap((ex) => ex.equipment ?? []))).filter((id) => id !== "bodyweight");
-  return { mode: workoutExercises.some(isGymOnly) ? "gym" : "home", gear };
+//
+// The onboarding answers (patients.training_location / home_equipment) fill
+// in what the workout can't show: someone who trains at the gym is at the
+// gym even on a bodyweight day, and their home gear counts even when this
+// workout doesn't use it.
+export interface SwapProfile {
+  location?: "gym" | "home" | "both" | null;
+  homeEquipment?: string[] | null;
+}
+
+export function inferSwapSetting(workoutExercises: Exercise[], profile?: SwapProfile | null): SwapSetting {
+  const workoutGear = workoutExercises.flatMap((ex) => ex.equipment ?? []);
+  const gear = Array.from(new Set([...workoutGear, ...(profile?.location !== "gym" ? (profile?.homeEquipment ?? []) : [])])).filter((id) => id !== "bodyweight");
+  const atGym = workoutExercises.some(isGymOnly) || profile?.location === "gym";
+  return { mode: atGym ? "gym" : "home", gear };
 }
 
 export interface SwapCandidate {

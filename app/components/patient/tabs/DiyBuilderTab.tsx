@@ -12,6 +12,7 @@ import { countLabel } from "@/app/utils/format";
 import { notify } from "@/app/components/ui/feedback";
 import { tapHaptic } from "@/app/utils/haptics";
 import { useBackDismiss } from "@/app/hooks/useBackDismiss";
+import { useAddress } from "@/app/hooks/useAddress";
 
 const BUILDER_EXIT_MS = 280;
 
@@ -91,6 +92,7 @@ export default function DiyBuilderTab({
   const dayNoun = isAssigned ? "אימון" : "יום";
   const dayText = (day: number) => labelForDay?.(day) ?? `${dayNoun} ${day}`;
   const { lang } = useAuth();
+  const t = useAddress();
   const [view, setView] = useState<"plan" | "picker">("plan");
   // Direction of the last plan <-> picker move, for the push animation.
   const [nav, setNav] = useState<"forward" | "back" | null>(null);
@@ -262,7 +264,7 @@ export default function DiyBuilderTab({
         className="shrink-0 flex items-center gap-1 pl-3 pr-3.5 py-2.5 rounded-full font-extrabold text-xs bg-accent/15 text-accent-fg border border-dashed border-accent/50 hover:bg-accent/25 transition-ui duration-150 ease-out active:scale-[0.97] disabled:opacity-40 disabled:pointer-events-none"
       >
         <Plus size={14} />
-        הוסף {dayNoun}
+        {t("הוסף")} {dayNoun}
       </button>
     </div>
   );
@@ -308,7 +310,7 @@ export default function DiyBuilderTab({
                 return (
                   <button
                     onClick={() => toggleExercise(ex)}
-                    aria-label={added > 0 ? "הסר מהאימון" : "הוסף לאימון"}
+                    aria-label={added > 0 ? "הסר מהאימון" : t("הוסף לאימון")}
                     aria-pressed={added > 0}
                     className={`relative w-11 h-11 rounded-full flex items-center justify-center active:scale-90 transition-ui duration-150 ease-out ${
                       added > 0 ? "bg-accent text-on-accent" : "bg-accent/15 text-accent-fg hover:bg-accent/25"
@@ -370,7 +372,7 @@ export default function DiyBuilderTab({
             </div>
             {isEditingSavedProgram && !isAssigned && (
               <button onClick={onCancelEditSavedProgram} className="shrink-0 text-[0.6875rem] font-bold text-muted hover:text-fg transition-ui duration-150 ease-out active:scale-[0.97]">
-                שמור כחדשה
+                {t("שמור כחדשה")}
               </button>
             )}
           </div>
@@ -405,7 +407,7 @@ export default function DiyBuilderTab({
                 className="mt-3.5 w-full bg-accent/8 border-[1.5px] border-dashed border-accent/40 text-accent-fg font-extrabold text-sm py-4 rounded-[1.25rem] flex items-center justify-center gap-2 hover:bg-accent/12 transition-ui duration-150 ease-out active:scale-[0.98]"
               >
                 <Plus size={17} />
-                הוסף תרגילים
+                {t("הוסף תרגילים")}
               </button>
             </>
           ) : (
@@ -414,13 +416,13 @@ export default function DiyBuilderTab({
                 <Dumbbell size={28} />
               </div>
               <h3 className="text-lg font-black text-fg">{dayText(diyActiveDay)} עדיין ריק</h3>
-              <p className="text-muted text-sm max-w-xs">בחר תרגילים מהמאגר — אפשר לחפש לפי שם או לעבור לפי קטגוריה ואזור בגוף.</p>
+              <p className="text-muted text-sm max-w-xs">{t("בחר תרגילים מהמאגר — אפשר לחפש לפי שם או לעבור לפי קטגוריה ואזור בגוף.")}</p>
               <button
                 onClick={openPicker}
                 className="mt-5 bg-btn-primary hover:bg-btn-primary-hover active:bg-btn-primary-active text-btn-primary-fg font-black text-sm px-7 py-3.5 rounded-2xl flex items-center justify-center gap-2 transition-colors shadow-lg"
               >
                 <Plus size={17} />
-                הוסף תרגילים
+                {t("הוסף תרגילים")}
               </button>
             </div>
           )}
@@ -441,7 +443,7 @@ export default function DiyBuilderTab({
             } active:scale-[0.97]`}
           >
             {justSaved ? <Check size={15} /> : <Bookmark size={15} />}
-            {justSaved ? "נשמר!" : isAssigned ? "שמור שינויים" : isEditingSavedProgram ? "עדכן תוכנית" : "שמור תוכנית"}
+            {justSaved ? "נשמר!" : isAssigned ? t("שמור שינויים") : isEditingSavedProgram ? t("עדכן תוכנית") : t("שמור תוכנית")}
           </button>
           {!isAssigned && (
           <button
@@ -449,7 +451,7 @@ export default function DiyBuilderTab({
             disabled={activeDayExercises.length === 0}
             className="flex-[1.5] bg-btn-primary text-btn-primary-fg font-black text-sm py-3.5 rounded-2xl hover:bg-btn-primary-hover active:bg-btn-primary-active transition-colors shadow-lg disabled:bg-disabled disabled:text-disabled-fg disabled:shadow-none disabled:pointer-events-none"
           >
-            התחל את יום {diyActiveDay}
+            {t("התחל")} את יום {diyActiveDay}
           </button>
           )}
         </div>

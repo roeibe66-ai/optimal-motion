@@ -15,7 +15,14 @@ const HINTS: Record<PushStatus, string> = {
 
 // Profile row: turns Web Push on/off for this device (app/utils/pushClient.ts)
 // — both the rest-end alert and the daily reminders depend on it.
-export default function RestAlertSetting() {
+interface RestAlertSettingProps {
+  // The admin console reuses this row for red-flag alerts from the AI coach.
+  title?: string;
+  hintOn?: string;
+  hintOff?: string;
+}
+
+export default function RestAlertSetting({ title = "התראות", hintOn, hintOff }: RestAlertSettingProps = {}) {
   const [status, setStatus] = useState<PushStatus | null>(null);
   const [isBusy, setIsBusy] = useState(false);
 
@@ -51,8 +58,8 @@ export default function RestAlertSetting() {
       <div className="flex items-center gap-3 min-w-0">
         <BellRing size={18} className="text-muted shrink-0" />
         <div className="text-right min-w-0">
-          <h4 className="font-bold text-fg text-sm">התראות</h4>
-          <p className="text-xs text-muted">{status ? HINTS[status] : " "}</p>
+          <h4 className="font-bold text-fg text-sm">{title}</h4>
+          <p className="text-xs text-muted">{status ? (status === "on" && hintOn) || (status === "off" && hintOff) || HINTS[status] : " "}</p>
         </div>
       </div>
       {canToggle && (
@@ -61,7 +68,7 @@ export default function RestAlertSetting() {
           type="button"
           role="switch"
           aria-checked={status === "on"}
-          aria-label="התראות"
+          aria-label={title}
           onClick={toggle}
           disabled={isBusy}
           className={`w-[46px] h-[26px] shrink-0 rounded-full transition-[background-color,scale] duration-200 ease-out relative flex items-center active:scale-95 disabled:opacity-60 ${

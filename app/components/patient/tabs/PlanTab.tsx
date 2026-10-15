@@ -37,6 +37,7 @@ import QuickLogSheet from "@/app/components/patient/workout/QuickLogSheet";
 import { getLastUsedWeights } from "@/app/utils/history";
 import { rankFactsForPatient } from "@/app/utils/factRanking";
 import { useBackDismiss } from "@/app/hooks/useBackDismiss";
+import { useAddress } from "@/app/hooks/useAddress";
 
 interface PlanTabProps {
   isLoading?: boolean; // first fetch still in flight — skeletons, not empty states
@@ -199,6 +200,7 @@ export default function PlanTab({
   onCompleteOnboarding,
 }: PlanTabProps) {
   const { loggedInPatient, lang } = useAuth();
+  const t = useAddress();
   const [isQuickLogOpen, setIsQuickLogOpen] = useState(false);
   // Direction of the last overview <-> program-detail move, for the push
   // animation. null when the detail was opened from outside (e.g. Calendar):
@@ -422,9 +424,9 @@ export default function PlanTab({
           <div className="on-light rounded-[2rem] p-7 md:p-9 bg-surface shadow-card mb-10">
             <div className="flex items-center gap-2 mb-1.5">
               <Sparkles size={18} className="text-accent-fg" />
-              <h3 className="text-lg font-black text-fg">התחל עם תוכנית פתיחה</h3>
+              <h3 className="text-lg font-black text-fg">{t("התחל עם תוכנית פתיחה")}</h3>
             </div>
-            <p className="text-muted text-sm mb-6">עדיין אין לך תוכנית. בחר תוכנית חינמית להתחלה — היא תתווסף לתוכניות שלך ותופיע כאן.</p>
+            <p className="text-muted text-sm mb-6">{t("עדיין אין לך תוכנית. בחר תוכנית חינמית להתחלה — היא תתווסף לתוכניות שלך ותופיע כאן.")}</p>
             <div className="flex flex-col gap-3">
               {starterPrograms.map((w, idx) => (
                 <button
@@ -446,7 +448,7 @@ export default function PlanTab({
           <div className="on-light rounded-[2rem] p-6 pb-9 text-center flex flex-col items-center justify-center relative overflow-hidden mb-10 bg-surface shadow-card">
             <img src={ECCO_EMPTY.noPlan} alt="" className="w-full max-w-sm aspect-[3/2] object-cover rounded-[1.5rem] mb-5" />
             <h3 className="text-xl font-black text-fg mb-2">אין תוכנית פעילה</h3>
-            <p className="text-muted text-sm">כשתשויך לך תוכנית אימון, האימון הבא שלך יופיע כאן.</p>
+            <p className="text-muted text-sm">{t("כשתשויך לך תוכנית אימון, האימון הבא שלך יופיע כאן.")}</p>
           </div>
         )}
 
@@ -469,7 +471,7 @@ export default function PlanTab({
                     onClick={() => setQuickLogFor({ entry, item })}
                     className="shrink-0 flex items-center gap-1.5 text-xs font-bold text-accent-fg bg-accent/10 hover:bg-accent/15 px-3 py-2 rounded-full active:scale-95 transition-ui duration-150 ease-out"
                   >
-                    <ClipboardCheck size={14} /> סמן כבוצע
+                    <ClipboardCheck size={14} /> {t("סמן כבוצע")}
                   </button>
                 </div>
               ))}
@@ -656,7 +658,7 @@ export default function PlanTab({
       <div className={`mb-6 flex items-center justify-between ${pushIn}`}>
         <button
           onClick={closeProgram}
-          aria-label="חזור"
+          aria-label={t("חזור")}
           className="p-2 bg-elevated shadow-card rounded-full hover:bg-line active:scale-90 transition-ui duration-150 ease-out text-fg"
         >
           {/* Back points right in RTL — same as My workouts' back button. */}
@@ -889,7 +891,7 @@ export default function PlanTab({
                     onClick={onStartWorkout}
                     className="w-full flex items-center justify-center bg-btn-primary hover:bg-btn-primary-hover active:bg-btn-primary-active text-btn-primary-fg active:scale-[0.98] transition-ui duration-150 ease-out font-black text-lg py-4 rounded-full shadow-[0_8px_24px_-4px_color-mix(in_srgb,var(--accent)_45%,transparent)]"
                   >
-                    התחל אימון
+                    {t("התחל אימון")}
                   </button>
                   {/* For a patient who trained without running the player —
                       log reps (and optional weights) straight to tracking. */}
@@ -897,7 +899,7 @@ export default function PlanTab({
                     onClick={() => setIsQuickLogOpen(true)}
                     className="w-full flex items-center justify-center gap-2 text-fg font-bold text-sm py-2 rounded-full hover:bg-line active:scale-[0.98] transition-ui duration-150 ease-out"
                   >
-                    <ClipboardCheck size={16} /> {detailItem?.doneLog ? "תעד שוב" : "כבר ביצעתי — סמן כבוצע"}
+                    <ClipboardCheck size={16} /> {detailItem?.doneLog ? t("תעד שוב") : t("כבר ביצעתי — סמן כבוצע")}
                   </button>
                   </div>
                 </div>

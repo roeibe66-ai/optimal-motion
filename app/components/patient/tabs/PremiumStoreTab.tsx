@@ -4,6 +4,7 @@ import { ArrowLeft, Check, Crown, Lock } from "lucide-react";
 import { useAuth } from "@/app/context/AuthContext";
 import { ADMIN_TAGS, DEFAULT_TRACK_GLOW, TRACK_GLOW_TINTS } from "@/app/constants/catalog";
 import { notify } from "@/app/components/ui/feedback";
+import { useAddress } from "@/app/hooks/useAddress";
 
 interface PremiumStoreTabProps {
   onGoToPlan: () => void;
@@ -11,6 +12,7 @@ interface PremiumStoreTabProps {
 
 export default function PremiumStoreTab({ onGoToPlan }: PremiumStoreTabProps) {
   const { loggedInPatient } = useAuth();
+  const t = useAddress();
 
   return (
     <div>
@@ -18,7 +20,7 @@ export default function PremiumStoreTab({ onGoToPlan }: PremiumStoreTabProps) {
         <Crown className="text-warm-fg" size={34} />
         <h2 className="text-2xl md:text-4xl font-black text-fg tracking-tight">התוכניות שלנו</h2>
         <p className="text-[0.8125rem] md:text-base text-muted leading-relaxed max-w-[280px] md:max-w-md">
-          פתח את הפוטנציאל המלא שלך. בחר מסלול ועקוב אחר ההתקדמות עם השיטה המקצועית.
+          {t("פתח את הפוטנציאל המלא שלך. בחר מסלול ועקוב אחר ההתקדמות עם השיטה המקצועית.")}
         </p>
       </div>
 
@@ -67,7 +69,7 @@ export default function PremiumStoreTab({ onGoToPlan }: PremiumStoreTabProps) {
                   <button
                     onClick={() => {
                       if (!loggedInPatient?.email_verified) {
-                        return notify("עליך לאמת את כתובת המייל שלך לפני שתוכל לרכוש תוכניות. בדוק את תיבת הדואר הנכנס שלך.", "info");
+                        return notify(t("עליך לאמת את כתובת המייל שלך לפני שתוכל לרכוש תוכניות. בדוק את תיבת הדואר הנכנס שלך."), "info");
                       }
                       window.open(
                         `https://wa.me/972504441094?text=${encodeURIComponent(`היי רועי, אני באפליקציה ואשמח לפתוח את המסלול: ${track.label}.`)}`,

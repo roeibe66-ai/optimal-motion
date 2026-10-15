@@ -12,6 +12,7 @@ import type { WorkoutLog } from "@/app/types";
 import { toDateKey } from "@/app/hooks/useWorkoutSession";
 import { countLabel } from "@/app/utils/format";
 import RestAlertSetting from "@/app/components/patient/RestAlertSetting";
+import { useAddress } from "@/app/hooks/useAddress";
 
 interface ProfileTabProps {
   workoutLogs: WorkoutLog[];
@@ -45,6 +46,7 @@ export default function ProfileTab({
   onOpenOnboarding,
 }: ProfileTabProps) {
   const { loggedInPatient, lang, setLang, handleLogout } = useAuth();
+  const t = useAddress();
   const { setting: themeSetting, setSetting: setThemeSetting } = useTheme();
 
   const userLogs = workoutLogs.filter((l) => l.patient_id === loggedInPatient?.id);
@@ -249,7 +251,7 @@ export default function ProfileTab({
                 onClick={onSaveSettings}
                 className="mt-2 bg-btn-primary hover:bg-btn-primary-hover active:bg-btn-primary-active text-btn-primary-fg px-4 py-2.5 rounded-lg text-sm font-bold active:scale-95 transition-ui duration-150 ease-out"
               >
-                שמור תזכורות
+                {t("שמור תזכורות")}
               </button>
             </div>
           </div>

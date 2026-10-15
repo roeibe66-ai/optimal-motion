@@ -282,7 +282,12 @@ export function useWorkoutSession({
   const activeAssign = activeBlockExercises[activeExInBlockIdx] as SessionExercise | undefined;
   const maxSetsInBlock = activeBlockExercises.length > 0 ? Math.max(...activeBlockExercises.map((e) => e.sets)) : 1;
 
-  const swapSetting = swapSettingOverride ?? inferSwapSetting(blocksKeys.flatMap((k) => blocksMap[k].map((se) => se.exercise)));
+  const swapSetting =
+    swapSettingOverride ??
+    inferSwapSetting(
+      blocksKeys.flatMap((k) => blocksMap[k].map((se) => se.exercise)),
+      { location: loggedInPatient?.training_location, homeEquipment: loggedInPatient?.home_equipment }
+    );
 
   // The exercise actually shown/played — a swap replaces it for this slot only.
   const displayedExercise = activeAssign ? swappedExercises[activeAssign.id] || activeAssign.exercise : undefined;

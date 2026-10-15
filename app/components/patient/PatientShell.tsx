@@ -34,6 +34,7 @@ import { notify } from "@/app/components/ui/feedback";
 import { supabase } from "@/app/lib/supabase";
 import { buildWeekPlan, DAY_NAMES, type PlannedWorkout, type ProgramQueueEntry } from "@/app/utils/programQueue";
 import { assignedEntryToDraft, draftToSessionsPayload, type AssignedProgramDraft } from "@/app/utils/assignedProgramEdit";
+import { useAddress } from "@/app/hooks/useAddress";
 
 type PatientTab = "plan" | "calendar" | "diy" | "explore" | "premium" | "profile";
 
@@ -46,6 +47,7 @@ type PatientTab = "plan" | "calendar" | "diy" | "explore" | "premium" | "profile
 // unmount it (which would otherwise reset tab/filter state under them).
 export default function PatientShell() {
   const { loggedInPatient } = useAuth();
+  const t = useAddress();
 
   const [patientTab, setPatientTab] = useState<PatientTab>("plan");
   // The DIY builder is a full-screen workspace over the shell (opened from
@@ -482,7 +484,7 @@ export default function PatientShell() {
             {loggedInPatient.patient_type === "fitness" && (
               <button onClick={() => switchTab("diy")} className={`flex flex-col items-center justify-center w-16 h-full gap-1 transition-colors ${patientTab === "diy" ? "text-accent-fg" : "text-muted hover:text-fg"}`}>
                 <Dumbbell size={22} />
-                <span className="text-[0.6875rem] font-bold">בנה אימון</span>
+                <span className="text-[0.6875rem] font-bold">{t("בנה אימון")}</span>
               </button>
             )}
 
@@ -537,7 +539,7 @@ export default function PatientShell() {
                 <div>
                   <h4 className="font-bold text-warm-fg text-sm">אנא אמת את כתובת המייל שלך</h4>
                   <p className="text-warm-fg/80 text-xs font-medium mt-1">
-                    נשלח קישור לאימות לכתובת {loggedInPatient.email}. יש לך 7 ימים לאמת את החשבון כדי שתוכל להמשיך להשתמש בפלטפורמה ולרכוש מסלולים חדשים.
+                    נשלח קישור לאימות לכתובת {loggedInPatient.email}. יש לך 7 ימים לאמת את החשבון כדי {t("שתוכל")} להמשיך להשתמש בפלטפורמה ולרכוש מסלולים חדשים.
                   </p>
                 </div>
               </div>

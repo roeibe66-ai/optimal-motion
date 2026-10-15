@@ -13,6 +13,7 @@ import type { HapticType } from "@/app/hooks/useHaptics";
 import type { Exercise, QueueLogRef } from "@/app/types";
 import { confirmAction, notify } from "@/app/components/ui/feedback";
 import { useBackDismiss } from "@/app/hooks/useBackDismiss";
+import { useAddress } from "@/app/hooks/useAddress";
 
 export interface AmrapStation {
   exercise: Exercise;
@@ -54,6 +55,7 @@ const formatClock = (ms: number) => {
 // into the unfinished round, then RPE, and logs the result to workout_logs.
 export default function AmrapPlayer({ config, triggerHaptic, onClose, onLogged, isSimulation = false }: AmrapPlayerProps) {
   const { loggedInPatient, lang } = useAuth();
+  const t = useAddress();
   const dir = lang === "he" ? "rtl" : "ltr";
   const totalMs = config.timeCapSeconds * 1000;
 
@@ -162,7 +164,7 @@ export default function AmrapPlayer({ config, triggerHaptic, onClose, onLogged, 
       <div data-toast-top className={`${shell} items-center justify-center p-6 text-center`} dir={dir}>
         <Timer size={52} className="text-accent-fg mb-5" />
         <h2 className="text-3xl md:text-4xl font-black mb-2">הזמן נגמר!</h2>
-        <p className="text-muted mb-10">בדוק את התוצאה שלך לפני השמירה.</p>
+        <p className="text-muted mb-10">{t("בדוק את התוצאה שלך לפני השמירה.")}</p>
 
         <div className="flex flex-col gap-6 w-full max-w-xs">
           <Stepper label="סבבים שהושלמו" value={rounds} onChange={setRounds} />
@@ -310,7 +312,7 @@ export default function AmrapPlayer({ config, triggerHaptic, onClose, onLogged, 
           </button>
         ) : (
           <button onClick={start} className="flex-1 bg-btn-primary hover:bg-btn-primary-hover active:bg-btn-primary-active text-btn-primary-fg font-black py-3.5 rounded-full flex items-center justify-center gap-2 transition-colors">
-            <Play size={18} /> {phase === "ready" ? "התחל" : "המשך"}
+            <Play size={18} /> {phase === "ready" ? t("התחל") : "המשך"}
           </button>
         )}
         {phase !== "ready" && (

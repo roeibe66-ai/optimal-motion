@@ -7,6 +7,7 @@ import RatingScale from "@/app/components/ui/RatingScale";
 import { getPainColor } from "@/app/utils/scoring";
 import type { HapticType } from "@/app/hooks/useHaptics";
 import type { FeedbackPhase } from "@/app/hooks/useWorkoutSession";
+import { useAddress } from "@/app/hooks/useAddress";
 
 interface PreWorkoutFlowProps {
   feedbackPhase: FeedbackPhase; // "pain_heatmap" | "pain_scale" while this flow is showing
@@ -30,6 +31,7 @@ export default function PreWorkoutFlow({
   triggerHaptic,
 }: PreWorkoutFlowProps) {
   const { lang } = useAuth();
+  const t = useAddress();
   const dir = lang === "he" ? "rtl" : "ltr";
 
   const toggleMuscle = (muscle: string) => {
@@ -46,7 +48,7 @@ export default function PreWorkoutFlow({
         <div key="pain_heatmap" className="animate-step-in w-full flex flex-col items-center">
           <Activity size={40} className="text-accent-fg mb-4" />
           <h2 className="text-3xl md:text-4xl font-black text-fg mb-2 tracking-tight">איפה כואב לך היום?</h2>
-          <p className="text-muted mb-8 max-w-sm mx-auto text-sm">סמן על גבי המודל את האזורים שמרגישים מתוחים או כואבים כרגע.</p>
+          <p className="text-muted mb-8 max-w-sm mx-auto text-sm">{t("סמן על גבי המודל את האזורים שמרגישים מתוחים או כואבים כרגע.")}</p>
 
           <div className="scheme-dark bg-elevated p-6 rounded-3xl w-full max-w-sm mb-8 flex justify-center border border-line">
             <div className="pointer-events-auto" style={{ width: "150px" }}>
