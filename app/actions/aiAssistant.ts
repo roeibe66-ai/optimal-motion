@@ -1,10 +1,17 @@
 "use server";
 
-import { generateText, type ModelMessage } from "ai";
-import { anthropic } from "@ai-sdk/anthropic";
+import Anthropic from "@anthropic-ai/sdk";
+import { loadSharedKnowledge } from "@/app/lib/coachKnowledge";
 import { verifyCaller } from "@/app/lib/serverAuth";
-import type { AIAssistantContext, AIAssistantRole, AIChatMessage } from "@/app/types";
+import { formatExerciseCatalog, formatKnowledgeCards, formatPrinciplesBlock } from "@/app/utils/coachPrompt";
+import type { AIAssistantContext, AIChatMessage } from "@/app/types";
 
+// The admin console's clinical co-pilot (AdminCoPilotDrawer). Works from the
+// same principles and knowledge cards as the patient coach
+// (app/actions/coach.ts), plus the exercise catalog with each exercise's
+// prime movers/synergists so it can count weekly sets per muscle.
+
+const MODEL = "claude-opus-5-5";
 const MAX_HISTORY_MESSAGES = 20; // keeps a long-running chat session's prompt bounded
 // The client sends the whole history, so a caller could otherwise pad it with
 // huge messages; this bounds what one call can cost.
@@ -19,22 +26,11 @@ const ADMIN_SYSTEM_PROMPT = `את/ה עמית/ה בכיר/ה - פיזיותרפ�
 - לתכנן פריודיזציה של בלוקי אימון
 - להרכיב אימונים ספציפיים לפי מקרה, כולל התאמות, פרוגרסיות ורגרסיות
 
-טון: עמית לעמית, ישיר, ברמה קלינית גבוהה, עם דגש על ביומכניקה, פיזיולוגיה של האימון ועקרונות שיקום מבוססי מחקר. רועי הוא המומחה כאן - אתה כלי עזר מקצועי לחשיבה, לא מורה שמסביר יסודות. אפשר ואף רצוי להשתמש במונחים מקצועיים ללא צורך לפשט אותם.
+העקרונות למטה הם של רועי עצמו. בנה/י לפיהם כברירת מחדל: נפח שבועי לשריר (שריר מסייע = חצי סט, לפי ספריית התרגילים), טווח חזרות, RIR, תדירות, משך אימון ובחירת תרגילים בטווח מלא. כשהוא מבקש משהו שחורג מהם, עשה/י מה שביקש וציין/י בקצרה את החריגה. כשמציעים תרגילים, רק מספריית התרגילים, בשמות שלהם.
+
+טון: עמית לעמית, ישיר, ברמה קלינית גבוהה, עם דגש על ביומכניקה, פיזיולוגיה של האימון ועקרונות שיקום מבוססי מחקר. רועי הוא המומחה כאן - אתה כלי עזר מקצועי לחשיבה, לא מורה שמסביר יסודות. אפשר ואף רצוי להשתמש במונחים מקצועיים ללא צורך לפשט אותם. מחקר מצטטים מכרטיסי הידע כשיש; ידע מחקרי אחר מותר, אבל בלי להמציא מקורות או מספרים.
 
 ענה תמיד בעברית, בקצרה ולעניין.`;
-
-const PATIENT_SYSTEM_PROMPT = `את/ה מאמן/ת אישי/ת פרימיום ומומחה/ית קליני/ת באפליקציית הכושר והשיקום Eccentric (Optimal Motion).
-
-תפקידך לעזור למטופל/ת:
-- להתאים את האימון הנוכחי שלו/ה (למשל: אם כואב לו/ה בתרגיל מסוים, להציע גרסה קלה יותר; אם קל מדי, להציע גרסה מאתגרת יותר)
-- לענות על שאלות כלליות בנושאי כושר, התאוששות והרגלי אימון
-- לתמוך ולעודד לאורך הדרך
-
-טון: אמפתי, מקצועי, שירותי ברמה פרימיום - כמו מאמן אישי יקר שבאמת אכפת לו מהמטופל.
-
-חשוב מאוד: אינך רשאי/ת לאבחן מצב רפואי או לקבוע אבחנה. אם המטופל/ת מדווח/ת על כאב חד, פתאומי, חמור, או כל תסמין מדאיג - המלץ/י בעדינות אך בבירור לפנות ישירות לרועי או לאיש מקצוע רפואי, ואל תנסה/י לפתור זאת לבד.
-
-ענה תמיד בעברית.`;
 
 function formatContextBlock(contextData?: AIAssistantContext): string {
   if (!contextData) return "";
@@ -58,40 +54,54 @@ function formatContextBlock(contextData?: AIAssistantContext): string {
 
   if (contextData.notes) lines.push(`הערות נוספות: ${contextData.notes}`);
 
-  return lines.length > 0 ? `\n\n--- הקשר נוכחי ---\n${lines.join("\n")}` : "";
+  return lines.length > 0 ? `--- מה שעל המסך עכשיו ---\n${lines.join("\n")}` : "";
 }
 
 /**
- * Dual-mode chat brain for the AI co-pilot: `role` selects the persona
- * (elite clinical peer for the admin, premium coach for the patient) and
- * `contextData` grounds the reply in whatever the caller already has on
- * screen (a plan being built, assigned exercises, recent logs). Safe to call
- * directly from a client component, with the caller's Supabase access token:
- * the admin persona requires an admin, the patient persona any signed-in user.
+ * Admin-only chat for the AI co-pilot. `contextData` grounds the reply in
+ * whatever the admin has on screen (e.g. the plan being built). Safe to call
+ * directly from a client component, with the caller's Supabase access token.
  */
-export async function chatWithAssistant(
-  accessToken: string,
-  messages: AIChatMessage[],
-  role: AIAssistantRole,
-  contextData?: AIAssistantContext
-): Promise<AIAssistantResult> {
+export async function chatWithAssistant(accessToken: string, messages: AIChatMessage[], contextData?: AIAssistantContext): Promise<AIAssistantResult> {
   if (messages.length === 0) return { ok: false, error: "לא נשלחה הודעה" };
   if (messages.some((m) => typeof m.content !== "string" || m.content.length > MAX_MESSAGE_CHARS)) return { ok: false, error: "ההודעה ארוכה מדי" };
   const caller = await verifyCaller(accessToken);
-  if (!caller || (role === "admin" && !caller.isAdmin)) return { ok: false, error: "אין הרשאה" };
+  if (!caller?.isAdmin) return { ok: false, error: "אין הרשאה" };
 
-  const basePrompt = role === "admin" ? ADMIN_SYSTEM_PROMPT : PATIENT_SYSTEM_PROMPT;
-  const systemPrompt = basePrompt + formatContextBlock(contextData);
-  const coreMessages: ModelMessage[] = messages.slice(-MAX_HISTORY_MESSAGES).map((m) => ({ role: m.role, content: m.content }));
+  const knowledge = await loadSharedKnowledge(caller.client);
+  const screenContext = formatContextBlock(contextData);
 
   try {
-    const { text } = await generateText({
-      model: anthropic("claude-sonnet-5"),
-      system: systemPrompt,
-      messages: coreMessages,
+    const response = await new Anthropic().beta.messages.create({
+      model: MODEL,
+      max_tokens: 16000, // thinking counts toward it: a full program used ~8k on thinking alone
+      betas: ["server-side-fallback-2026-07-01"],
+      fallbacks: "default",
+      // "medium" spent the whole budget thinking through weekly volume on a
+      // 4-day program (16k tokens, 145 s, no answer); "low" answered in ~75 s
+      // with the volume table right.
+      output_config: { effort: "low" },
+      system: [
+        { type: "text", text: ADMIN_SYSTEM_PROMPT },
+        { type: "text", text: formatPrinciplesBlock(knowledge.principles) },
+        { type: "text", text: formatKnowledgeCards(knowledge.facts) },
+        { type: "text", text: formatExerciseCatalog(knowledge.exercises), cache_control: { type: "ephemeral" } },
+        ...(screenContext ? [{ type: "text" as const, text: screenContext }] : []),
+      ],
+      messages: messages.slice(-MAX_HISTORY_MESSAGES).map((m) => ({ role: m.role, content: m.content })),
     });
+    if (response.stop_reason === "refusal") return { ok: false, error: "העוזר סירב לבקשה. נסה לנסח אחרת." };
+    if (response.stop_reason === "max_tokens") return { ok: false, error: "התשובה נקטעה. נסה לבקש פחות בבת אחת." };
+    const text = response.content
+      .filter((b) => b.type === "text")
+      .map((b) => (b as { text: string }).text)
+      .join("\n")
+      .trim();
+    if (!text) return { ok: false, error: "לא התקבלה תשובה מהעוזר" };
     return { ok: true, reply: text };
   } catch (err) {
+    if (err instanceof Anthropic.RateLimitError) return { ok: false, error: "העוזר עמוס כרגע. נסה שוב בעוד רגע." };
+    if (err instanceof Anthropic.APIError) return { ok: false, error: `שגיאת API (${err.status}): ${err.message}` };
     return { ok: false, error: err instanceof Error ? err.message : "שגיאה בתקשורת עם העוזר החכם" };
   }
 }

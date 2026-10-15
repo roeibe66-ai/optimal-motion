@@ -2,13 +2,15 @@
 
 import { useCallback, useState } from "react";
 import { chatWithAssistant } from "@/app/actions/aiAssistant";
+import { askCoach } from "@/app/actions/coach";
 import { supabase } from "@/app/lib/supabase";
 import type { AIAssistantContext, AIAssistantRole, AIChatMessage } from "@/app/types";
 
-// Shared state/send logic behind both chat surfaces (the admin builder's
-// co-pilot drawer and the patient's coach sheet) — each renders its own
-// themed UI on top of this, but neither duplicates the message-array/
-// loading/error handling.
+// Shared state/send logic behind both chat surfaces (the admin co-pilot
+// drawer and the patient's coach sheet) — each renders its own themed UI on
+// top of this, but neither duplicates the message-array/loading/error
+// handling. "admin" -> chatWithAssistant (contextData = what's on screen);
+// "patient" -> askCoach, which loads the patient's own data on the server.
 export function useAIAssistantChat(role: AIAssistantRole, contextData?: AIAssistantContext) {
   const [messages, setMessages] = useState<AIChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -25,7 +27,8 @@ export function useAIAssistantChat(role: AIAssistantRole, contextData?: AIAssist
       setError("");
 
       const { data } = await supabase.auth.getSession();
-      const result = await chatWithAssistant(data.session?.access_token ?? "", nextMessages, role, contextData);
+      const token = data.session?.access_token ?? "";
+      const result = role === "admin" ? await chatWithAssistant(token, nextMessages, contextData) : await askCoach(token, nextMessages);
       setIsLoading(false);
       if (!result.ok) {
         setError(result.error);

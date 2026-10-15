@@ -1,5 +1,5 @@
 import "server-only";
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 // Server actions are public endpoints: anyone who loads the site can find
 // their ids in the client bundle and call them with any arguments. Every
@@ -8,6 +8,9 @@ import { createClient } from "@supabase/supabase-js";
 export interface VerifiedCaller {
   userId: string;
   isAdmin: boolean;
+  // Queries as this user, under RLS — never more than they could read
+  // themselves from the browser.
+  client: SupabaseClient;
 }
 
 export async function verifyCaller(accessToken: string): Promise<VerifiedCaller | null> {
@@ -22,5 +25,5 @@ export async function verifyCaller(accessToken: string): Promise<VerifiedCaller 
   if (userError || !userData.user) return null;
   // is_admin() checks patients.role for auth.uid().
   const { data: isAdmin, error } = await userClient.rpc("is_admin");
-  return { userId: userData.user.id, isAdmin: !error && isAdmin === true };
+  return { userId: userData.user.id, isAdmin: !error && isAdmin === true, client: userClient };
 }

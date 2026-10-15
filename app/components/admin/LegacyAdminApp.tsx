@@ -43,6 +43,7 @@ import AdminSidebar from "@/app/components/admin/AdminSidebar";
 import ExerciseNoteEditor from "@/app/components/ExerciseNoteEditor";
 import AdminCoPilotDrawer from "@/app/components/admin/AdminCoPilotDrawer";
 import CoachKnowledgeTab from "@/app/components/admin/tabs/CoachKnowledgeTab";
+import CoachTestTab from "@/app/components/admin/tabs/CoachTestTab";
 import WorkoutBuilderTab from "@/app/components/admin/tabs/WorkoutBuilderTab";
 import ProgramLibraryTab from "@/app/components/admin/tabs/ProgramLibraryTab";
 import PatientProgramMeta from "@/app/components/admin/PatientProgramMeta";
@@ -983,7 +984,6 @@ export default function LegacyAdminApp() {
         {/* ----- הבונה החכם המבוסס ימים ----- */}
         {adminTab === "builder" && (
           <div className="max-w-7xl mx-auto h-full flex flex-col">
-            <AdminCoPilotDrawer contextData={builderCoPilotContext} />
             <header className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
               <h1 className="text-2xl md:text-3xl font-black text-fg tracking-tight flex items-center gap-3">
                 <Wand2 className="text-accent-fg" size={28} /> בונה חכם & תבניות
@@ -1661,6 +1661,8 @@ export default function LegacyAdminApp() {
 
         {adminTab === "knowledge" && <CoachKnowledgeTab />}
 
+        {adminTab === "coach_test" && <CoachTestTab patients={patients} />}
+
         {adminTab === "research" && (
           <div className="max-w-6xl mx-auto">
             <header className="mb-10 hidden md:block">
@@ -1866,6 +1868,14 @@ export default function LegacyAdminApp() {
           </div>
         )}
       </main>
+
+      {/* The clinical co-pilot, on every tab: it follows Roei's principles
+          (app/actions/aiAssistant.ts) and, in the smart builder, also sees
+          the plan on screen. Not on the tabs that have their own assistant
+          (the workout builder) or chat (the coach test). */}
+      {adminTab !== "workout_builder" && adminTab !== "coach_test" && (
+        <AdminCoPilotDrawer contextData={adminTab === "builder" ? builderCoPilotContext : undefined} />
+      )}
     </div>
   );
 }

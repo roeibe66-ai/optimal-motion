@@ -6,6 +6,11 @@ import { LIGHT_SCHEME_QUERY, THEME_COLORS, themeInitScript } from "@/app/lib/the
 
 const rubik = Rubik({ subsets: ["hebrew", "latin"] });
 
+// Server actions run inside this segment's function. The AI ones are slow:
+// a full program from the admin co-pilot takes ~75 s, the research agent
+// 20-40 s — past the platform's short default.
+export const maxDuration = 300;
+
 export const metadata: Metadata = {
   title: "Eccentric — Optimal Motion",
   description: "Eccentric · Optimal Motion — קליניקה לשיקום וכושר",

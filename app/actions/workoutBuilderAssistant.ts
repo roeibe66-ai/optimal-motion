@@ -2,6 +2,8 @@
 
 import Anthropic from "@anthropic-ai/sdk";
 import { verifyCaller } from "@/app/lib/serverAuth";
+import { loadSharedKnowledge } from "@/app/lib/coachKnowledge";
+import { formatPrinciplesBlock } from "@/app/utils/coachPrompt";
 import type { WorkoutFormat, WorkoutItem } from "@/app/types";
 
 // AI co-pilot for the admin workout builder (WorkoutBuilderTab): answers
@@ -122,7 +124,11 @@ export async function askWorkoutBuilderAssistant(
   catalog: BuilderCatalogEntry[],
 ): Promise<BuilderAssistantResult> {
   if (history.length === 0 || history[history.length - 1].role !== "user") return { ok: false, error: "לא נשלחה הודעה" };
-  if (!(await verifyCaller(accessToken))?.isAdmin) return { ok: false, error: "אין הרשאה" };
+  const caller = await verifyCaller(accessToken);
+  if (!caller?.isAdmin) return { ok: false, error: "אין הרשאה" };
+  // Roei's principles (volume, 6-12 reps, RIR, session length...) — the
+  // same ones the patient coach and the co-pilot follow.
+  const { principles } = await loadSharedKnowledge(caller.client);
 
   const catalogIds = new Set(catalog.map((e) => e.id));
   const client = new Anthropic();
@@ -136,6 +142,7 @@ export async function askWorkoutBuilderAssistant(
       output_config: { effort: "medium", format: { type: "json_schema", schema: OUTPUT_SCHEMA } },
       system: [
         { type: "text", text: SYSTEM_PROMPT },
+        { type: "text", text: `${formatPrinciplesBlock(principles)}\n\nבנה לפי העקרונות האלה כברירת מחדל. כשרועי מבקש משהו שחורג מהם, עשה מה שביקש וציין את החריגה במשפט ב-reply.` },
         // Catalog last in system so the whole stable prefix is cached.
         { type: "text", text: `--- קטלוג התרגילים (id | עברית | English | קטגוריות | ציוד | שריר מטרה) ---\n${formatCatalog(catalog)}`, cache_control: { type: "ephemeral" } },
       ],

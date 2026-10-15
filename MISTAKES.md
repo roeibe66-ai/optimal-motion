@@ -22,6 +22,12 @@ the rule going forward. No fix commentary, no praise, no filler.
 **Why:** React state set in a handler isn't visible until the next render; reading it right after `setX` reads the old value.
 **Rule:** when a handler both sets state and immediately uses the value, pass the value along as an argument (`submitFinalFeedback(null, num)`) — never read the state variable back in the same tick.
 
+## 2026-10-15 — AI answers cut off: thinking used the whole max_tokens
+
+**What happened:** testing the admin co-pilot on "build a 4-day program with weekly volume per muscle", the reply came back as one cut-off line. At `effort: "medium"` the model spent 7.9k of `max_tokens: 8000` on thinking; at 16000 it spent 15.8k (145 s) and still never answered.
+**Why:** thinking tokens count toward `max_tokens`, and a volume-counting task invites exhaustive thinking. The code also didn't check `stop_reason === "max_tokens"`, so a truncated answer looked like a real one.
+**Rule:** every AI call checks `stop_reason` for `max_tokens` and says so. Leave real headroom in `max_tokens`, and lower `effort` for heavy calculation tasks; test long requests locally before shipping.
+
 ## 2026-08 — Reps/sets fallback used string concatenation instead of numeric addition
 
 **What happened:** `handleFinishAction`'s fallback for reps used string concatenation

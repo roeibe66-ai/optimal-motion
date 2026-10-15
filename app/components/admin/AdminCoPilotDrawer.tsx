@@ -9,9 +9,9 @@ interface AdminCoPilotDrawerProps {
   contextData?: AIAssistantContext;
 }
 
-// Floating trigger + slide-in side drawer, mounted only within the builder
-// tab (see adminTab === "builder" in LegacyAdminApp.tsx) so it always has
-// the in-progress plan's contextData to ground its answers in. Not the same
+// Floating trigger + slide-in side drawer, mounted on every admin tab (see
+// LegacyAdminApp.tsx); contextData is the in-progress plan when the smart
+// builder tab is open, else undefined. Not the same
 // thing as the "עוזר קליני AI" prompt bar already in that tab — that one is
 // a keyword-matched exercise-filter mock (handleAiGenerate); this is a real
 // chat backed by app/actions/aiAssistant.ts.
@@ -64,7 +64,7 @@ export default function AdminCoPilotDrawer({ contextData }: AdminCoPilotDrawerPr
         <div className="flex-1 overflow-y-auto p-5 space-y-4">
           {messages.length === 0 && (
             <div className="text-center text-muted text-xs font-medium mt-10 px-4 leading-relaxed">
-              שאל אותי על בניית פרוטוקול, פריודיזציה של בלוקים, או התאמת תרגילים למקרה שאתה בונה כרגע.
+              אני עובד לפי העקרונות שלך. שאל אותי על בניית תוכנית או פרוטוקול, פריודיזציה, נפח שבועי לשריר, או התאמת תרגילים למקרה מסוים.
             </div>
           )}
           {messages.map((m, i) => (
