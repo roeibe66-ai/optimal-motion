@@ -85,7 +85,9 @@ function demo(): PlanFixture {
     ],
     // Last Saturday's log, filed under Sunday's slot (done on another day).
     workoutLogs: [{ ...log(1, 6, "חיזוק רגליים"), program_id: "חיזוק רגליים", program_week: 1, session_key: "0" }, log(3, 7, "חיזוק רגליים"), log(5, 5, "מוביליטי"), log(8, 8, "חיזוק רגליים"), log(10, 7, "חיזוק רגליים")],
-    curatedFacts: [fact("f1", "אימון אקסצנטרי מפחית כאב בגיד הברך תוך 12 שבועות.", "מטא-אנליזה של 14 מחקרים מצאה שיפור משמעותי בכאב ובתפקוד.", "Eccentric training for patellar tendinopathy", 2021, "https://example.com/paper")],
+    curatedFacts: [
+      { ...fact("f1", "אימון אקסצנטרי מפחית כאב בגיד הברך תוך 12 שבועות.", "מטא-אנליזה של 14 מחקרים מצאה שיפור משמעותי בכאב ובתפקוד.", "Eccentric training for patellar tendinopathy", 2021, "https://example.com/paper"), takeaway_he: "כדאי לשלב ירידה איטית בתרגילי רגליים כשהגיד בברך רגיש", tags: ["knee", "tendon"] },
+    ],
     starterPrograms: [],
   };
 }

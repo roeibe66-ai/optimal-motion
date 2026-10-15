@@ -5,6 +5,7 @@ import { anthropic } from "@ai-sdk/anthropic";
 import { z } from "zod";
 import { XMLParser } from "fast-xml-parser";
 import { verifyCaller } from "@/app/lib/serverAuth";
+import { KNOWLEDGE_AREA_TAGS, KNOWLEDGE_TOPIC_TAGS } from "@/app/constants/knowledgeTags";
 import type { ResearchFinding } from "@/app/types";
 
 const SEMANTIC_SCHOLAR_SEARCH_URL = "https://api.semanticscholar.org/graph/v1/paper/search";
@@ -613,12 +614,51 @@ function errorMessage(err: unknown): string {
 }
 // -------------------------------------------------------------------------
 
+const KNOWLEDGE_TAG_IDS = [...KNOWLEDGE_AREA_TAGS, ...KNOWLEDGE_TOPIC_TAGS].map((t) => t.id) as [string, ...string[]];
+const KNOWLEDGE_TAG_GUIDE = [...KNOWLEDGE_AREA_TAGS, ...KNOWLEDGE_TOPIC_TAGS].map((t) => `${t.id} = ${t.label}`).join(", ");
+
 const paperFactSchema = z.object({
-  summaryHe: z.string().describe("תקציר קצר ופשוט של מסקנת המחקר, 2-3 משפטים, בעברית ברורה להדיוט"),
+  summaryHe: z.string().describe("תקציר קצר ופשוט של מסקנת המחקר, 2-3 משפטים, בעברית ברורה להדיוט, כולל מגבלה מרכזית כשהראיות חלשות"),
   didYouKnowHe: z
     .string()
-    .describe("כותרת 'הידעת' קצרה: משפט אחד בלבד, עד 12 מילים, בעברית, הממצא המרכזי בלבד — בלי הקדמות, בלי 'מחקר מצא ש', בלי פרטים משניים"),
+    .describe("כותרת 'הידעת' קצרה: משפט אחד בלבד, עד 12 מילים, בעברית, טענה אחת — בלי 'הידעת', בלי הקדמות, בלי 'מחקר מצא ש', בלי פרטים משניים"),
+  takeawayHe: z
+    .string()
+    .describe("'מה זה אומר בשבילך': משפט מעשי אחד בלבד, עד 15 מילים, שנובע ישירות מהממצא. כללי, בלי פנייה במין ('כדאי', 'אפשר'), לא ייעוץ רפואי אישי, בלי סייגים (הם בסיכום) ובלי מספרים שלא מופיעים בתקציר"),
+  tags: z.array(z.enum(KNOWLEDGE_TAG_IDS)).describe(`1-4 תגיות מהרשימה: ${KNOWLEDGE_TAG_GUIDE}. אזור גוף רק אם המחקר באמת עוסק בו`),
 });
+
+// A second, independent pass over each written fact: does every claim
+// match the abstract, is the wording as strong as the evidence (and no
+// stronger), and does it follow the headline rules. Returns the corrected
+// texts plus what it changed, so the admin sees why.
+const reviewSchema = z.object({
+  issues: z.array(z.string()).describe("בעיות שמצאת ותיקנת, כל אחת במשפט קצר בעברית (למשל: 'הכותרת הציגה קשר סיבתי ממחקר תצפיתי'). מערך ריק אם הכול תקין"),
+  didYouKnowHe: z.string().describe("הכותרת המתוקנת (או המקורית, אם תקינה)"),
+  takeawayHe: z.string().describe("המשפט המעשי המתוקן (או המקורי)"),
+  summaryHe: z.string().describe("הסיכום המתוקן (או המקורי)"),
+});
+
+const REVIEW_SYSTEM_PROMPT = `את/ה עורך/ת מדעי/ת קפדני/ת של עובדות "הידעת" באפליקציית כושר ושיקום. קיבלת תקציר של מאמר, נתוני איכות הראיות, וטיוטה בעברית. בדוק/י:
+1. כל טענה ומספר בטיוטה מופיעים בתקציר. מספר שלא מופיע — הסר/י.
+2. עוצמת הניסוח מתאימה לראיות: ממחקר תצפיתי, פיילוט, מדגם קטן (פחות מכ-50) או מחקר בודד לא כותבים "מונע", "גורם", "מוכח", אלא "קשור ל", "עשוי", "נמצא ש". הכללה מאוכלוסייה מסוימת (למשל ספרינטרים) לכלל המתאמנים אסורה בלי סייג.
+3. הכותרת: טענה אחת, עד 12 מילים, בלי "הידעת", בלי "מחקר מצא".
+4. המשפט המעשי: משפט אחד בלבד, עד 15 מילים, נובע מהממצא, לא חזק ממנו, ואינו ייעוץ רפואי אישי. את הסייגים משאירים לסיכום.
+5. בלי פנייה במין: לא "אתה"/"את", אלא ניסוח כללי ("כדאי לשלב", "אפשר לשקול").
+6. עברית תקנית וטבעית, בלי מילים באנגלית.
+תקן/י רק מה שצריך. אם הכול תקין, החזר/י את הטקסטים כפי שהם ו-issues ריק.`;
+
+// Numbers (2+ digits, or with %) in the Hebrew texts that the abstract
+// doesn't contain — a deterministic backstop to the reviewer, never fixed
+// automatically, only flagged.
+function numbersMissingFromAbstract(texts: string[], abstract: string): string[] {
+  const norm = (n: string) => n.replace(",", ".");
+  const inAbstract = new Set((abstract.match(/\d+(?:[.,]\d+)?/g) ?? []).map(norm));
+  const found = texts.flatMap((t) => t.match(/\d+(?:[.,]\d+)?%?/g) ?? []);
+  return Array.from(new Set(found.filter((n) => (n.endsWith("%") || n.replace(/\D/g, "").length >= 2) && !inAbstract.has(norm(n.replace("%", ""))))));
+}
+
+const stripDidYouKnowPrefix = (text: string) => text.replace(/^\s*הידעת\s*[?？]?\s*[-–:,]?\s*/, "").trim();
 
 const RESEARCH_AGENT_SYSTEM_PROMPT = `את/ה עוזר/ת מחקר עבור אפליקציית כושר ושיקום פיזיותרפי בשם Eccentric (Optimal Motion).
 
@@ -636,11 +676,13 @@ const RESEARCH_AGENT_SYSTEM_PROMPT = `את/ה עוזר/ת מחקר עבור אפ
 - אל תטען בשום צורה שהמאמר פורסם בכתב עת "Q1" או בעל "Impact Factor" גבוה - מידע כזה לא סופק לך ואסור להמציא אותו.
 - כתוב בעברית תקנית וטבעית בלבד, ללא מילים באנגלית.
 - כשהמאמר עונה ישירות על ההיבט הספציפי שנשאל, כותרת ה"הידעת" חייבת לענות עליו עצמו. אם התשובה היא מספר או טווח שמופיע בתקציר (למשל משך בשניות), מותר ורצוי לכלול אותו, כי הוא הממצא המרכזי ולא פרט משני. אם התקציר לא מציין ערך מדויק, אל תמציא אחד, וכתוב במפורש מה כן נמצא.
-- אל תכתוב "הידעת" שנשמעת כמו תשובה לשאלה אם המאמר לא באמת עונה עליה.`;
+- אל תכתוב "הידעת" שנשמעת כמו תשובה לשאלה אם המאמר לא באמת עונה עליה.
+- עוצמת הניסוח לפי הראיות שתקבל (סוג המחקר והמדגם): ממחקר תצפיתי, פיילוט, מדגם קטן או מחקר בודד כותבים "קשור ל", "עשוי", "נמצא ש", ולא "מונע", "גורם" או "מוכח". אל תכליל מאוכלוסייה מסוימת לכלל המתאמנים בלי סייג, ובסיכום ציין את המגבלה המרכזית.
+- המשפט "מה זה אומר בשבילך" הוא מעשי וכללי (מה כדאי לעשות או לדעת באימון), לא חזק מהממצא, ולא ייעוץ רפואי אישי.`;
 
 async function summarizePaperInHebrew(
   paper: { title: string; abstract: string; year: number | null },
-  context: { userRequest: string; focusEn: string; aspectEn: string; matchLevel: "direct" | "related" | undefined }
+  context: { userRequest: string; focusEn: string; aspectEn: string; matchLevel: "direct" | "related" | undefined; evidenceHe: string }
 ) {
   const matchInstructions =
     context.matchLevel === undefined
@@ -652,7 +694,17 @@ async function summarizePaperInHebrew(
     model: anthropic(SUMMARY_MODEL),
     schema: paperFactSchema,
     system: RESEARCH_AGENT_SYSTEM_PROMPT,
-    prompt: `הבקשה המקורית של המשתמש: ${context.userRequest}\nהשאלה (באנגלית): ${context.focusEn}\nההיבט הספציפי שנשאל: ${context.aspectEn}\n\n${matchInstructions}\n\nכותרת: ${paper.title}\nשנת פרסום: ${paper.year ?? "לא ידוע"}\nתקציר: ${paper.abstract}`,
+    prompt: `הבקשה המקורית של המשתמש: ${context.userRequest}\nהשאלה (באנגלית): ${context.focusEn}\nההיבט הספציפי שנשאל: ${context.aspectEn}\n\n${matchInstructions}\n\nאיכות הראיות: ${context.evidenceHe}\n\nכותרת: ${paper.title}\nשנת פרסום: ${paper.year ?? "לא ידוע"}\nתקציר: ${paper.abstract}`,
+  });
+  return object;
+}
+
+async function reviewFact(abstract: string, evidenceHe: string, draft: { didYouKnowHe: string; takeawayHe: string; summaryHe: string }) {
+  const { object } = await generateObject({
+    model: anthropic(SUMMARY_MODEL),
+    schema: reviewSchema,
+    system: REVIEW_SYSTEM_PROMPT,
+    prompt: `איכות הראיות: ${evidenceHe}\n\nתקציר המאמר:\n${abstract}\n\nהטיוטה:\nכותרת: ${draft.didYouKnowHe}\nמה זה אומר בשבילך: ${draft.takeawayHe}\nסיכום: ${draft.summaryHe}`,
   });
   return object;
 }
@@ -727,18 +779,39 @@ export async function generateResearchFacts(accessToken: string, query: string):
   const settled = await Promise.allSettled(
     papers.map(async (paper): Promise<ResearchFinding> => {
       const matchLevel: "direct" | "related" | undefined = relevance ? ((relevance.get(paper) ?? 0) >= DIRECT_MATCH_SCORE ? "direct" : "related") : undefined;
-      const facts = await summarizePaperInHebrew(
-        { title: paper.title, abstract: paper.abstract, year: paper.year },
-        { userRequest: trimmed, focusEn: plan.focusEn, aspectEn: plan.aspectEn, matchLevel }
-      );
       const tier = classifyEvidence(paper);
       const evidenceLabelHe = EVIDENCE_LABEL_HE[tier];
+      const sampleSizeHe = extractSampleSizeHe(paper.abstract, tier === "meta_analysis" || tier === "systematic_review");
+      const isPilot = /\bpilot\b|\bfeasibility\b/i.test(`${paper.title} ${paper.abstract}`);
+      const evidenceHe = [evidenceLabelHe, sampleSizeHe ? `מדגם: ${sampleSizeHe}` : "מדגם לא צוין", isPilot ? "מחקר פיילוט" : null].filter(Boolean).join(" · ");
+      const draft = await summarizePaperInHebrew(
+        { title: paper.title, abstract: paper.abstract, year: paper.year },
+        { userRequest: trimmed, focusEn: plan.focusEn, aspectEn: plan.aspectEn, matchLevel, evidenceHe }
+      );
+      // The reviewer is a safety net, not a gate: if it fails, the draft
+      // goes through and says it wasn't reviewed.
+      let facts = { didYouKnowHe: draft.didYouKnowHe, takeawayHe: draft.takeawayHe, summaryHe: draft.summaryHe };
+      const reviewNotes: string[] = [];
+      try {
+        const reviewed = await reviewFact(paper.abstract, evidenceHe, facts);
+        facts = { didYouKnowHe: reviewed.didYouKnowHe, takeawayHe: reviewed.takeawayHe, summaryHe: reviewed.summaryHe };
+        reviewNotes.push(...reviewed.issues.map((issue) => `תוקן: ${issue}`));
+      } catch (err) {
+        console.error("Research fact review failed:", err);
+        reviewNotes.push("הבדיקה מול התקציר נכשלה. כדאי לקרוא בעיון לפני פרסום.");
+      }
+      const missing = numbersMissingFromAbstract([facts.didYouKnowHe, facts.takeawayHe], paper.abstract);
+      if (missing.length > 0) reviewNotes.push(`לבדוק: המספרים ${missing.join(", ")} לא מופיעים בתקציר`);
+      if (isPilot) reviewNotes.push("מחקר פיילוט: ראיות ראשוניות בלבד");
       return {
         paperTitle: paper.title,
         paperUrl: paper.url,
         year: paper.year,
         summaryHe: facts.summaryHe,
-        didYouKnowHe: facts.didYouKnowHe,
+        didYouKnowHe: stripDidYouKnowPrefix(facts.didYouKnowHe),
+        takeawayHe: facts.takeawayHe,
+        tags: draft.tags,
+        reviewNotes,
         // Computed deterministically from the same publicationTypes/keyword
         // signals selectTopPapers ranked on — not LLM-generated, so it can't
         // drift from what actually determined this paper's rank.
@@ -748,7 +821,7 @@ export async function generateResearchFacts(accessToken: string, query: string):
         citationCount: paper.citationCount,
         venue: paper.venue,
         isTopTierJournal: isTopTierJournal(paper.venue),
-        sampleSizeHe: extractSampleSizeHe(paper.abstract, tier === "meta_analysis" || tier === "systematic_review"),
+        sampleSizeHe,
         matchLevel,
       };
     })

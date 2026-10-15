@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type UIEvent } from "react";
+import { useEffect, useState, type UIEvent } from "react";
 import {
   ArrowDown,
   Check,
@@ -35,6 +35,7 @@ import AnatomyHeatmap from "@/app/components/AnatomyHeatmap";
 import { ExerciseMediaPlayer } from "@/app/components/ExerciseMedia";
 import QuickLogSheet from "@/app/components/patient/workout/QuickLogSheet";
 import { getLastUsedWeights } from "@/app/utils/history";
+import { rankFactsForPatient } from "@/app/utils/factRanking";
 import { useBackDismiss } from "@/app/hooks/useBackDismiss";
 
 interface PlanTabProps {
@@ -118,6 +119,8 @@ function WeekStrip({ queue, onPick }: { queue: ProgramQueueEntry[]; onPick: (ent
 // the badge + hero line by default. "קרא עוד" reveals the summary and
 // citation via a CSS grid-template-rows transition (0fr -> 1fr), which
 // animates to the content's natural height without measuring it in JS.
+const SEEN_FACTS_KEY = "optimalMotionSeenFacts";
+
 function CuratedFactCard({ fact }: { fact: CuratedFact }) {
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -132,6 +135,9 @@ function CuratedFactCard({ fact }: { fact: CuratedFact }) {
       {/* Clamped to 4 lines until "קרא עוד": facts are LLM-drafted and some
           run 250+ characters (9 lines at this size). */}
       <p className={`relative text-fg text-[1.375rem] md:text-[1.625rem] font-black leading-snug ${isExpanded ? "" : "line-clamp-4"}`}>{fact.did_you_know_he}</p>
+      {/* The practical line ("מה זה אומר בשבילך") — always visible, it's the
+          part a patient can act on. */}
+      {fact.takeaway_he && <p className="relative -mt-1 text-fg text-[0.9375rem] font-semibold leading-snug">← {fact.takeaway_he}</p>}
 
       <div className={`relative grid transition-[grid-template-rows] duration-300 ease-out ${isExpanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}>
         {/* inert while collapsed: hidden text and its link stay out of the
@@ -212,6 +218,37 @@ export default function PlanTab({
   // Which "Did you know?" card is snapped into view — the carousel has no
   // scrollbar, so a "2/5" counter is the only cue that more facts exist.
   const [factIndex, setFactIndex] = useState(0);
+  // Facts already shown to this viewer (a per-device convenience, so
+  // localStorage). A snapshot read once after mount — not in a useState
+  // initializer (hydration mismatch, see MISTAKES.md) — so the order doesn't
+  // shift under the patient's finger as cards get marked seen below.
+  const [seenFactIds, setSeenFactIds] = useState<Set<string>>(() => new Set());
+  useEffect(() => {
+    try {
+      const stored = JSON.parse(localStorage.getItem(SEEN_FACTS_KEY) ?? "[]");
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- reading browser storage, an external system, once after mount
+      if (Array.isArray(stored)) setSeenFactIds(new Set(stored.map(String)));
+    } catch {
+      // Storage blocked or corrupt: every fact counts as unseen.
+    }
+  }, []);
+  const orderedFacts = rankFactsForPatient(curatedFacts, {
+    painAreas: workoutLogs.slice(0, 10).flatMap((log) => (log.pain_areas ? log.pain_areas.split(",") : [])),
+    programMuscles: weekFilteredExercises.flatMap((pe) => pe.exercise.prime_movers ?? []),
+    patientType: loggedInPatient?.patient_type,
+    seenIds: seenFactIds,
+  });
+  const visibleFactId = orderedFacts[Math.min(factIndex, orderedFacts.length - 1)]?.id;
+  useEffect(() => {
+    if (!visibleFactId) return;
+    try {
+      const stored = JSON.parse(localStorage.getItem(SEEN_FACTS_KEY) ?? "[]");
+      const ids: string[] = Array.isArray(stored) ? stored.map(String) : [];
+      if (!ids.includes(visibleFactId)) localStorage.setItem(SEEN_FACTS_KEY, JSON.stringify([...ids, visibleFactId].slice(-200)));
+    } catch {
+      // Not remembering is fine.
+    }
+  }, [visibleFactId]);
   const onFactsScroll = (e: UIEvent<HTMLDivElement>) => {
     const el = e.currentTarget;
     setFactIndex(Math.round(Math.abs(el.scrollLeft) / el.clientWidth));
@@ -466,7 +503,7 @@ export default function PlanTab({
               )}
             </div>
             <div onScroll={onFactsScroll} className="flex items-start gap-4 overflow-x-auto no-scrollbar snap-x snap-mandatory -mx-1 px-1">
-              {curatedFacts.map((fact) => (
+              {orderedFacts.map((fact) => (
                 <CuratedFactCard key={fact.id} fact={fact} />
               ))}
             </div>

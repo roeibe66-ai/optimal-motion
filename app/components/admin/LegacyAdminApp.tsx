@@ -44,6 +44,7 @@ import ExerciseNoteEditor from "@/app/components/ExerciseNoteEditor";
 import AdminCoPilotDrawer from "@/app/components/admin/AdminCoPilotDrawer";
 import CoachKnowledgeTab from "@/app/components/admin/tabs/CoachKnowledgeTab";
 import CoachTestTab from "@/app/components/admin/tabs/CoachTestTab";
+import { KNOWLEDGE_TAG_LABELS } from "@/app/constants/knowledgeTags";
 import WorkoutBuilderTab from "@/app/components/admin/tabs/WorkoutBuilderTab";
 import ProgramLibraryTab from "@/app/components/admin/tabs/ProgramLibraryTab";
 import PatientProgramMeta from "@/app/components/admin/PatientProgramMeta";
@@ -52,6 +53,7 @@ import ExerciseLibraryTab from "@/app/components/admin/tabs/ExerciseLibraryTab";
 import { formatAdminDate, formatRepTarget, formatWeightKg, getExerciseName, parseRepInput, parseWeightInput } from "@/app/utils/format";
 import { getAIInsight } from "@/app/utils/scoring";
 import { generateResearchFacts, type ResearchInterpretation } from "@/app/actions/researchAgent";
+import { suggestResearchTopics, type ResearchTopicSuggestion } from "@/app/actions/researchTopics";
 import type { AIAssistantContext, CuratedFact, PatientProgram, ResearchFinding } from "@/app/types";
 import { SELF_BUILT_PROGRAM_NAME } from "@/app/hooks/useWorkoutSession";
 import { MAX_CATALOG_TITLE_LENGTH } from "@/app/utils/validation";
@@ -138,6 +140,9 @@ export default function LegacyAdminApp() {
   const [isResearchLoading, setIsResearchLoading] = useState(false);
   const [researchError, setResearchError] = useState("");
   const [researchInterpretation, setResearchInterpretation] = useState<ResearchInterpretation | null>(null);
+  // "הצע לי נושאים" (app/actions/researchTopics.ts).
+  const [topicSuggestions, setTopicSuggestions] = useState<ResearchTopicSuggestion[]>([]);
+  const [isSuggestingTopics, setIsSuggestingTopics] = useState(false);
   // Tracks which of the current researchResults have been saved this
   // session, keyed by paperUrl (findings have no id until they become a
   // curated_facts row) — lets the "Save to App" button flip to a disabled
@@ -331,6 +336,22 @@ export default function LegacyAdminApp() {
     }
   };
 
+  const handleSuggestTopics = async () => {
+    if (isSuggestingTopics) return;
+    setIsSuggestingTopics(true);
+    setResearchError("");
+    try {
+      const { data } = await supabase.auth.getSession();
+      const result = await suggestResearchTopics(data.session?.access_token ?? "");
+      if (result.ok) setTopicSuggestions(result.topics);
+      else setResearchError(result.error);
+    } catch (err) {
+      setResearchError(`ההצעות נכשלו: ${err instanceof Error ? err.message : "שגיאה לא ידועה"}`);
+    } finally {
+      setIsSuggestingTopics(false);
+    }
+  };
+
   const handleResearchSearch = (e: any) => {
     e.preventDefault();
     runResearchSearch(researchQuery);
@@ -344,6 +365,8 @@ export default function LegacyAdminApp() {
         year: finding.year,
         summary_he: finding.summaryHe,
         did_you_know_he: finding.didYouKnowHe,
+        takeaway_he: finding.takeawayHe || null,
+        tags: finding.tags ?? [],
         evidence_grade: finding.evidenceGrade,
       },
     ]);
@@ -1704,28 +1727,56 @@ export default function LegacyAdminApp() {
                 </button>
               </form>
 
-              <div className="mt-5 flex flex-wrap gap-2">
-                {[
-                  "האם מתיחות לפני ריצה מונעות פציעות?",
-                  "פחד מתנועה אחרי פציעת גב",
-                  "כמה חזרות צריך כדי לבנות שריר אחרי גיל 60?",
-                  "does sleep affect tendon healing",
-                ].map((example) => (
-                  <button
-                    key={example}
-                    type="button"
-                    disabled={isResearchLoading}
-                    onClick={() => {
-                      setResearchQuery(example);
-                      runResearchSearch(example);
-                    }}
-                    className="on-light text-[12px] font-bold text-muted bg-surface-alt border border-line px-3.5 py-2 rounded-full hover:border-accent/40 hover:text-accent-fg transition-colors disabled:opacity-50"
-                    dir="auto"
-                  >
-                    {example}
-                  </button>
-                ))}
+              <div className="mt-5 flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleSuggestTopics}
+                  disabled={isSuggestingTopics || isResearchLoading}
+                  className="text-[12px] font-black text-on-accent bg-accent px-3.5 py-2 rounded-full flex items-center gap-1.5 hover:brightness-110 transition-colors disabled:opacity-50"
+                >
+                  {isSuggestingTopics ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}
+                  {isSuggestingTopics ? "חושב על נושאים..." : topicSuggestions.length > 0 ? "הצע נושאים אחרים" : "הצע לי נושאים"}
+                </button>
+                {topicSuggestions.length === 0 &&
+                  ["האם מתיחות לפני ריצה מונעות פציעות?", "כמה זמן לנוח בין סטים לבניית שריר?", "does sleep affect tendon healing"].map((example) => (
+                    <button
+                      key={example}
+                      type="button"
+                      disabled={isResearchLoading}
+                      onClick={() => {
+                        setResearchQuery(example);
+                        runResearchSearch(example);
+                      }}
+                      className="on-light text-[12px] font-bold text-muted bg-surface-alt border border-line px-3.5 py-2 rounded-full hover:border-accent/40 hover:text-accent-fg transition-colors disabled:opacity-50"
+                      dir="auto"
+                    >
+                      {example}
+                    </button>
+                  ))}
               </div>
+
+              {/* Suggestions grounded in what patients train and where they
+                  report pain — one click searches it. */}
+              {topicSuggestions.length > 0 && (
+                <ul className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-2">
+                  {topicSuggestions.map((topic) => (
+                    <li key={topic.questionHe}>
+                      <button
+                        type="button"
+                        disabled={isResearchLoading}
+                        onClick={() => {
+                          setResearchQuery(topic.questionHe);
+                          runResearchSearch(topic.questionHe);
+                        }}
+                        className="on-light w-full text-start bg-surface-alt border border-line rounded-2xl px-4 py-3 hover:border-accent/40 transition-colors disabled:opacity-50"
+                      >
+                        <span className="block text-[13px] font-bold text-fg">{topic.questionHe}</span>
+                        <span className="block text-[11px] text-muted mt-0.5">{topic.whyHe}</span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
 
               {isResearchLoading && <p className="mt-4 text-[12px] text-muted">מנתב את השאלה למאגרי PubMed ו-Semantic Scholar, מסנן לפי רלוונטיות ומסכם — בדרך כלל 20–40 שניות.</p>}
 
@@ -1790,8 +1841,27 @@ export default function LegacyAdminApp() {
                               )}
                             </div>
                             <p className="text-fg font-bold text-[15px] leading-relaxed mt-3">{finding.didYouKnowHe}</p>
+                            {finding.takeawayHe && <p className="text-fg text-[13px] leading-relaxed mt-1.5">← {finding.takeawayHe}</p>}
+                            {finding.tags?.length > 0 && (
+                              <div className="flex flex-wrap gap-1 mt-2">
+                                {finding.tags.map((t) => (
+                                  <span key={t} className="bg-accent/10 text-accent-fg text-[10px] font-bold px-2 py-0.5 rounded-full">
+                                    {KNOWLEDGE_TAG_LABELS[t] ?? t}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
                           </div>
                           <p className="text-muted text-[13px] leading-relaxed flex-1">{finding.summaryHe}</p>
+                          {/* What the reviewer pass changed against the abstract, and
+                              deterministic warnings (see reviewFact in researchAgent.ts). */}
+                          {finding.reviewNotes?.length > 0 && (
+                            <ul className="bg-warning/10 border border-warning/30 rounded-2xl p-3 text-[11px] text-fg space-y-1">
+                              {finding.reviewNotes.map((note) => (
+                                <li key={note}>{note}</li>
+                              ))}
+                            </ul>
+                          )}
                           {/* Quality signals — all from the source metadata or the
                               abstract text (see researchAgent.ts), never generated. */}
                           <dl className="on-light grid grid-cols-2 gap-x-4 gap-y-2 bg-surface-alt border border-line rounded-2xl p-3.5 text-[11px]">

@@ -318,6 +318,11 @@ export interface ResearchFinding {
   year: number | null;
   summaryHe: string;
   didYouKnowHe: string;
+  takeawayHe: string; // "מה זה אומר בשבילך" — one practical line
+  tags: string[]; // app/constants/knowledgeTags.ts ids, suggested by the writer
+  // What the reviewer pass changed, plus deterministic warnings (numbers not
+  // in the abstract, pilot study). Empty = nothing to flag.
+  reviewNotes: string[];
   // Both computed deterministically in researchAgent.ts from the paper's
   // publication-type/keyword signals (the same ones its evidence-hierarchy
   // ranking used) — not LLM-generated, so they can't drift from what
