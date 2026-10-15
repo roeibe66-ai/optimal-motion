@@ -7,6 +7,15 @@ import type { HapticType } from "@/app/hooks/useHaptics";
 import { getExerciseName, parseWeightInput } from "@/app/utils/format";
 import { getLastUsedWeights, parsePerformance } from "@/app/utils/history";
 import { suggestProgression, type ProgressionSuggestion } from "@/app/utils/progression";
+import { extendRestAlarm, startRestAlarm, stopRestAlarm } from "@/app/utils/pushClient";
+
+// Seconds before the end of a rest at which an on-screen app cancels the
+// push alarm (see the rest countdown below).
+const REST_ALARM_CANCEL_LEAD_S = 2;
+
+// A wall-clock deadline `seconds` from now. Module-level: only ever called
+// from effects, but the React Compiler flags Date.now() inside the hook body.
+const deadlineAfter = (seconds: number) => Date.now() + seconds * 1000;
 import type { DiyExercise, Exercise, PatientExercise, QueueLogRef, SessionPerformanceEntry, WorkoutFormat, WorkoutLog } from "@/app/types";
 import { confirmAction, notify } from "@/app/components/ui/feedback";
 import { getDiyPrescription } from "@/app/utils/diy";
@@ -513,13 +522,34 @@ export function useWorkoutSession({
     };
   }, [isWorkoutMode]);
 
+  // Every way out of a rest (end, skip, back, close) drops its push alarm.
+  useEffect(() => {
+    if (!isResting) stopRestAlarm();
+  }, [isResting]);
+
   // Rest-between-sets countdown.
   useEffect(() => {
     let interval: ReturnType<typeof setInterval> | undefined;
     if (isResting && restTimer > 0) {
-      // A new rest (every exit clears the deadline) starts its clock here.
-      if (restEndsAt.current === null) restEndsAt.current = Date.now() + restTimer * 1000;
-      interval = setInterval(() => restEndsAt.current !== null && setRestTimer(secondsUntil(restEndsAt.current)), 1000);
+      // A new rest (every exit clears the deadline) starts its clock here —
+      // and its push alarm, in case the app is in the background when it
+      // ends (app/utils/pushClient.ts; a no-op without notifications on).
+      if (restEndsAt.current === null) {
+        restEndsAt.current = deadlineAfter(restTimer);
+        if (!isSimulation) {
+          const next = nextExercise ? getExerciseName(nextExercise.exercise, lang) : null;
+          startRestAlarm(restEndsAt.current, "המנוחה נגמרה 💪", next ? `הבא: ${next}` : "חוזרים לאימון");
+        }
+      }
+      interval = setInterval(() => {
+        if (restEndsAt.current === null) return;
+        const left = secondsUntil(restEndsAt.current);
+        setRestTimer(left);
+        // On screen at the end: the app announces it itself, so the push
+        // is cancelled just before it would go out. In the background this
+        // never runs (iOS suspends the page) and the push arrives.
+        if (left <= REST_ALARM_CANCEL_LEAD_S && document.visibilityState === "visible") stopRestAlarm();
+      }, 1000);
     }
     // eslint-disable-next-line react-hooks/set-state-in-effect -- reacting to the countdown's own terminal value, not syncing external state
     else if (isResting && restTimer <= 0) handleEndRest();
@@ -692,7 +722,10 @@ export function useWorkoutSession({
 
   const addRestTime = () => {
     triggerHaptic("light");
-    if (restEndsAt.current !== null) restEndsAt.current += 15_000;
+    if (restEndsAt.current !== null) {
+      restEndsAt.current += 15_000;
+      extendRestAlarm(restEndsAt.current);
+    }
     setRestTimer((prev) => prev + 15);
     setRestTimerTotal((prev) => prev + 15);
   };
@@ -937,6 +970,7 @@ export function useWorkoutSession({
   };
 
   const closeWorkout = () => {
+    stopRestAlarm();
     restEndsAt.current = null;
     exEndsAt.current = null;
     setSetHistory([]);

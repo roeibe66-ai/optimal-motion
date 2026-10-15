@@ -1,12 +1,13 @@
 "use client";
 
-import { useMemo, useState, type SetStateAction } from "react";
+import { useEffect, useMemo, useState, type SetStateAction } from "react";
 import { AlertCircle, CalendarDays, Compass, Crown, Dumbbell, Home as HomeIcon } from "lucide-react";
 import { useAuth } from "@/app/context/AuthContext";
 import { useHaptics } from "@/app/hooks/useHaptics";
 import { useReminders } from "@/app/hooks/useReminders";
 import { usePatientData } from "@/app/hooks/usePatientData";
 import { useCuratedFacts } from "@/app/hooks/useCuratedFacts";
+import { registerServiceWorker } from "@/app/utils/pushClient";
 import { usePlanSelection } from "@/app/hooks/usePlanSelection";
 import { useWorkoutSession } from "@/app/hooks/useWorkoutSession";
 import { useSavedPrograms } from "@/app/hooks/useSavedPrograms";
@@ -69,6 +70,12 @@ export default function PatientShell() {
   const savedProgramsData = useSavedPrograms();
   const explore = useExplorePrograms();
   const { curatedFacts } = useCuratedFacts();
+
+  // The service worker only shows Web Push notifications (public/sw.js);
+  // registered here so a device that turned rest alerts on keeps receiving them.
+  useEffect(() => {
+    registerServiceWorker();
+  }, []);
 
   // A live session is always one sitting, so it only ever runs the DIY
   // builder's currently-active day — the rest of the multi-day draft just

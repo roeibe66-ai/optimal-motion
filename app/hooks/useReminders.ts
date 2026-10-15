@@ -52,10 +52,17 @@ export function useReminders(triggerHaptic: (type: HapticType) => void) {
 
       if (todayTime && currentTimeStr === todayTime && lastNotificationDate !== todayDateStr) {
         if ("Notification" in window && Notification.permission === "granted") {
-          new Notification("הגיע הזמן להתאמן! 💪", {
-            body: "התוכנית שלך באופטימל מושן מחכה לך. בוא נתחיל!",
-            icon: "/icon.png",
-          });
+          const title = "הגיע הזמן להתאמן! 💪";
+          const options = { body: "התוכנית שלך באופטימל מושן מחכה לך. בוא נתחיל!", icon: "/icon.png" };
+          // iPhone has no `new Notification()`: it goes through the service
+          // worker (public/sw.js) when one is registered.
+          const viaWorker = "serviceWorker" in navigator ? navigator.serviceWorker.getRegistration() : Promise.resolve(undefined);
+          viaWorker
+            .then((registration) => {
+              if (registration) return registration.showNotification(title, options);
+              new Notification(title, options);
+            })
+            .catch(() => {});
           setLastNotificationDate(todayDateStr);
         }
       }

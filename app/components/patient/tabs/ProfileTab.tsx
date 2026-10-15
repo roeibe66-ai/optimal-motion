@@ -11,6 +11,7 @@ import type { HapticType } from "@/app/hooks/useHaptics";
 import type { WorkoutLog } from "@/app/types";
 import { toDateKey } from "@/app/hooks/useWorkoutSession";
 import { countLabel } from "@/app/utils/format";
+import RestAlertSetting from "@/app/components/patient/RestAlertSetting";
 
 interface ProfileTabProps {
   workoutLogs: WorkoutLog[];
@@ -175,6 +176,8 @@ export default function ProfileTab({
           </div>
 
           {/* Note: the mockup drops the "edit personal details" row entirely (Premium/Invoices/Notifications/Haptics/Logout only) — removed to match; it was a non-functional placeholder with no onClick either way, so nothing behavioral is lost. */}
+
+          <RestAlertSetting />
 
           {/* הגדרות התראות באזור האישי */}
           <div className="flex flex-col px-5 py-4 border-b border-line gap-4">
