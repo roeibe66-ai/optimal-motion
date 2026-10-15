@@ -6,6 +6,7 @@ import { useAuth } from "@/app/context/AuthContext";
 import type { HapticType } from "@/app/hooks/useHaptics";
 import { getExerciseName, parseWeightInput } from "@/app/utils/format";
 import { getLastUsedWeights, parsePerformance } from "@/app/utils/history";
+import { suggestProgression, type ProgressionSuggestion } from "@/app/utils/progression";
 import type { DiyExercise, Exercise, PatientExercise, QueueLogRef, SessionPerformanceEntry, WorkoutFormat, WorkoutLog } from "@/app/types";
 import { confirmAction, notify } from "@/app/components/ui/feedback";
 import { getDiyPrescription } from "@/app/utils/diy";
@@ -201,6 +202,11 @@ export function useWorkoutSession({
   // a weight logs none, and one who does doesn't retype it every set.
   const [pendingSetWeight, setPendingSetWeight] = useState("");
   const [lastWeightByAssign, setLastWeightByAssign] = useState<Record<string, string>>({});
+  // "Ready to progress" (app/utils/progression.ts), computed once per slot
+  // when it first comes up (null = nothing to suggest), and what the patient
+  // chose. Session-local, like repAdjustments.
+  const [progressionByAssign, setProgressionByAssign] = useState<Record<string, ProgressionSuggestion | null>>({});
+  const [progressionChoice, setProgressionChoice] = useState<Record<string, "accepted" | "dismissed">>({});
 
   // Admin Run/Test feedback: a brief confirmation whenever a write would
   // normally happen but got skipped because isSimulation is true — so the
@@ -447,6 +453,19 @@ export function useWorkoutSession({
       setPendingSetWeight(
         lastWeightByAssign[activeAssign.id] ?? (previousWeight !== null ? String(previousWeight) : prescribedWeight > 0 ? String(prescribedWeight) : "")
       );
+      // Not for a swapped-in exercise: the prescription (target reps/RIR)
+      // belongs to the original one.
+      if (!(activeAssign.id in progressionByAssign) && displayedExercise?.id === activeAssign.exercise.id) {
+        const suggestion = suggestProgression({
+          exerciseId: activeAssign.exercise.id,
+          equipment: activeAssign.exercise.equipment,
+          isTime: !!activeAssign.is_time,
+          targetTopReps: Number(activeAssign.reps_max) > Number(activeAssign.reps) ? Number(activeAssign.reps_max) : Number(activeAssign.reps) || 0,
+          targetRir: activeAssign.rir ?? null,
+          logs: workoutLogs,
+        });
+        setProgressionByAssign((prev) => ({ ...prev, [activeAssign.id]: suggestion }));
+      }
       exEndsAt.current = null;
       setExTimer(null);
       setIsExTimerRunning(false);
@@ -747,6 +766,34 @@ export function useWorkoutSession({
     }));
   };
 
+  // The pending "ready to progress" offer for this slot, until the patient
+  // answers it; and the weight they agreed to, shown as today's target.
+  const activeProgression = activeAssign && !progressionChoice[activeAssign.id] ? (progressionByAssign[activeAssign.id] ?? null) : null;
+  const acceptedSuggestion = activeAssign && progressionChoice[activeAssign.id] === "accepted" ? progressionByAssign[activeAssign.id] : null;
+  const progressionTargetKg = acceptedSuggestion?.kind === "weight" ? acceptedSuggestion.toKg : null;
+
+  // Weight: becomes this slot's prefilled weight for every remaining set.
+  // Challenge: the same +2 reps as "make it harder" (only offered when that
+  // stays within 12; the player offers a harder variation instead).
+  const acceptProgression = () => {
+    if (!activeAssign || !activeProgression) return;
+    if (activeProgression.kind === "challenge" && !activeProgression.canAddReps) return;
+    triggerHaptic("light");
+    if (activeProgression.kind === "weight") {
+      const kg = String(activeProgression.toKg);
+      setLastWeightByAssign((prev) => ({ ...prev, [activeAssign.id]: kg }));
+      setPendingSetWeight(kg);
+    } else {
+      makeHarder();
+    }
+    setProgressionChoice((prev) => ({ ...prev, [activeAssign.id]: "accepted" }));
+  };
+
+  const dismissProgression = () => {
+    if (!activeAssign) return;
+    setProgressionChoice((prev) => ({ ...prev, [activeAssign.id]: "dismissed" }));
+  };
+
   // Rest-screen editing of the set just finished: both update the displayed
   // value and patch the sessionPerformance entry handleFinishAction already
   // pushed for it (there's no rest screen after the workout's very last set,
@@ -788,7 +835,11 @@ export function useWorkoutSession({
     updateLastPerformanceEntry({ weight_kg: parseWeightInput(value) ?? undefined });
   };
 
-  const submitFinalFeedback = async (postPain: number | null = null) => {
+  // `rpe` is passed in rather than read from rpeScore: the fitness path calls
+  // this in the same handler that sets rpeScore, so the state would still be
+  // the previous render's null (it was, for every fitness workout until
+  // 2026-10-15).
+  const submitFinalFeedback = async (postPain: number | null = null, rpe: number | null = rpeScore) => {
     if (!loggedInPatient) return;
 
     if (isSimulation) {
@@ -831,7 +882,7 @@ export function useWorkoutSession({
       {
         patient_id: loggedInPatient.id,
         category: isDiyMode ? (adHocSession?.title ?? "אימון עצמאי") : selectedCategory,
-        rpe: rpeScore,
+        rpe,
         pain_before: loggedInPatient.patient_type === "fitness" ? null : painBefore,
         pain_after: loggedInPatient.patient_type === "fitness" ? null : postPain,
         pain_areas: selectedPainAreas.length > 0 ? selectedPainAreas.join(",") : null,
@@ -856,7 +907,7 @@ export function useWorkoutSession({
   // (fitness patients skip the post-workout pain scale entirely).
   const handleRpeSelect = (num: number) => {
     setRpeScore(num);
-    if (loggedInPatient?.patient_type === "fitness") submitFinalFeedback(null);
+    if (loggedInPatient?.patient_type === "fitness") submitFinalFeedback(null, num);
     else setFeedbackPhase("pain_after");
   };
 
@@ -899,6 +950,8 @@ export function useWorkoutSession({
     setPendingSetRir(null);
     setPendingSetWeight("");
     setLastWeightByAssign({});
+    setProgressionByAssign({});
+    setProgressionChoice({});
     setViewingExInfo(null);
     setIsExTimerRunning(false);
     setSelectedPainAreas([]);
@@ -972,6 +1025,10 @@ export function useWorkoutSession({
     // doesn't suggest something the patient is already doing today.
     sessionExerciseIds: new Set([...blocksKeys.flatMap((k) => blocksMap[k].map((se) => se.exercise.id)), ...Object.values(swappedExercises).map((e) => e.id)]),
     makeHarder,
+    activeProgression,
+    progressionTargetKg,
+    acceptProgression,
+    dismissProgression,
     makeEasier,
     attachSwipeStage,
     onTouchStart,

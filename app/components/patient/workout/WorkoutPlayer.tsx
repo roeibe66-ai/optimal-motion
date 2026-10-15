@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowLeftRight, ArrowRight, Dumbbell, FlaskConical, Info, Minus, Pause, Play, Plus, SkipForward, Trophy, X } from "lucide-react";
+import { ArrowLeftRight, ArrowRight, Dumbbell, TrendingUp, FlaskConical, Info, Minus, Pause, Play, Plus, SkipForward, Trophy, X } from "lucide-react";
 import { useAuth } from "@/app/context/AuthContext";
 import ExerciseInfoModal from "@/app/components/patient/workout/ExerciseInfoModal";
 import SwapExerciseSheet from "@/app/components/patient/workout/SwapExerciseSheet";
@@ -288,15 +288,21 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
               // The prescribed weight belongs to the original exercise — not shown after a swap.
               const isSwapped = !!ex && !!session.activeAssign && ex.id !== session.activeAssign.exercise.id;
               const target = isSwapped ? null : formatWeightKg(session.activeAssign?.weight_kg);
-              if (!previous && !target) return null;
+              const today = formatWeightKg(session.progressionTargetKg);
+              if (!previous && !target && !today) return null;
               return (
                 <div className="flex flex-wrap items-center justify-center gap-2 mt-2">
+                  {today && (
+                    <span className="inline-flex items-center gap-1.5 bg-accent text-on-accent text-xs font-extrabold px-3 py-1 rounded-full">
+                      <TrendingUp size={12} /> היום: {today}
+                    </span>
+                  )}
                   {previous && (
                     <span className="inline-flex items-center gap-1.5 bg-accent/15 text-accent-fg text-xs font-extrabold px-3 py-1 rounded-full">
                       <Dumbbell size={12} /> פעם קודמת: {previous}
                     </span>
                   )}
-                  {target && target !== previous && (
+                  {target && target !== previous && target !== today && (
                     <span className="inline-flex items-center gap-1.5 bg-fg/10 text-muted text-xs font-bold px-3 py-1 rounded-full">
                       {previous ? `יעד: ${target}` : <><Dumbbell size={12} /> {target}</>}
                     </span>
@@ -304,6 +310,45 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
                 </div>
               );
             })()}
+            {/* "Ready to progress" (app/utils/progression.ts): the last two
+                sessions of this exercise were too easy. Asked once per
+                exercise per workout. */}
+            {session.activeProgression && (
+              <div className="mx-auto mt-3 max-w-sm bg-accent/15 border border-accent/30 rounded-2xl px-4 py-3 text-start">
+                <p className="flex items-center gap-1.5 text-sm font-extrabold text-fg">
+                  <TrendingUp size={15} className="text-accent-fg shrink-0" /> מוכן להתקדם?
+                </p>
+                <p className="text-xs text-muted mt-1 leading-relaxed">
+                  {session.activeProgression.kind === "weight"
+                    ? `2 האימונים האחרונים עם ${formatWeightKg(session.activeProgression.fromKg)} היו קלים (נשארו לך בממוצע ${Math.round(session.activeProgression.avgRir)} חזרות). נסה היום ${formatWeightKg(session.activeProgression.toKg)}.`
+                    : "2 האימונים האחרונים בתרגיל הזה היו קלים. אפשר להעלות קושי."}
+                </p>
+                <div className="flex flex-wrap gap-2 mt-2.5">
+                  {(session.activeProgression.kind === "weight" || session.activeProgression.canAddReps) && (
+                    <button
+                      onClick={session.acceptProgression}
+                      className="bg-btn-primary text-btn-primary-fg text-xs font-black px-3.5 py-2 rounded-xl active:scale-95 transition-[scale] duration-150 ease-out"
+                    >
+                      {session.activeProgression.kind === "weight" ? `כן, ${formatWeightKg(session.activeProgression.toKg)}` : "עוד 2 חזרות"}
+                    </button>
+                  )}
+                  {session.activeProgression.kind === "challenge" && (
+                    <button
+                      onClick={() => {
+                        session.dismissProgression();
+                        setIsSwapOpen(true);
+                      }}
+                      className="bg-surface text-fg border border-line text-xs font-bold px-3.5 py-2 rounded-xl active:scale-95 transition-[scale] duration-150 ease-out"
+                    >
+                      תרגיל קשה יותר
+                    </button>
+                  )}
+                  <button onClick={session.dismissProgression} className="text-xs font-bold text-muted px-2 py-2 active:scale-95 transition-[scale] duration-150 ease-out">
+                    לא היום
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       ) : (

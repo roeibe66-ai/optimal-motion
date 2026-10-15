@@ -30,11 +30,12 @@ function se(exercise: Exercise, block: string, opts: Partial<SessionExercise> = 
 }
 
 // A past log carrying per-set weights, so the "פעם קודמת" chip has data.
-function weightLog(entries: { exercise_id: string; weight_kg: number }[]): WorkoutLog {
+// `reps`/`rir` per entry make it count toward the "ready to progress" offer.
+function weightLog(entries: { exercise_id: string; weight_kg: number; reps?: number; rir?: number }[], daysAgo = 3): WorkoutLog {
   return {
-    id: "pl-1", patient_id: "-1", category: "אימון קודם", rpe: 7, pain_before: null, pain_after: null,
-    created_at: new Date(Date.now() - 3 * 864e5).toISOString(),
-    performance_data: JSON.stringify(entries.map((e, i) => ({ ...e, set_number: i + 1, reps: 8 }))),
+    id: `pl-${daysAgo}`, patient_id: "-1", category: "אימון קודם", rpe: 7, pain_before: null, pain_after: null,
+    created_at: new Date(Date.now() - daysAgo * 864e5).toISOString(),
+    performance_data: JSON.stringify(entries.map((e, i) => ({ reps: 8, ...e, set_number: i + 1 }))),
   };
 }
 
@@ -53,7 +54,11 @@ function demo(): PlayerFixture {
   return {
     title: "חיזוק רגליים",
     exercises: [se(squat, "A", { reps: 10, weight_kg: 16, rir: 2, notes: "ירידה איטית, 3 שניות למטה", patient_notes: "להתחיל עם 14 ק״ג" }), se(rdl, "B", { reps: 8, notes: "ימין בלבד · ברך מעט כפופה" }), se(plank, "C", { is_time: true, reps: 45 })],
-    workoutLogs: [weightLog([{ exercise_id: "d1", weight_kg: 14 }])],
+    // Two easy sessions of the squat at 14 kg (10 reps, RIR 4) -> offers 16 kg.
+    workoutLogs: [
+      weightLog([{ exercise_id: "d1", weight_kg: 14, reps: 10, rir: 4 }, { exercise_id: "d1", weight_kg: 14, reps: 10, rir: 4 }]),
+      weightLog([{ exercise_id: "d1", weight_kg: 14, reps: 10, rir: 3 }, { exercise_id: "d1", weight_kg: 14, reps: 10, rir: 4 }], 6),
+    ],
     catalogExtras: [
       ex("s1", "סקוואט במשקל גוף", { difficulty_level: "intermediate", equipment: ["bodyweight"], synergists: ["gluteal", "adductors"] }),
       ex("s2", "לאנג' אחורי עם קטלבל", { difficulty_level: "intermediate", equipment: ["kettlebell"], synergists: ["gluteal"] }),
