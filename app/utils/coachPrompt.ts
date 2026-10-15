@@ -113,7 +113,7 @@ export function formatPatientContext(ctx: CoachPatientContext): string {
   if (ctx.logs.length === 0) {
     lines.push("", "אימונים אחרונים: אין עדיין.");
   } else {
-    lines.push("", "אימונים אחרונים (החדש קודם). RPE 1-10: 2 קליל, 4 נוח, 6 מאתגר, 8 קשה מאוד, 10 גמרתי:");
+    lines.push("", "אימונים אחרונים (החדש קודם). RPE 1-10: 2 קליל, 4 נוח, 6 מאתגר, 8 קשה מאוד, 10 נגמרתי:");
     for (const log of ctx.logs) {
       const head = [
         log.created_at.slice(0, 10),

@@ -20,7 +20,7 @@ export type ProgressionSuggestion =
 const SESSIONS_NEEDED = 2;
 // After a longer break the principles say to come back lighter, not heavier.
 const MAX_DAYS_SINCE_LAST = 14;
-// Session RPE (1-10, stored from the Ecco scale: 2 קליל ... 10 גמרתי). A
+// Session RPE (1-10, stored from the Ecco scale: 2 קליל ... 10 נגמרתי). A
 // session rated the hardest level never counts as easy, whatever the RIR.
 const MAX_SESSION_RPE = 10;
 // Hypertrophy target is RIR 0-2 (RPE 7-10), so 3+ in reserve is "too easy".

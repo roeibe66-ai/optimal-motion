@@ -57,6 +57,20 @@ const RIR_OPTIONS = [0, 1, 2, 3, 4];
 // diffused shadow, on the --bg-page player background.
 const GLASS = "bg-elevated/90 backdrop-blur-md border border-line shadow-[0_4px_20px_color-mix(in_srgb,var(--shadow-ink)_4%,transparent)]";
 
+// The next exercise's name on the rest screen, with a clear button for its
+// info sheet (cues, mistakes, media) — reading the cues is exactly what the
+// rest is good for.
+function NextExerciseName({ name, onInfo }: { name: string; onInfo: () => void }) {
+  return (
+    <button onClick={onInfo} aria-label={`דגשים לתרגיל ${name}`} className="flex items-center gap-2 active:scale-95 transition-transform duration-150 ease-out">
+      <h3 className="text-xl font-black text-fg">{name}</h3>
+      <span className="w-7 h-7 shrink-0 rounded-full border border-line text-muted flex items-center justify-center">
+        <Info size={14} />
+      </span>
+    </button>
+  );
+}
+
 // The "what does RIR mean" info icon + popover, next to every RIR label in
 // the player (the active-set target and the rest screen's RIR picker) — a
 // brief explainer, not a full Modal.
@@ -588,19 +602,13 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
                 <span className="text-muted text-sm font-bold tabular-nums">
                   סט {session.currentBlockSet + 1} מתוך {session.maxSetsInBlock}
                 </span>
-                <h3 className="text-xl font-black text-fg">{ex && getExerciseName(ex, lang)}</h3>
+                {ex && <NextExerciseName name={getExerciseName(ex, lang)} onInfo={() => session.setViewingExInfo(ex)} />}
               </div>
             ) : next ? (
               <div className="flex flex-col items-center gap-1.5">
                 <span className="text-[0.6875rem] font-bold text-muted">הבא בתור</span>
                 <span className="text-muted text-sm font-bold tabular-nums">סט 1 מתוך {next.sets}</span>
-                <button
-                  onClick={() => session.setViewingExInfo(next.exercise)}
-                  className="flex items-center gap-1.5 active:scale-95 transition-transform duration-150 ease-out"
-                >
-                  <h3 className="text-xl font-black text-fg">{getExerciseName(next.exercise, lang)}</h3>
-                  <Info size={14} className="text-muted" />
-                </button>
+                <NextExerciseName name={getExerciseName(next.exercise, lang)} onInfo={() => session.setViewingExInfo(next.exercise)} />
                 <ExerciseNotes therapistNote={next.notes} patientNote={next.patient_notes} align="center" />
               </div>
             ) : (

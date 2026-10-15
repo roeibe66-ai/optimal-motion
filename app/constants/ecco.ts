@@ -9,7 +9,7 @@ export const RPE_LEVELS: { value: number; label: string; hint: string; image: st
   { value: 4, label: "נוח", hint: "עבדתי, אבל בנוחות", image: "/ecco/rpe-2.webp" },
   { value: 6, label: "מאתגר", hint: "היה צריך להתאמץ", image: "/ecco/rpe-3.webp" },
   { value: 8, label: "קשה מאוד", hint: "בקושי סיימתי", image: "/ecco/rpe-4.webp" },
-  { value: 10, label: "גמרתי", hint: "לא נשאר לי כלום", image: "/ecco/rpe-5.webp" },
+  { value: 10, label: "נגמרתי", hint: "לא נשאר לי כלום", image: "/ecco/rpe-5.webp" },
 ];
 
 // "Feedback sent" — one of these at random each time.

@@ -378,7 +378,7 @@ export default function PlanTab({
             </div>
 
             {(heroMuscleAggregation.primeMovers.length > 0 || heroMuscleAggregation.synergists.length > 0) && (
-              <div className="absolute top-1/2 left-4 -translate-y-1/2 z-10 w-28" style={{ filter: "drop-shadow(0 6px 16px color-mix(in srgb, var(--shadow-ink) 45%, transparent))" }}>
+              <div className="absolute bottom-[5.5rem] left-4 z-10 w-28" style={{ filter: "drop-shadow(0 6px 16px color-mix(in srgb, var(--shadow-ink) 45%, transparent))" }}>
                 <AnatomyHeatmap primeMovers={heroMuscleAggregation.primeMovers} synergists={heroMuscleAggregation.synergists} />
               </div>
             )}
