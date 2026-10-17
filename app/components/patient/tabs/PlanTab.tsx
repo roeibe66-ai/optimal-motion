@@ -3,6 +3,7 @@
 import { useEffect, useState, type UIEvent } from "react";
 import {
   ArrowDown,
+  CalendarDays,
   Check,
   CheckCircle2,
   ChevronDown,
@@ -65,6 +66,7 @@ interface PlanTabProps {
   queue: ProgramQueueEntry[];
   onOpenProgram: (entry: ProgramQueueEntry, item: PlannedWorkout) => void;
   onEditProgram: (entry: ProgramQueueEntry) => void;
+  onEditProgramDays?: (entry: ProgramQueueEntry) => void; // move workouts between weekdays only (ProgramDaysSheet)
   queueLogRef: QueueLogRef | null;
   // Set while a fitness patient deferred the onboarding questionnaire: shows
   // a card that opens it (useOnboarding).
@@ -196,6 +198,7 @@ export default function PlanTab({
   queue,
   onOpenProgram,
   onEditProgram,
+  onEditProgramDays,
   queueLogRef,
   onCompleteOnboarding,
 }: PlanTabProps) {
@@ -668,12 +671,22 @@ export default function PlanTab({
         {detailEntry?.canEdit ? (
           // The patient can make an assigned program their own; the
           // therapist sees that it was edited and can restore it.
-          <button
-            onClick={() => onEditProgram(detailEntry)}
-            className="flex items-center gap-1.5 px-3.5 h-10 bg-elevated shadow-card rounded-full hover:bg-line active:scale-95 transition-ui duration-150 ease-out text-fg text-xs font-bold"
-          >
-            <Pencil size={14} /> ערוך
-          </button>
+          <div className="flex items-center gap-2">
+            {onEditProgramDays && !detailEntry.isOneTime && detailEntry.sessions.length > 0 && (
+              <button
+                onClick={() => onEditProgramDays(detailEntry)}
+                className="flex items-center gap-1.5 px-3.5 h-10 bg-elevated shadow-card rounded-full hover:bg-line active:scale-95 transition-ui duration-150 ease-out text-fg text-xs font-bold"
+              >
+                <CalendarDays size={14} /> ימים
+              </button>
+            )}
+            <button
+              onClick={() => onEditProgram(detailEntry)}
+              className="flex items-center gap-1.5 px-3.5 h-10 bg-elevated shadow-card rounded-full hover:bg-line active:scale-95 transition-ui duration-150 ease-out text-fg text-xs font-bold"
+            >
+              <Pencil size={14} /> ערוך
+            </button>
+          </div>
         ) : (
           <span className="w-10" aria-hidden="true" />
         )}

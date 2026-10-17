@@ -45,6 +45,7 @@ import AdminCoPilotDrawer from "@/app/components/admin/AdminCoPilotDrawer";
 import CoachKnowledgeTab from "@/app/components/admin/tabs/CoachKnowledgeTab";
 import CoachTestTab from "@/app/components/admin/tabs/CoachTestTab";
 import AdminTasksTab from "@/app/components/admin/tabs/AdminTasksTab";
+import AdminProgramDaysButton from "@/app/components/admin/AdminProgramDaysButton";
 import { KNOWLEDGE_TAG_LABELS } from "@/app/constants/knowledgeTags";
 import WorkoutBuilderTab from "@/app/components/admin/tabs/WorkoutBuilderTab";
 import ProgramLibraryTab from "@/app/components/admin/tabs/ProgramLibraryTab";
@@ -1490,6 +1491,7 @@ export default function LegacyAdminApp() {
                         </div>
                         {group.program && (
                           <div className="flex gap-2">
+                            <AdminProgramDaysButton programName={group.name} rows={group.items} lang={lang} onChanged={() => fetchManagePatientExercises(managePatientId)} />
                             <button onClick={() => handleRenameProgram(group.program!)} className="bg-surface-alt border border-line text-fg px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-line">
                               <Edit3 size={14} /> שנה שם
                             </button>

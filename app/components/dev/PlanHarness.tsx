@@ -4,7 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import { AuthContext, type AuthContextValue } from "@/app/context/AuthContext";
 import { TRANSLATIONS } from "@/app/constants/translations";
 import { isInWeek, programNameOf, type SessionExercise } from "@/app/hooks/useWorkoutSession";
-import { buildWeekPlan } from "@/app/utils/programQueue";
+import { buildWeekPlan, type ProgramQueueEntry } from "@/app/utils/programQueue";
+import ProgramDaysSheet from "@/app/components/ProgramDaysSheet";
 import type { PatientProgram } from "@/app/types";
 import PlanTab from "@/app/components/patient/tabs/PlanTab";
 import DevDataToggle from "@/app/components/dev/DevDataToggle";
@@ -22,6 +23,7 @@ export default function PlanHarness() {
   const fixture = useMemo(() => planFixture(mode), [mode]);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedDayFilter, setSelectedDayFilter] = useState(new Date().getDay().toString());
+  const [daysEntry, setDaysEntry] = useState<ProgramQueueEntry | null>(null);
   // `?loading=1` holds PlanTab in its first-load state (skeletons) — read
   // after mount, since the URL isn't available during the server render.
   const [isLoading, setIsLoading] = useState(false);
@@ -96,8 +98,17 @@ export default function PlanHarness() {
               setSelectedDayFilter(item.slotKey);
             }}
             onEditProgram={() => {}}
+            onEditProgramDays={setDaysEntry}
             queueLogRef={null}
           />
+          {daysEntry && (
+            <ProgramDaysSheet
+              programName={daysEntry.name}
+              workouts={daysEntry.sessions.map((s, i) => ({ label: `אימון ${i + 1}`, preview: s.rows.map((r) => r.exercise?.name_he ?? "").join(" · "), days: s.slotKeys }))}
+              onSave={async () => true}
+              onClose={() => setDaysEntry(null)}
+            />
+          )}
         </main>
         <DevDataToggle />
         <FeedbackHost />

@@ -10,6 +10,7 @@ import { useCuratedFacts } from "@/app/hooks/useCuratedFacts";
 import { registerServiceWorker } from "@/app/utils/pushClient";
 import { useOnboarding } from "@/app/hooks/useOnboarding";
 import OnboardingFlow from "@/app/components/patient/onboarding/OnboardingFlow";
+import ProgramDaysSheet from "@/app/components/ProgramDaysSheet";
 import ConsentGate, { needsConsent } from "@/app/components/patient/ConsentGate";
 import { usePlanSelection } from "@/app/hooks/usePlanSelection";
 import { useWorkoutSession } from "@/app/hooks/useWorkoutSession";
@@ -51,6 +52,8 @@ export default function PatientShell() {
   const t = useAddress();
 
   const [patientTab, setPatientTab] = useState<PatientTab>("plan");
+  // The program whose weekdays are being moved ("ימים", ProgramDaysSheet).
+  const [daysEntry, setDaysEntry] = useState<ProgramQueueEntry | null>(null);
   // The DIY builder is a full-screen workspace over the shell (opened from
   // the "בנה אימון" tab's hub), not inline tab content.
   const [builderOpen, setBuilderOpen] = useState(false);
@@ -322,6 +325,33 @@ export default function PatientShell() {
     planSelection.setReferenceDate(entry.scheduledDate ? new Date(`${entry.scheduledDate}T00:00:00`) : new Date());
   };
 
+  // "ימים": move an assigned program's workouts between weekdays without the
+  // builder. Saved through patient_save_program_week with the same exercises
+  // (patients can't update their rows directly; the RPC keeps the therapist's
+  // notes), so the therapist sees it as edited, like any patient edit.
+  const saveProgramDays = async (daysPerWorkout: string[][]) => {
+    if (!daysEntry) return false;
+    const draft = assignedEntryToDraft(daysEntry);
+    if (!draft) return false;
+    daysPerWorkout.forEach((days, i) => {
+      draft.slotKeysByDay[i + 1] = days;
+    });
+    const sessions = draftToSessionsPayload(draft);
+    const { error } = await supabase.rpc("patient_save_program_week", {
+      p_program_id: draft.programId,
+      p_week: draft.week,
+      p_name: draft.name,
+      p_sessions: sessions,
+    });
+    if (error) {
+      notify(`שגיאה בשמירה: ${error.message}`, "error");
+      return false;
+    }
+    await patientData.refetch();
+    notify("הימים עודכנו");
+    return true;
+  };
+
   const handleEditAssignedProgram = (entry: ProgramQueueEntry) => {
     const draft = assignedEntryToDraft(entry);
     if (draft) setAssignedDraft(draft);
@@ -389,6 +419,22 @@ export default function PatientShell() {
           before it (the passkey upsell, the onboarding questionnaire). */}
       {needsConsent(loggedInPatient) && <ConsentGate />}
       {!needsConsent(loggedInPatient) && <PasskeyPrompt />}
+      {daysEntry && (
+        <ProgramDaysSheet
+          programName={daysEntry.name}
+          workouts={daysEntry.sessions.map((session, i) => ({
+            label: `אימון ${i + 1}`,
+            preview: session.rows
+              .slice(0, 3)
+              .map((r) => r.exercise?.name_he || r.exercise?.name_en || "")
+              .filter(Boolean)
+              .join(" · "),
+            days: session.slotKeys,
+          }))}
+          onSave={saveProgramDays}
+          onClose={() => setDaysEntry(null)}
+        />
+      )}
       {onboarding.isOpen && !needsConsent(loggedInPatient) && <OnboardingFlow patient={loggedInPatient} onFinish={onboarding.finish} onLater={onboarding.later} triggerHaptic={triggerHaptic} />}
       {assignedDraft && (
         <DiyBuilderTab
@@ -650,6 +696,7 @@ export default function PatientShell() {
               queue={queue}
               onOpenProgram={handleOpenProgram}
               onEditProgram={handleEditAssignedProgram}
+              onEditProgramDays={(entry) => setDaysEntry(entry)}
               queueLogRef={session.queueLogRef}
               onCompleteOnboarding={onboarding.shouldOffer ? onboarding.open : undefined}
             />
