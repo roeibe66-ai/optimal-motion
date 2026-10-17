@@ -4,6 +4,7 @@ import { useEffect, useState, type UIEvent } from "react";
 import {
   ArrowDown,
   CalendarDays,
+  MessageSquarePlus,
   Check,
   CheckCircle2,
   ChevronDown,
@@ -37,6 +38,7 @@ import { ExerciseMediaPlayer } from "@/app/components/ExerciseMedia";
 import QuickLogSheet from "@/app/components/patient/workout/QuickLogSheet";
 import { getLastUsedWeights } from "@/app/utils/history";
 import { rankFactsForPatient } from "@/app/utils/factRanking";
+import ChangeRequestSheet from "@/app/components/patient/ChangeRequestSheet";
 import { useBackDismiss } from "@/app/hooks/useBackDismiss";
 import { useAddress } from "@/app/hooks/useAddress";
 
@@ -205,6 +207,7 @@ export default function PlanTab({
   const { loggedInPatient, lang } = useAuth();
   const t = useAddress();
   const [isQuickLogOpen, setIsQuickLogOpen] = useState(false);
+  const [isChangeRequestOpen, setIsChangeRequestOpen] = useState(false);
   // Direction of the last overview <-> program-detail move, for the push
   // animation. null when the detail was opened from outside (e.g. Calendar):
   // that arrives via a tab switch, which stays instant.
@@ -914,10 +917,23 @@ export default function PlanTab({
                   >
                     <ClipboardCheck size={16} /> {detailItem?.doneLog ? t("תעד שוב") : t("כבר ביצעתי — סמן כבוצע")}
                   </button>
+                  {/* A few words to the therapist (ChangeRequestSheet); the
+                      limits live in the database. */}
+                  {detailEntry?.programId && !detailEntry.isOneTime && (
+                    <button
+                      onClick={() => setIsChangeRequestOpen(true)}
+                      className="w-full flex items-center justify-center gap-2 text-muted font-bold text-xs py-2 rounded-full hover:bg-line active:scale-[0.98] transition-ui duration-150 ease-out"
+                    >
+                      <MessageSquarePlus size={14} /> רוצה שינוי בתוכנית?
+                    </button>
+                  )}
                   </div>
                 </div>
               )}
 
+              {isChangeRequestOpen && detailEntry && (
+                <ChangeRequestSheet programId={detailEntry.programId} programName={detailEntry.name} onClose={() => setIsChangeRequestOpen(false)} />
+              )}
               {isQuickLogOpen && (
                 <QuickLogSheet
                   title={isDiyMode ? diyProgramName : (selectedCategory ?? "")}

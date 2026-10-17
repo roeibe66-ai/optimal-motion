@@ -1,7 +1,7 @@
 "use client";
 
 import { BrandLockup } from "@/app/components/brand/Brand";
-import { Activity, BookOpen, BotMessageSquare, BrainCircuit, ListTodo, Image as ImageIcon, Library, LogOut, Menu, Settings, Timer, Users, Video, Wand2, X } from "lucide-react";
+import { Activity, BookOpen, BotMessageSquare, BrainCircuit, ListTodo, MessageSquarePlus, Image as ImageIcon, Library, LogOut, Menu, Settings, Timer, Users, Video, Wand2, X } from "lucide-react";
 
 interface AdminSidebarProps {
   adminTab: string;
@@ -23,6 +23,7 @@ const NAV_ITEMS: { id: string; label: string; icon: typeof Activity }[] = [
   { id: "research", label: "מחקר ועדכוני הידעת", icon: BookOpen },
   { id: "knowledge", label: "ידע ועקרונות", icon: BrainCircuit },
   { id: "coach_test", label: "בדיקת המאמן", icon: BotMessageSquare },
+  { id: "change_requests", label: "בקשות מתאמנים", icon: MessageSquarePlus },
   { id: "tasks", label: "משימות", icon: ListTodo },
 ];
 

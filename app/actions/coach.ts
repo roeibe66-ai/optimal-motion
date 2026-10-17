@@ -6,7 +6,7 @@ import { FEATURES } from "@/app/constants/features";
 import { loadPatientContext, loadSharedKnowledge } from "@/app/lib/coachKnowledge";
 import { verifyCaller } from "@/app/lib/serverAuth";
 import { supabaseAdmin } from "@/app/lib/supabaseAdmin";
-import { ensureVapid, sendPush, type PushTarget } from "@/app/lib/webPush";
+import { pushToAdmins } from "@/app/lib/adminAlerts";
 import { COACH_SYSTEM_PROMPT, formatExerciseCatalog, formatKnowledgeCards, formatPatientContext, formatPrinciplesBlock } from "@/app/utils/coachPrompt";
 import type { AIChatMessage } from "@/app/types";
 
@@ -126,18 +126,11 @@ async function recordRedFlag(f: { patientId: string; patientName: string | null;
       coach_reply: f.reply.slice(0, 4000),
       is_test: f.isTest,
     });
-    if (!ensureVapid()) return;
-    const { data: admins } = await supabaseAdmin.from("patients").select("id").eq("role", "admin");
-    const adminIds = (admins ?? []).map((a) => a.id);
-    if (adminIds.length === 0) return;
-    const { data: subs } = await supabaseAdmin.from("push_subscriptions").select("endpoint, p256dh, auth").in("patient_id", adminIds);
     const excerpt = f.message.length > 90 ? `${f.message.slice(0, 90)}…` : f.message;
-    const { gone } = await sendPush(
-      (subs ?? []) as PushTarget[],
+    await pushToAdmins(
       { title: `${f.isTest ? "[בדיקה] " : ""}${FLAG_TITLE[f.level]}`, body: `${f.patientName ?? "מתאמן"}: ${excerpt}`, tag: `coach-flag-${f.patientId}` },
       24 * 3600
     );
-    if (gone.length) await supabaseAdmin.from("push_subscriptions").delete().in("endpoint", gone);
   } catch (err) {
     console.error("Recording coach red flag failed:", err);
   }
