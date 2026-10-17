@@ -1,9 +1,10 @@
 "use client";
 
 import { X } from "lucide-react";
-import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useBackDismiss } from "@/app/hooks/useBackDismiss";
+import { useDialog } from "@/app/hooks/useDialog";
 import { project, rubberband } from "@/app/utils/motion";
 
 interface ModalProps {
@@ -70,6 +71,9 @@ export default function Modal({ onClose, title, icon, children }: ModalProps) {
   // to the element's style (no re-render per pointermove) so it tracks the
   // finger 1:1 from where it was grabbed.
   const panelRef = useRef<HTMLDivElement>(null);
+  const titleId = useId();
+  // Focus in, Tab trapped, Escape closes (same exit as the X).
+  useDialog(panelRef, true, handleClose);
   const backdropRef = useRef<HTMLDivElement>(null);
   const drag = useRef<{ startY: number; dy: number; active: boolean; samples: { y: number; t: number }[] } | null>(null);
 
@@ -214,6 +218,9 @@ export default function Modal({ onClose, title, icon, children }: ModalProps) {
         ref={panelRef}
         className="sheet-panel bg-elevated text-fg w-full overflow-hidden shadow-elevated relative flex flex-col max-h-[92vh] rounded-t-3xl m-0 pb-[env(safe-area-inset-bottom)]"
         data-closing={isClosing || undefined}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Grab handle + header are the drag area (touch-none so the browser
@@ -229,7 +236,7 @@ export default function Modal({ onClose, title, icon, children }: ModalProps) {
           <div className="w-10 h-1.5 rounded-full bg-fg/20" />
         </div>
         <div className="flex justify-between items-center px-5 pb-5 pt-2.5 border-b border-line">
-          <h3 className="text-xl font-black flex items-center gap-2 text-fg">
+          <h3 id={titleId} className="text-xl font-black flex items-center gap-2 text-fg">
             {icon} {title}
           </h3>
           <button

@@ -10,6 +10,7 @@ import { useCuratedFacts } from "@/app/hooks/useCuratedFacts";
 import { registerServiceWorker } from "@/app/utils/pushClient";
 import { useOnboarding } from "@/app/hooks/useOnboarding";
 import OnboardingFlow from "@/app/components/patient/onboarding/OnboardingFlow";
+import ConsentGate, { needsConsent } from "@/app/components/patient/ConsentGate";
 import { usePlanSelection } from "@/app/hooks/usePlanSelection";
 import { useWorkoutSession } from "@/app/hooks/useWorkoutSession";
 import { useSavedPrograms } from "@/app/hooks/useSavedPrograms";
@@ -384,8 +385,11 @@ export default function PatientShell() {
       {amrapConfig && (
         <AmrapPlayer config={amrapConfig} triggerHaptic={triggerHaptic} onClose={() => setAmrapConfig(null)} onLogged={patientData.refetch} />
       )}
-      <PasskeyPrompt />
-      {onboarding.isOpen && <OnboardingFlow patient={loggedInPatient} onFinish={onboarding.finish} onLater={onboarding.later} triggerHaptic={triggerHaptic} />}
+      {/* Consent first: nothing else that asks for input opens over or
+          before it (the passkey upsell, the onboarding questionnaire). */}
+      {needsConsent(loggedInPatient) && <ConsentGate />}
+      {!needsConsent(loggedInPatient) && <PasskeyPrompt />}
+      {onboarding.isOpen && !needsConsent(loggedInPatient) && <OnboardingFlow patient={loggedInPatient} onFinish={onboarding.finish} onLater={onboarding.later} triggerHaptic={triggerHaptic} />}
       {assignedDraft && (
         <DiyBuilderTab
           variant="assigned"

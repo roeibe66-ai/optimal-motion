@@ -41,7 +41,8 @@ export const viewport: Viewport = {
   ],
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
+  // No maximumScale: pinch-zoom must stay available (WCAG 1.4.4 / IS 5568).
+  // iOS focus-zoom on small inputs is prevented in globals.css instead.
 };
 
 export default function RootLayout({

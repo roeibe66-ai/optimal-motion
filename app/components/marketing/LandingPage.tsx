@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { useAuth } from "@/app/context/AuthContext";
 import { BrandLockup } from "@/app/components/brand/Brand";
+import LegalLinks from "@/app/components/ui/LegalLinks";
 
 export default function LandingPage() {
   const { lang, setLang, t, setCurrentView } = useAuth();
@@ -81,7 +82,7 @@ export default function LandingPage() {
         </p>
       </div>
 
-      <div className="absolute inset-x-6 bottom-[max(2.5rem,calc(env(safe-area-inset-bottom)+1rem))] md:inset-x-0 md:bottom-14 z-10 flex flex-col md:flex-row md:justify-center gap-3 md:gap-3.5 animate-landing-rise">
+      <div className="absolute inset-x-6 bottom-[max(2.5rem,calc(env(safe-area-inset-bottom)+1rem))] md:inset-x-0 md:bottom-14 z-10 flex flex-col md:flex-row md:flex-wrap md:justify-center gap-3 md:gap-3.5 animate-landing-rise">
         <button
           onClick={() => setCurrentView("login")}
           className="w-full md:w-auto bg-btn-primary text-btn-primary-fg font-black text-[0.9375rem] md:text-base px-6 py-4 md:px-11 md:py-[17px] rounded-full shadow-[0_14px_32px_-10px_color-mix(in_srgb,var(--accent)_50%,transparent)] md:shadow-[0_16px_40px_-12px_color-mix(in_srgb,var(--accent)_50%,transparent)] hover:bg-btn-primary-hover active:bg-btn-primary-active active:scale-[0.97] transition-ui duration-150 ease-out"
@@ -94,6 +95,7 @@ export default function LandingPage() {
         >
           {t.signup}
         </button>
+        <LegalLinks className="md:w-full mt-1 [&_a]:text-fg [text-shadow:0_1px_8px_var(--scrim)]" />
       </div>
     </div>
   );

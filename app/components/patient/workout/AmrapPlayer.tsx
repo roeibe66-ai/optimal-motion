@@ -13,6 +13,7 @@ import type { HapticType } from "@/app/hooks/useHaptics";
 import type { Exercise, QueueLogRef } from "@/app/types";
 import { confirmAction, notify } from "@/app/components/ui/feedback";
 import { useBackDismiss } from "@/app/hooks/useBackDismiss";
+import { useDialog } from "@/app/hooks/useDialog";
 import { useAddress } from "@/app/hooks/useAddress";
 
 export interface AmrapStation {
@@ -67,6 +68,8 @@ export default function AmrapPlayer({ config, triggerHaptic, onClose, onLogged, 
       ? Promise.resolve(true)
       : confirmAction({ title: "לצאת מהאימון?", message: "התוצאה לא תישמר.", confirmLabel: "צא", cancelLabel: "המשך להתאמן", destructive: true })
   );
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useDialog(dialogRef, true);
   const [remainingMs, setRemainingMs] = useState(totalMs);
   const [rounds, setRounds] = useState(0);
   const [extraReps, setExtraReps] = useState(0);
@@ -161,7 +164,7 @@ export default function AmrapPlayer({ config, triggerHaptic, onClose, onLogged, 
 
   if (phase === "result") {
     return (
-      <div data-toast-top className={`${shell} items-center justify-center p-6 text-center`} dir={dir}>
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-label="אימון AMRAP" data-toast-top className={`${shell} items-center justify-center p-6 text-center`} dir={dir}>
         <Timer size={52} className="text-accent-fg mb-5" />
         <h2 className="text-3xl md:text-4xl font-black mb-2">הזמן נגמר!</h2>
         <p className="text-muted mb-10">{t("בדוק את התוצאה שלך לפני השמירה.")}</p>
@@ -183,7 +186,7 @@ export default function AmrapPlayer({ config, triggerHaptic, onClose, onLogged, 
 
   if (phase === "rpe") {
     return (
-      <div data-toast-top className={`${shell} items-center justify-center p-6 text-center`} dir={dir}>
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-label="אימון AMRAP" data-toast-top className={`${shell} items-center justify-center p-6 text-center`} dir={dir}>
         <h2 className="text-3xl md:text-4xl font-black mb-3">
           {rounds} סבבים{extraReps > 0 ? ` + ${extraReps} חזרות` : ""}
         </h2>
@@ -197,7 +200,7 @@ export default function AmrapPlayer({ config, triggerHaptic, onClose, onLogged, 
 
   if (phase === "done") {
     return (
-      <div data-toast-top className={`${shell} items-center justify-center p-6 text-center`} dir={dir}>
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-label="אימון AMRAP" data-toast-top className={`${shell} items-center justify-center p-6 text-center`} dir={dir}>
         {/* Same one-shot celebration as WorkoutFinishFlow's done screen
             (Ecco pops in, then text rises in) — not an endless bounce. */}
         <img src={doneImage} alt="" className="w-56 h-56 rounded-[2rem] object-cover shadow-card mb-8 animate-celebrate-pop" />
@@ -211,7 +214,7 @@ export default function AmrapPlayer({ config, triggerHaptic, onClose, onLogged, 
         <button
           onClick={onClose}
           style={{ animationDelay: "220ms" }}
-          className="animate-celebrate-rise bg-btn-primary text-btn-primary-fg px-10 py-4 rounded-full font-bold text-lg hover:bg-btn-primary-hover active:bg-btn-primary-active transition"
+          className="animate-celebrate-rise bg-btn-primary text-btn-primary-fg px-10 py-4 rounded-full font-bold text-lg hover:bg-btn-primary-hover active:bg-btn-primary-active transition-ui duration-150 ease-out active:scale-[0.97]"
         >
           חזרה למסך הראשי
         </button>
@@ -224,7 +227,7 @@ export default function AmrapPlayer({ config, triggerHaptic, onClose, onLogged, 
   const progress = totalMs > 0 ? 1 - remainingMs / totalMs : 0;
 
   return (
-    <div data-toast-top className={shell} dir={dir}>
+    <div ref={dialogRef} role="dialog" aria-modal="true" aria-label="אימון AMRAP" data-toast-top className={shell} dir={dir}>
       {isSimulation && <SimulationBanner onExit={onClose} />}
       <div className="pt-[max(1rem,env(safe-area-inset-top))] px-5 pt-4 flex items-center justify-between gap-3">
         <button onClick={requestClose} aria-label="סגור" className="w-10 h-10 rounded-full bg-elevated border border-line flex items-center justify-center text-fg hover:bg-line transition-ui duration-150 ease-out active:scale-[0.97]">

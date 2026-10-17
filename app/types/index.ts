@@ -28,6 +28,10 @@ export interface Patient {
   reminder_days?: string; // legacy: comma-separated DAYS_OF_WEEK ids
   reminder_schedule?: Record<string, string> | null; // DAYS_OF_WEEK id -> "HH:MM", a time per day
   onboarding_completed_at?: string | null; // null = hasn't finished the onboarding wizard yet
+  // Accepted terms + privacy policy (LEGAL_VERSION in app/constants/legal.ts)
+  // and when; a different version means ConsentGate asks again.
+  terms_version?: string | null;
+  terms_accepted_at?: string | null;
   // Onboarding questionnaire answers (fitness patients; OnboardingFlow,
   // 20261015190000_onboarding_profile.sql). All optional.
   onboarding_skipped_at?: string | null; // "אמלא אחר כך": a home card offers it until completed

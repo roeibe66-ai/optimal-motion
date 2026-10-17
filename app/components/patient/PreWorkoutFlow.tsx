@@ -1,6 +1,8 @@
 "use client";
 
+import { useRef } from "react";
 import { Activity } from "lucide-react";
+import { useDialog } from "@/app/hooks/useDialog";
 import { useAuth } from "@/app/context/AuthContext";
 import BodyDiagram from "@/app/components/BodyDiagram";
 import RatingScale from "@/app/components/ui/RatingScale";
@@ -33,6 +35,8 @@ export default function PreWorkoutFlow({
   const { lang } = useAuth();
   const t = useAddress();
   const dir = lang === "he" ? "rtl" : "ltr";
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useDialog(dialogRef, true);
 
   const toggleMuscle = (muscle: string) => {
     triggerHaptic("light");
@@ -42,6 +46,10 @@ export default function PreWorkoutFlow({
   if (feedbackPhase === "pain_heatmap") {
     return (
       <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label="בדיקת כאב לפני אימון"
         className="fixed inset-0 z-[100] bg-page flex flex-col items-center justify-start pt-12 p-6 text-center overflow-y-auto overflow-x-hidden"
         dir={dir}
       >
@@ -51,14 +59,12 @@ export default function PreWorkoutFlow({
           <p className="text-muted mb-8 max-w-sm mx-auto text-sm">{t("סמן על גבי המודל את האזורים שמרגישים מתוחים או כואבים כרגע.")}</p>
 
           <div className="scheme-dark bg-elevated p-6 rounded-3xl w-full max-w-sm mb-8 flex justify-center border border-line">
-            <div className="pointer-events-auto" style={{ width: "150px" }}>
-              <BodyDiagram highlightedMuscles={selectedPainAreas} onMuscleClick={toggleMuscle} />
-            </div>
+            <BodyDiagram highlightedMuscles={selectedPainAreas} onMuscleClick={toggleMuscle} />
           </div>
 
           <button
             onClick={onConfirmPainAreas}
-            className="bg-btn-primary text-btn-primary-fg px-10 py-4 rounded-full font-bold text-lg hover:bg-btn-primary-hover active:bg-btn-primary-active transition-colors shadow-lg w-full max-w-sm"
+            className="bg-btn-primary text-btn-primary-fg px-10 py-4 rounded-full font-bold text-lg hover:bg-btn-primary-hover active:bg-btn-primary-active transition-ui duration-150 ease-out active:scale-[0.97] shadow-lg w-full max-w-sm"
           >
             המשך
           </button>
@@ -70,6 +76,10 @@ export default function PreWorkoutFlow({
   // feedbackPhase === "pain_scale"
   return (
     <div
+      ref={dialogRef}
+      role="dialog"
+      aria-modal="true"
+      aria-label="בדיקת כאב לפני אימון"
       className="fixed inset-0 z-[100] bg-page flex flex-col items-center justify-center p-6 text-center"
       dir={dir}
     >

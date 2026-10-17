@@ -1,8 +1,10 @@
 "use client";
 
-import { Dumbbell, Globe, HeartPulse, UserPlus } from "lucide-react";
+import { Dumbbell, Globe, HeartPulse, Loader2, UserPlus } from "lucide-react";
+import Link from "next/link";
 import { useAuth } from "@/app/context/AuthContext";
 import { useAuthSession } from "@/app/hooks/useAuthSession";
+import LegalLinks from "@/app/components/ui/LegalLinks";
 import { isPasswordConfirmed, isStrongPassword, MAX_PERSON_NAME_LENGTH } from "@/app/utils/validation";
 import PasswordFieldsWithStrength from "@/app/components/marketing/PasswordFieldsWithStrength";
 
@@ -21,15 +23,18 @@ export default function RegisterPage() {
     setRegConfirmPass,
     regPatientType,
     setRegPatientType,
+    regAcceptedTerms,
+    setRegAcceptedTerms,
     handleRegister,
+    isSubmitting,
     handleGoogleSignIn,
   } = useAuthSession();
 
-  const canSubmit = isStrongPassword(regPass) && isPasswordConfirmed(regPass, regConfirmPass);
+  const canSubmit = isStrongPassword(regPass) && isPasswordConfirmed(regPass, regConfirmPass) && regAcceptedTerms;
 
   return (
     <div
-      className="relative min-h-dvh flex items-center justify-center p-4"
+      className="relative min-h-dvh flex flex-col items-center justify-center p-4"
       style={{ background: "radial-gradient(120% 70% at 50% 0%, var(--bg-elevated) 0%, var(--bg-page) 62%), linear-gradient(180deg, var(--bg-elevated), var(--bg-page) 55%)" }}
       dir={lang === "he" ? "rtl" : "ltr"}
     >
@@ -47,12 +52,12 @@ export default function RegisterPage() {
           </h2>
           <button
             onClick={() => setLang(lang === "he" ? "en" : "he")}
-            className="on-light bg-surface-alt hover:bg-line text-fg px-3 py-1 rounded-full font-bold text-xs flex items-center gap-1"
+            className="on-light relative bg-surface-alt hover:bg-line text-fg px-3 py-1 rounded-full font-bold text-xs flex items-center gap-1 after:absolute after:-inset-x-1 after:-inset-y-2.5 after:content-[''] transition-ui duration-150 ease-out active:scale-[0.97]"
           >
             <Globe size={14} /> {lang === "he" ? "English" : "עברית"}
           </button>
         </div>
-        <p className="text-sm text-muted mb-6 font-medium">הצטרף למערכת כדי לקבל גישה לתוכניות המקצועיות שלנו.</p>
+        <p className="text-sm text-muted mb-6 font-medium">כמה פרטים, וכל התוכניות המקצועיות שלנו פתוחות בפניכם.</p>
 
         <form onSubmit={handleRegister} className="space-y-4">
           <div className="flex gap-4">
@@ -63,6 +68,7 @@ export default function RegisterPage() {
               <input
                 id="reg-first-name"
                 type="text"
+                autoComplete="given-name"
                 placeholder="שם פרטי"
                 value={regFirstName}
                 onChange={(e) => setRegFirstName(e.target.value)}
@@ -78,6 +84,7 @@ export default function RegisterPage() {
               <input
                 id="reg-last-name"
                 type="text"
+                autoComplete="family-name"
                 placeholder="שם משפחה"
                 value={regLastName}
                 onChange={(e) => setRegLastName(e.target.value)}
@@ -94,6 +101,7 @@ export default function RegisterPage() {
             <input
               id="reg-email"
               type="email"
+              autoComplete="email"
               placeholder="אימייל"
               value={regEmail}
               onChange={(e) => setRegEmail(e.target.value)}
@@ -109,7 +117,8 @@ export default function RegisterPage() {
               <button
                 type="button"
                 onClick={() => setRegPatientType("clinical")}
-                className={`flex-1 py-3 rounded-xl text-sm font-bold flex flex-col items-center gap-2 border-2 transition-ui ${
+                aria-pressed={regPatientType === "clinical"}
+                className={`flex-1 py-3 rounded-xl text-sm font-bold flex flex-col items-center gap-2 border-2 transition-ui active:scale-[0.97] ${
                   regPatientType === "clinical" ? "border-accent bg-accent/15 text-accent-fg" : "border-line bg-surface text-muted hover:border-line-input"
                 }`}
               >
@@ -118,7 +127,8 @@ export default function RegisterPage() {
               <button
                 type="button"
                 onClick={() => setRegPatientType("fitness")}
-                className={`flex-1 py-3 rounded-xl text-sm font-bold flex flex-col items-center gap-2 border-2 transition-ui ${
+                aria-pressed={regPatientType === "fitness"}
+                className={`flex-1 py-3 rounded-xl text-sm font-bold flex flex-col items-center gap-2 border-2 transition-ui active:scale-[0.97] ${
                   regPatientType === "fitness" ? "border-accent bg-accent/15 text-accent-fg" : "border-line bg-surface text-muted hover:border-line-input"
                 }`}
               >
@@ -127,12 +137,36 @@ export default function RegisterPage() {
             </div>
           </div>
 
+          {/* Consent (חוק הגנת הפרטיות): unchecked by default, required to
+              submit; recorded with LEGAL_VERSION by the signup trigger. */}
+          <label className="flex items-start gap-2.5 text-sm text-fg leading-relaxed cursor-pointer">
+            <input
+              type="checkbox"
+              checked={regAcceptedTerms}
+              onChange={(e) => setRegAcceptedTerms(e.target.checked)}
+              required
+              className="mt-1 w-4 h-4 shrink-0 accent-[var(--accent-fg)]"
+            />
+            <span>
+              קראתי ואני מסכים/ה ל
+              <Link href="/terms" target="_blank" className="font-bold text-accent-fg underline">
+                תנאי השימוש
+              </Link>{" "}
+              ול
+              <Link href="/privacy" target="_blank" className="font-bold text-accent-fg underline">
+                מדיניות הפרטיות
+              </Link>
+              , כולל ההבהרה הרפואית (התייעצות עם רופא לפני תחילת אימונים במקרה של מצב רפואי) ושמירת המידע הבריאותי שאמסור
+              לצורך התאמת האימונים.
+            </span>
+          </label>
+
           <button
             type="submit"
-            disabled={!canSubmit}
-            className="w-full bg-btn-primary text-btn-primary-fg py-4 rounded-xl font-bold hover:bg-btn-primary-hover active:bg-btn-primary-active transition-colors mt-6 shadow-md text-lg disabled:bg-disabled disabled:text-disabled-fg disabled:cursor-not-allowed disabled:hover:bg-disabled"
+            disabled={!canSubmit || isSubmitting}
+            className="w-full flex items-center justify-center bg-btn-primary text-btn-primary-fg py-4 rounded-xl font-bold hover:bg-btn-primary-hover active:bg-btn-primary-active transition-ui duration-150 ease-out active:scale-[0.97] mt-6 shadow-md text-lg disabled:bg-disabled disabled:text-disabled-fg disabled:cursor-not-allowed disabled:hover:bg-disabled"
           >
-            צור משתמש
+            {isSubmitting ? <Loader2 size={22} className="animate-spin" /> : "יצירת משתמש"}
           </button>
         </form>
 
@@ -145,7 +179,7 @@ export default function RegisterPage() {
         <button
           type="button"
           onClick={handleGoogleSignIn}
-          className="w-full flex items-center justify-center gap-3 border-2 border-btn-secondary text-accent-fg py-3.5 rounded-xl font-bold hover:bg-btn-secondary-hover transition-colors"
+          className="w-full flex items-center justify-center gap-3 border-2 border-btn-secondary text-accent-fg py-3.5 rounded-xl font-bold hover:bg-btn-secondary-hover transition-ui duration-150 ease-out active:scale-[0.97]"
         >
           <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
             <path style={{ fill: "var(--brand-google-blue)" }} d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.9c1.7-1.56 2.7-3.86 2.7-6.62Z" />
@@ -161,10 +195,11 @@ export default function RegisterPage() {
             onClick={() => setCurrentView("login")}
             className="text-sm font-bold text-muted hover:text-fg transition-colors"
           >
-            כבר יש לך משתמש? לחץ להתחברות
+            כבר רשומים? לכניסה
           </button>
         </div>
       </div>
+      <LegalLinks className="mt-6" />
     </div>
   );
 }

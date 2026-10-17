@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { Fingerprint, Globe, Mail } from "lucide-react";
+import { Fingerprint, Globe, Loader2, Mail } from "lucide-react";
 import { useAuth } from "@/app/context/AuthContext";
 import { useAuthSession } from "@/app/hooks/useAuthSession";
+import LegalLinks from "@/app/components/ui/LegalLinks";
 
 export default function LoginPage() {
   const { lang, setLang, t, setCurrentView } = useAuth();
@@ -13,6 +14,7 @@ export default function LoginPage() {
     loginPassword,
     setLoginPassword,
     handleLogin,
+    isSubmitting,
     handleGoogleSignIn,
     isPasskeySupported,
     isPasskeyLoggingIn,
@@ -24,10 +26,18 @@ export default function LoginPage() {
     handleForgotPassword,
   } = useAuthSession();
   const [showForgotPassword, setShowForgotPassword] = useState(false);
+  // The card itself rises in on load; the panel inside slides only when the
+  // patient switches between login and forgot-password, not on first paint.
+  const [hasSwitchedPanel, setHasSwitchedPanel] = useState(false);
+  const switchPanel = (toForgot: boolean) => {
+    setHasSwitchedPanel(true);
+    setShowForgotPassword(toForgot);
+  };
+  const panelAnim = hasSwitchedPanel ? "animate-step-in" : "";
 
   return (
     <div
-      className="relative min-h-dvh flex items-center justify-center p-4"
+      className="relative min-h-dvh flex flex-col items-center justify-center p-4"
       style={{ background: "radial-gradient(120% 70% at 50% 0%, var(--bg-elevated) 0%, var(--bg-page) 62%), linear-gradient(180deg, var(--bg-elevated), var(--bg-page) 55%)" }}
       dir={lang === "he" ? "rtl" : "ltr"}
     >
@@ -43,24 +53,24 @@ export default function LoginPage() {
           <h2 className="text-3xl font-black text-fg">{t.login}</h2>
           <button
             onClick={() => setLang(lang === "he" ? "en" : "he")}
-            className="on-light bg-surface-alt hover:bg-line text-fg px-3 py-1 rounded-full font-bold text-xs flex items-center gap-1"
+            className="on-light relative bg-surface-alt hover:bg-line text-fg px-3 py-1 rounded-full font-bold text-xs flex items-center gap-1 after:absolute after:-inset-x-1 after:-inset-y-2.5 after:content-[''] transition-ui duration-150 ease-out active:scale-[0.97]"
           >
             <Globe size={14} /> {lang === "he" ? "English" : "עברית"}
           </button>
         </div>
         {showForgotPassword ? (
           forgotSent ? (
-            <div className="text-center py-4">
+            <div key="forgot-sent" className={`${panelAnim} text-center py-4`}>
               <Mail className="mx-auto text-accent-fg mb-3" size={40} />
-              <h3 className="text-lg font-bold text-fg mb-2">בדוק את תיבת הדואר שלך</h3>
+              <h3 className="text-lg font-bold text-fg mb-2">הקישור בדרך למייל</h3>
               <p className="text-sm text-muted mb-6">אם הכתובת {forgotEmail} רשומה במערכת, שלחנו אליה קישור לאיפוס הסיסמה.</p>
-              <button onClick={() => setShowForgotPassword(false)} className="text-sm font-bold text-accent-fg hover:underline transition-colors">
-                חזור להתחברות
+              <button onClick={() => switchPanel(false)} className="text-sm font-bold text-accent-fg hover:underline transition-colors">
+                חזרה להתחברות
               </button>
             </div>
           ) : (
-            <form onSubmit={handleForgotPassword} className="space-y-5">
-              <p className="text-sm text-muted">הזן את כתובת המייל שלך ונשלח אליה קישור לאיפוס הסיסמה.</p>
+            <form key="forgot" onSubmit={handleForgotPassword} className={`${panelAnim} space-y-5`}>
+              <p className="text-sm text-muted">מה כתובת המייל? נשלח אליה קישור לאיפוס הסיסמה.</p>
               <div>
                 <label htmlFor="forgot-email" className="block text-xs font-bold text-muted mb-1.5">
                   אימייל
@@ -68,6 +78,7 @@ export default function LoginPage() {
                 <input
                 id="forgot-email"
                 type="email"
+                autoComplete="email"
                 placeholder="אימייל"
                 value={forgotEmail}
                 onChange={(e) => setForgotEmail(e.target.value)}
@@ -75,20 +86,20 @@ export default function LoginPage() {
                 required
                 />
               </div>
-              <button type="submit" className="w-full bg-btn-primary text-btn-primary-fg py-4 rounded-xl font-bold hover:bg-btn-primary-hover active:bg-btn-primary-active transition-colors mt-2">
-                שלח קישור לאיפוס
+              <button type="submit" disabled={isSubmitting} className="w-full flex items-center justify-center bg-btn-primary text-btn-primary-fg py-4 rounded-xl font-bold hover:bg-btn-primary-hover active:bg-btn-primary-active transition-ui duration-150 ease-out active:scale-[0.97] mt-2">
+                {isSubmitting ? <Loader2 size={20} className="animate-spin" /> : "שליחת קישור לאיפוס"}
               </button>
               <button
                 type="button"
-                onClick={() => setShowForgotPassword(false)}
+                onClick={() => switchPanel(false)}
                 className="w-full text-center text-sm font-bold text-muted hover:text-fg transition-colors"
               >
-                חזור להתחברות
+                חזרה להתחברות
               </button>
             </form>
           )
         ) : (
-          <>
+          <div key="login" className={panelAnim}>
             {/* Real WebAuthn passwordless login — a usernameless/discoverable
                 assertion ceremony (see app/actions/passkeyAuth.ts), only
                 shown when this browser/device actually reports a platform
@@ -100,15 +111,15 @@ export default function LoginPage() {
                   type="button"
                   onClick={handlePasskeyLogin}
                   disabled={isPasskeyLoggingIn}
-                  className="w-full flex items-center justify-center gap-2.5 bg-fg text-surface py-4 rounded-xl font-bold hover:bg-fg/90 transition-colors disabled:bg-disabled disabled:text-disabled-fg"
+                  className="w-full flex items-center justify-center gap-2.5 bg-fg text-surface py-4 rounded-xl font-bold hover:bg-fg/90 transition-ui duration-150 ease-out active:scale-[0.97] disabled:bg-disabled disabled:text-disabled-fg"
                 >
-                  <Fingerprint size={20} />
-                  {isPasskeyLoggingIn ? "מתחבר..." : "התחבר עם Face ID / Touch ID"}
+                  {isPasskeyLoggingIn ? <Loader2 size={20} className="animate-spin" /> : <Fingerprint size={20} />}
+                  {isPasskeyLoggingIn ? "מתחברים..." : "כניסה עם Face ID / Touch ID"}
                 </button>
                 {passkeyLoginError && <p className="text-xs font-bold text-danger-fg text-center mt-2.5">{passkeyLoginError}</p>}
                 <div className="flex items-center gap-3 my-5">
                   <div className="flex-1 h-px bg-line"></div>
-                  <span className="text-xs font-bold text-muted">או התחבר עם סיסמה</span>
+                  <span className="text-xs font-bold text-muted">או כניסה עם סיסמה</span>
                   <div className="flex-1 h-px bg-line"></div>
                 </div>
               </>
@@ -122,6 +133,7 @@ export default function LoginPage() {
                 <input
                   id="login-email"
                   type="email"
+                  autoComplete="email"
                   placeholder="אימייל"
                   value={loginIdentifier}
                   onChange={(e) => setLoginIdentifier(e.target.value)}
@@ -136,6 +148,7 @@ export default function LoginPage() {
                 <input
                   id="login-password"
                   type="password"
+                  autoComplete="current-password"
                   placeholder="סיסמה"
                   value={loginPassword}
                   onChange={(e) => setLoginPassword(e.target.value)}
@@ -144,8 +157,8 @@ export default function LoginPage() {
                 />
               </div>
 
-              <button type="submit" className="w-full bg-btn-primary text-btn-primary-fg py-4 rounded-xl font-bold hover:bg-btn-primary-hover active:bg-btn-primary-active transition-colors mt-2">
-                התחבר
+              <button type="submit" disabled={isSubmitting} className="w-full flex items-center justify-center bg-btn-primary text-btn-primary-fg py-4 rounded-xl font-bold hover:bg-btn-primary-hover active:bg-btn-primary-active transition-ui duration-150 ease-out active:scale-[0.97] mt-2">
+                {isSubmitting ? <Loader2 size={20} className="animate-spin" /> : "כניסה"}
               </button>
             </form>
 
@@ -158,7 +171,7 @@ export default function LoginPage() {
             <button
               type="button"
               onClick={handleGoogleSignIn}
-              className="w-full flex items-center justify-center gap-3 border-2 border-btn-secondary text-accent-fg py-3.5 rounded-xl font-bold hover:bg-btn-secondary-hover transition-colors"
+              className="w-full flex items-center justify-center gap-3 border-2 border-btn-secondary text-accent-fg py-3.5 rounded-xl font-bold hover:bg-btn-secondary-hover transition-ui duration-150 ease-out active:scale-[0.97]"
             >
               <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
                 <path style={{ fill: "var(--brand-google-blue)" }} d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.9c1.7-1.56 2.7-3.86 2.7-6.62Z" />
@@ -170,22 +183,23 @@ export default function LoginPage() {
             </button>
 
             <button
-              onClick={() => setShowForgotPassword(true)}
+              onClick={() => switchPanel(true)}
               className="w-full text-center mt-6 text-accent-fg hover:underline font-bold transition-colors"
             >
               {t.forgot_pass}
             </button>
             <div className="flex justify-between items-center mt-4 pt-4 border-t border-line">
               <button onClick={() => setCurrentView("landing")} className="text-sm font-bold text-muted hover:text-fg transition-colors">
-                חזור
+                חזרה
               </button>
               <button onClick={() => setCurrentView("register")} className="text-sm font-black text-accent-fg hover:underline transition-colors">
-                משתמש חדש? הירשם כאן
+                חדשים כאן? להרשמה
               </button>
             </div>
-          </>
+          </div>
         )}
       </div>
+      <LegalLinks className="mt-6" />
     </div>
   );
 }

@@ -1,11 +1,13 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { createPortal } from "react-dom";
+import Link from "next/link";
 import { Send, Sparkles, X } from "lucide-react";
 import { useAIAssistantChat } from "@/app/hooks/useAIAssistantChat";
 import type { AIAssistantContext } from "@/app/types";
 import { useAddress } from "@/app/hooks/useAddress";
+import { useDialog } from "@/app/hooks/useDialog";
 
 interface PatientCoachSheetProps {
   contextData?: AIAssistantContext;
@@ -25,6 +27,8 @@ export default function PatientCoachSheet({ contextData }: PatientCoachSheetProp
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState("");
   const { messages, isLoading, error, sendMessage } = useAIAssistantChat("patient", contextData);
+  const sheetRef = useRef<HTMLDivElement>(null);
+  useDialog(sheetRef, isOpen, () => setIsOpen(false));
 
   // Portals straight to <body>, bypassing PatientShell entirely. That's not
   // cosmetic: PatientShell's <main> is `relative z-0`, which makes it its
@@ -70,7 +74,14 @@ export default function PatientCoachSheet({ contextData }: PatientCoachSheetProp
 
       {isOpen && <div className="fixed inset-0 bg-backdrop backdrop-blur-sm z-[100]" onClick={() => setIsOpen(false)}></div>}
 
+      {/* Closed = parked off-screen, so inert keeps it out of Tab order and
+          the accessibility tree; open = a modal dialog (useDialog). */}
       <div
+        ref={sheetRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="patient-coach-title"
+        inert={!isOpen}
         className={`fixed inset-x-0 bottom-0 z-[100] bg-elevated rounded-t-[2rem] shadow-[0_-8px_40px_color-mix(in_srgb,var(--shadow-ink)_12%,transparent)] flex flex-col max-h-[82vh] transition-transform duration-300 ease-out ${
           isOpen ? "translate-y-0" : "translate-y-full"
         }`}
@@ -85,7 +96,7 @@ export default function PatientCoachSheet({ contextData }: PatientCoachSheetProp
               <Sparkles size={18} />
             </div>
             <div>
-              <h3 className="font-black text-fg text-[0.9375rem]">מאמן AI אישי</h3>
+              <h3 id="patient-coach-title" className="font-black text-fg text-[0.9375rem]">מאמן AI אישי</h3>
               <p className="text-[0.6875rem] text-muted font-semibold">כאן כדי לעזור להתאים את האימון שלך</p>
             </div>
           </div>
@@ -94,7 +105,7 @@ export default function PatientCoachSheet({ contextData }: PatientCoachSheetProp
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
+        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4" aria-live="polite">
           {messages.length === 0 && (
             <div className="text-center text-muted text-[0.8125rem] font-medium mt-6 px-4 leading-relaxed">
               {t("כואב לך באיזשהו תרגיל? רוצה גרסה קלה או מאתגרת יותר? יש לך שאלה על האימון? שאל אותי כל דבר.")}
@@ -116,10 +127,19 @@ export default function PatientCoachSheet({ contextData }: PatientCoachSheetProp
               <div className="bg-accent/15 text-accent-fg rounded-2xl px-4 py-3 text-xs font-bold">חושב...</div>
             </div>
           )}
-          {error && <div className="bg-danger/15 border border-danger/40 text-danger-fg text-xs font-bold px-4 py-3 rounded-2xl">{error}</div>}
+          {error && <div role="alert" className="bg-danger/15 border border-danger/40 text-danger-fg text-xs font-bold px-4 py-3 rounded-2xl">{error}</div>}
         </div>
 
-        <form onSubmit={handleSubmit} className="p-4 border-t border-line flex gap-2 shrink-0 pb-[max(1rem,env(safe-area-inset-bottom))]">
+        {/* Notice at the point of collection (privacy policy, "מאמן ה-AI"):
+            what this is, where the messages go, and not for emergencies. */}
+        <p className="px-6 pt-3 border-t border-line text-[0.6875rem] text-muted text-center leading-relaxed shrink-0">
+          מאמן ממוחשב (AI), לא אדם ולא ייעוץ רפואי. ההודעות נשלחות לעיבוד אצל Anthropic ·{" "}
+          <Link href="/privacy" target="_blank" className="underline font-bold">
+            פרטים
+          </Link>
+          {" "}· במצב חירום: 101
+        </p>
+        <form onSubmit={handleSubmit} className="p-4 pt-2 flex gap-2 shrink-0 pb-[max(1rem,env(safe-area-inset-bottom))]">
           <input
             type="text"
             value={input}

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { useDialog } from "@/app/hooks/useDialog";
 import { Activity } from "lucide-react";
 import { useAuth } from "@/app/context/AuthContext";
 import RatingScale from "@/app/components/ui/RatingScale";
@@ -26,11 +27,17 @@ export default function WorkoutFinishFlow({ feedbackPhase, onSelectRpe, onSubmit
   const { lang } = useAuth();
   const dir = lang === "he" ? "rtl" : "ltr";
   // Picked once per finish flow, so it doesn't flip on re-render.
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useDialog(dialogRef, true);
   const [doneImage] = useState(() => FEEDBACK_DONE_IMAGES[Math.floor(Math.random() * FEEDBACK_DONE_IMAGES.length)]);
 
   if (feedbackPhase === "rpe") {
     return (
       <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label="סיום אימון"
         className="fixed inset-0 z-[100] bg-page flex flex-col items-center justify-center p-6 text-center"
         dir={dir}
       >
@@ -48,6 +55,10 @@ export default function WorkoutFinishFlow({ feedbackPhase, onSelectRpe, onSubmit
   if (feedbackPhase === "pain_after") {
     return (
       <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label="סיום אימון"
         className="fixed inset-0 z-[100] bg-page flex flex-col items-center justify-center p-6 text-center"
         dir={dir}
       >
@@ -68,6 +79,10 @@ export default function WorkoutFinishFlow({ feedbackPhase, onSelectRpe, onSubmit
   // rise in 60ms apart. The button is clickable from the first frame.
   return (
     <div
+      ref={dialogRef}
+      role="dialog"
+      aria-modal="true"
+      aria-label="סיום אימון"
       className="fixed inset-0 z-[100] bg-page flex flex-col items-center justify-center p-6 text-center"
       dir={dir}
     >
@@ -78,7 +93,7 @@ export default function WorkoutFinishFlow({ feedbackPhase, onSelectRpe, onSubmit
       <p className="text-xl text-muted mb-10 animate-celebrate-rise" style={{ animationDelay: "160ms" }}>
         הנתונים התעדכנו בתיק שלך.
       </p>
-      <button onClick={onClose} style={{ animationDelay: "220ms" }} className="animate-celebrate-rise bg-btn-primary text-btn-primary-fg px-10 py-4 rounded-full font-bold text-lg hover:bg-btn-primary-hover active:bg-btn-primary-active transition">
+      <button onClick={onClose} style={{ animationDelay: "220ms" }} className="animate-celebrate-rise bg-btn-primary text-btn-primary-fg px-10 py-4 rounded-full font-bold text-lg hover:bg-btn-primary-hover active:bg-btn-primary-active transition-ui duration-150 ease-out active:scale-[0.97]">
         חזרה למסך הראשי
       </button>
     </div>

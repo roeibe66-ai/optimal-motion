@@ -7,6 +7,7 @@ import { useAuth } from "@/app/context/AuthContext";
 import { isPasswordConfirmed, isStrongPassword } from "@/app/utils/validation";
 import { generatePasskeyAuthenticationOptions, verifyPasskeyAuthentication } from "@/app/actions/passkeyAuth";
 import { confirmAction, notify } from "@/app/components/ui/feedback";
+import { LEGAL_VERSION } from "@/app/constants/legal";
 
 // Login + registration business logic, now backed by real Supabase Auth
 // instead of a plaintext password column. This hook only triggers the auth
@@ -30,6 +31,7 @@ export function useAuthSession() {
   const [regPass, setRegPass] = useState("");
   const [regConfirmPass, setRegConfirmPass] = useState("");
   const [regPatientType, setRegPatientType] = useState<"clinical" | "fitness">("fitness");
+  const [regAcceptedTerms, setRegAcceptedTerms] = useState(false);
 
   const [forgotEmail, setForgotEmail] = useState("");
   const [forgotSent, setForgotSent] = useState(false);
@@ -40,15 +42,26 @@ export function useAuthSession() {
   const [isPasskeySupported, setIsPasskeySupported] = useState(false);
   const [isPasskeyLoggingIn, setIsPasskeyLoggingIn] = useState(false);
   const [passkeyLoginError, setPasskeyLoginError] = useState<string | null>(null);
+  // One email/password request at a time: the submit button shows a spinner
+  // and a second tap (or Enter) does nothing until the first one returns.
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const whileSubmitting = (handler: () => Promise<void>) => async (e: FormEvent) => {
+    e.preventDefault();
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      await handler();
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   useEffect(() => {
     if (!browserSupportsWebAuthn()) return;
     platformAuthenticatorIsAvailable().then(setIsPasskeySupported);
   }, []);
 
-  const handleLogin = async (e: FormEvent) => {
-    e.preventDefault();
-
+  const handleLogin = whileSubmitting(async () => {
     const { error } = await supabase.auth.signInWithPassword({ email: loginIdentifier, password: loginPassword });
 
     if (error) {
@@ -58,7 +71,7 @@ export function useAuthSession() {
 
     setLoginIdentifier("");
     setLoginPassword("");
-  };
+  });
 
   // redirectTo = the origin the user is on (prod, preview or localhost), so
   // the round trip lands back where it started instead of on the Supabase
@@ -89,7 +102,7 @@ export function useAuthSession() {
     try {
       const optionsJSON = await generatePasskeyAuthenticationOptions();
       const authResponse = await startAuthentication({ optionsJSON });
-      const result = await verifyPasskeyAuthentication(authResponse, optionsJSON.challenge);
+      const result = await verifyPasskeyAuthentication(authResponse);
 
       if (!result.verified) {
         setPasskeyLoginError(result.error);
@@ -114,15 +127,14 @@ export function useAuthSession() {
     }
   };
 
-  const handleRegister = async (e: FormEvent) => {
-    e.preventDefault();
+  const handleRegister = whileSubmitting(async () => {
     const fullName = `${regFirstName} ${regLastName}`.trim();
 
     // The form already shows live strength/match feedback and disables
     // submit until both are satisfied — this is a silent defense-in-depth
     // guard (e.g. against an Enter-key submit bypassing the disabled
     // button), not the primary way a user finds out their password is weak.
-    if (!isStrongPassword(regPass) || !isPasswordConfirmed(regPass, regConfirmPass)) {
+    if (!isStrongPassword(regPass) || !isPasswordConfirmed(regPass, regConfirmPass) || !regAcceptedTerms) {
       return;
     }
 
@@ -131,8 +143,12 @@ export function useAuthSession() {
       password: regPass,
       // first_name rides along so the signup trigger (handle_new_patient)
       // stores it as typed — full_name alone can't tell "בת שבע כהן"'s
-      // first name from its first word.
-      options: { data: { full_name: fullName, first_name: regFirstName.trim(), patient_type: regPatientType }, emailRedirectTo: window.location.origin },
+      // first name from its first word. terms_version: the checked consent
+      // box — the trigger records it with the server's timestamp.
+      options: {
+        data: { full_name: fullName, first_name: regFirstName.trim(), patient_type: regPatientType, terms_version: LEGAL_VERSION },
+        emailRedirectTo: window.location.origin,
+      },
     });
 
     if (error) {
@@ -146,7 +162,7 @@ export function useAuthSession() {
     // identities array is the documented signal that this is a repeat
     // signup, not a genuinely new auth user.
     if (data.user.identities && data.user.identities.length === 0) {
-      notify("כתובת האימייל הזו כבר רשומה במערכת. אנא התחבר לחשבונך.", "info");
+      notify("כתובת האימייל הזו כבר רשומה במערכת. אפשר פשוט להתחבר.", "info");
       return;
     }
 
@@ -172,11 +188,10 @@ export function useAuthSession() {
     setRegPass("");
     setRegConfirmPass("");
     setRegPatientType("fitness");
-  };
+    setRegAcceptedTerms(false);
+  });
 
-  const handleForgotPassword = async (e: FormEvent) => {
-    e.preventDefault();
-
+  const handleForgotPassword = whileSubmitting(async () => {
     const { error } = await supabase.auth.resetPasswordForEmail(forgotEmail, { redirectTo: window.location.origin });
 
     if (error) {
@@ -189,14 +204,12 @@ export function useAuthSession() {
     // "check your email" state either way is the correct, honest UI: it's
     // true regardless of whether the address exists.
     setForgotSent(true);
-  };
+  });
 
   // Called from the reset_password view, reached via the recovery link's
   // temporary session (AuthContext routes PASSWORD_RECOVERY here instead of
   // straight into patient/admin view).
-  const handleSetNewPassword = async (e: FormEvent) => {
-    e.preventDefault();
-
+  const handleSetNewPassword = whileSubmitting(async () => {
     if (!isStrongPassword(newPassword) || !isPasswordConfirmed(newPassword, newPasswordConfirm)) {
       return;
     }
@@ -214,7 +227,7 @@ export function useAuthSession() {
     // event with a normal (non-recovery) session, which AuthContext's
     // onAuthStateChange listener already handles the same way as a fresh
     // login: hydrate loggedInPatient and route to patient/admin by role.
-  };
+  });
 
   return {
     loginIdentifier,
@@ -222,6 +235,7 @@ export function useAuthSession() {
     loginPassword,
     setLoginPassword,
     handleLogin,
+    isSubmitting,
     handleGoogleSignIn,
     isPasskeySupported,
     isPasskeyLoggingIn,
@@ -239,6 +253,8 @@ export function useAuthSession() {
     setRegConfirmPass,
     regPatientType,
     setRegPatientType,
+    regAcceptedTerms,
+    setRegAcceptedTerms,
     handleRegister,
     forgotEmail,
     setForgotEmail,

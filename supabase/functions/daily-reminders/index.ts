@@ -91,6 +91,9 @@ Deno.serve(async (req: Request) => {
     const { data: logs } = await db.from("workout_logs").select("created_at").eq("patient_id", p.id).gte("created_at", since);
     if ((logs ?? []).some((l) => localDateOf(l.created_at as string, tz) === local.date)) continue;
 
+    // Service message only (חוק התקשורת סעיף 30א): the patient scheduled it.
+    // Never put promotions ("upgrade to premium", sales) in it — marketing
+    // needs its own explicit opt-in and an unsubscribe in every message.
     const name = p.first_name?.trim();
     const payload = JSON.stringify({
       title: "הגיע הזמן להתאמן 💪",

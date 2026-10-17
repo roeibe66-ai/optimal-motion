@@ -252,9 +252,18 @@ html {
 
 /* Visible 2px focus ring on every interactive element (keyboard focus only,
    so mouse clicks don't flash it). --focus-ring re-scopes with .on-light. */
-:where(a, button, input, select, textarea, summary, [role="button"], [tabindex]):focus-visible {
+/* tabindex="-1" is a programmatic focus target (a dialog container, see
+   useDialog), not a control — no ring around the whole sheet. */
+:where(a, button, input, select, textarea, summary, [role="button"], [tabindex]:not([tabindex="-1"])):focus-visible {
   outline: 2px solid var(--focus-ring);
   outline-offset: 2px;
+}
+
+/* iOS Safari zooms the page into any focused field under 16px. Zoom can't be
+   disabled in the viewport (users must be able to pinch-zoom — WCAG 1.4.4),
+   so touch devices get 16px fields instead. Unlayered, so it beats text-sm. */
+@media (pointer: coarse) {
+  input, select, textarea { font-size: max(16px, 1em); }
 }
 
 /* Landing page entrance (LandingPage.tsx): logo drops in, buttons rise in

@@ -1,7 +1,9 @@
 "use client";
 
+import { useRef } from "react";
 import { Fingerprint, X } from "lucide-react";
 import { usePasskeys } from "@/app/hooks/usePasskeys";
+import { useDialog } from "@/app/hooks/useDialog";
 
 // A dismissible bottom-sheet upsell shown once per patient (localStorage-
 // gated, see usePasskeys) after a normal password login, on a device whose
@@ -10,6 +12,8 @@ import { usePasskeys } from "@/app/hooks/usePasskeys";
 // registration ceremony — this isn't a decorative stand-in.
 export default function PasskeyPrompt() {
   const { shouldShowPrompt, isRegistering, error, registerPasskey, dismissPrompt } = usePasskeys();
+  const panelRef = useRef<HTMLDivElement>(null);
+  useDialog(panelRef, shouldShowPrompt, dismissPrompt);
 
   if (!shouldShowPrompt) return null;
 
@@ -19,6 +23,10 @@ export default function PasskeyPrompt() {
       onClick={dismissPrompt}
     >
       <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="passkey-prompt-title"
         className="bg-elevated w-full sm:max-w-sm rounded-t-3xl sm:rounded-3xl p-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] sm:pb-6 shadow-elevated"
         onClick={(e) => e.stopPropagation()}
       >
@@ -31,12 +39,12 @@ export default function PasskeyPrompt() {
           </button>
         </div>
 
-        <h3 className="text-lg font-black text-fg mb-1.5">כניסה מהירה עם Face ID</h3>
+        <h3 id="passkey-prompt-title" className="text-lg font-black text-fg mb-1.5">כניסה מהירה עם Face ID</h3>
         <p className="text-sm text-muted leading-relaxed mb-5">
           הפעל כניסה עם טביעת אצבע או זיהוי פנים כדי להתחבר בפעם הבאה בלי להקליד סיסמה.
         </p>
 
-        {error && <p className="text-xs font-bold text-danger-fg mb-3">{error}</p>}
+        {error && <p role="alert" className="text-xs font-bold text-danger-fg mb-3">{error}</p>}
 
         <div className="flex gap-2.5">
           <button

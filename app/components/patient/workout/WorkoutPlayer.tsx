@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { ArrowLeftRight, ArrowRight, Dumbbell, TrendingUp, FlaskConical, Info, Minus, Pause, Play, Plus, SkipForward, Trophy, X } from "lucide-react";
 import { useAuth } from "@/app/context/AuthContext";
 import ExerciseInfoModal from "@/app/components/patient/workout/ExerciseInfoModal";
@@ -14,6 +14,7 @@ import { formatRepTarget, formatTime, formatWeightKg, getExerciseName, parseWeig
 import type { HapticType } from "@/app/hooks/useHaptics";
 import type { useWorkoutSession } from "@/app/hooks/useWorkoutSession";
 import { useBackDismiss } from "@/app/hooks/useBackDismiss";
+import { useDialog } from "@/app/hooks/useDialog";
 import { confirmAction } from "@/app/components/ui/feedback";
 import { useAddress } from "@/app/hooks/useAddress";
 
@@ -138,6 +139,12 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
     })
   );
 
+  // The live player screen (pre/post flows have their own) — a modal layer
+  // over the tabs: focus in, Tab kept inside. Leaving goes through the X /
+  // system Back, which ask first, so no Escape shortcut.
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useDialog(dialogRef, session.isWorkoutMode && !session.showPreWorkout && !session.workoutFinished);
+
   if (session.showPreWorkout) {
     return (
       <PreWorkoutFlow
@@ -176,7 +183,7 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
   // חזרות" set whose "סיום סט" would log a set of nothing.
   if (!ex && !session.isResting && !session.isSupersetCheck) {
     return (
-      <div className="fixed inset-0 z-[150] bg-page text-fg flex flex-col items-center justify-center gap-4 p-8 text-center" dir={dir}>
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-label="אימון" className="fixed inset-0 z-[150] bg-page text-fg flex flex-col items-center justify-center gap-4 p-8 text-center" dir={dir}>
         <Dumbbell size={40} className="text-muted" />
         <p className="text-lg font-black">אין תרגילים זמינים באימון הזה</p>
         <p className="text-sm text-muted max-w-xs">ייתכן שהתרגילים הוסרו מהמאגר. אפשר לבחור אימון אחר או לבנות אחד חדש.</p>
@@ -210,6 +217,10 @@ export default function WorkoutPlayer({ session, triggerHaptic }: WorkoutPlayerP
 
   return (
     <div
+      ref={dialogRef}
+      role="dialog"
+      aria-modal="true"
+      aria-label="אימון"
       data-toast-top
       className="fixed inset-0 z-[150] bg-page text-fg flex flex-col overflow-hidden"
       dir={dir}

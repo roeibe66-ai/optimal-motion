@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState, type ReactNode, type TouchEvent } from "react";
+import Link from "next/link";
+import { useDialog } from "@/app/hooks/useDialog";
 import { createPortal } from "react-dom";
 import {
   ArrowLeftRight,
@@ -27,7 +29,7 @@ import {
   Loader2,
   type LucideIcon,
 } from "lucide-react";
-import BodyDiagram from "@/app/components/BodyDiagram";
+import BodyDiagram, { BodyAreaButtons } from "@/app/components/BodyDiagram";
 import { EQUIPMENT_LIST } from "@/app/constants/catalog";
 import { ADDRESS_FORMS, MAX_TRAINING_GOALS, SESSION_MINUTES, TRAINING_DAYS, TRAINING_EXPERIENCE, TRAINING_GOALS, TRAINING_LOCATIONS } from "@/app/constants/onboarding";
 import type { HapticType } from "@/app/hooks/useHaptics";
@@ -127,7 +129,7 @@ function OptionCard({ selected, onClick, icon: Icon, label, hint, n }: { selecte
       aria-pressed={selected}
       onClick={onClick}
       style={stagger(n)}
-      className={`animate-card-in relative w-full flex items-center gap-3 text-start rounded-2xl border-2 px-4 py-3.5 transition-[transform,background-color,border-color,color] duration-150 ease-out active:scale-[0.97] ${
+      className={`animate-card-in relative w-full flex items-center gap-3 text-start rounded-2xl border-2 px-4 py-3.5 transition-ui duration-150 ease-out active:scale-[0.97] ${
         selected ? "border-accent bg-accent/10 text-accent-fg" : "on-light border-line bg-surface text-fg"
       }`}
     >
@@ -139,7 +141,7 @@ function OptionCard({ selected, onClick, icon: Icon, label, hint, n }: { selecte
       <span
         aria-hidden="true"
         className={`absolute top-2.5 end-2.5 w-5 h-5 rounded-full bg-accent text-on-accent flex items-center justify-center transition-[opacity,scale] duration-200 ease-out-strong ${
-          selected ? "opacity-100 scale-100" : "opacity-0 scale-60"
+          selected ? "opacity-100 scale-100" : "opacity-0 scale-75"
         }`}
       >
         <Check size={12} strokeWidth={3} />
@@ -154,7 +156,7 @@ function Chip({ selected, onClick, children }: { selected: boolean; onClick: () 
       type="button"
       aria-pressed={selected}
       onClick={onClick}
-      className={`min-h-11 rounded-full border-2 px-4 text-sm font-bold transition-[transform,background-color,border-color,color] duration-150 ease-out active:scale-[0.97] ${
+      className={`min-h-11 rounded-full border-2 px-4 text-sm font-bold transition-ui duration-150 ease-out active:scale-[0.97] ${
         selected ? "border-accent bg-accent/10 text-accent-fg" : "on-light border-line bg-surface text-fg"
       }`}
     >
@@ -190,6 +192,8 @@ export default function OnboardingFlow({ patient, onFinish, onLater, triggerHapt
   const autoAdvance = useRef<ReturnType<typeof setTimeout> | null>(null);
   const touchStart = useRef<{ x: number; y: number } | null>(null);
   const [isMounted, setIsMounted] = useState(false);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useDialog(dialogRef, isMounted);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- portal target exists only after the first client render
@@ -434,12 +438,13 @@ export default function OnboardingFlow({ patient, onFinish, onLater, triggerHapt
             <p className="animate-card-in text-sm text-muted mt-1 mb-4" style={stagger(1)}>
               נגיעה באזור במפה, מלפנים ומאחור
             </p>
-            <div className="animate-card-in scheme-dark bg-elevated border border-line rounded-3xl p-4 flex justify-center gap-4" style={stagger(2)}>
-              {(["anterior", "posterior"] as const).map((view) => (
-                <div key={view} style={{ width: "120px" }}>
-                  <BodyDiagram view={view} highlightedMuscles={answers.limitation_areas} onMuscleClick={(m) => toggleIn("limitation_areas", m)} />
-                </div>
-              ))}
+            <div className="animate-card-in scheme-dark bg-elevated border border-line rounded-3xl p-4 flex flex-col items-center gap-4" style={stagger(2)}>
+              <div className="flex justify-center gap-4">
+                {(["anterior", "posterior"] as const).map((view) => (
+                  <BodyDiagram key={view} view={view} width={120} showButtons={false} highlightedMuscles={answers.limitation_areas} onMuscleClick={(m) => toggleIn("limitation_areas", m)} />
+                ))}
+              </div>
+              <BodyAreaButtons views={["anterior", "posterior"]} selected={answers.limitation_areas} onToggle={(m) => toggleIn("limitation_areas", m)} />
             </div>
             <p className="text-xs text-muted mt-2 min-h-5 text-center">
               {answers.limitation_areas.length > 0 ? (
@@ -464,6 +469,14 @@ export default function OnboardingFlow({ patient, onFinish, onLater, triggerHapt
                 כן
               </Chip>
             </div>
+            {/* Notice at the point of collection: this is health data
+                (מידע רגיש), optional, and who sees it — matches /privacy. */}
+            <p className="animate-card-in text-xs text-muted mt-6 leading-relaxed" style={stagger(5)}>
+              מידע רפואי, רשות למסור. משמש רק להתאמת האימונים, ומוצג למטפל שלכם ולמאמן ה-AI.{" "}
+              <Link href="/privacy" target="_blank" className="underline font-bold">
+                מדיניות הפרטיות
+              </Link>
+            </p>
           </>
         );
       case "done": {
@@ -503,12 +516,13 @@ export default function OnboardingFlow({ patient, onFinish, onLater, triggerHapt
   if (!isMounted) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-[120] bg-page flex flex-col" dir="rtl" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
+    <div ref={dialogRef} role="dialog" aria-modal="true" aria-label="שאלון היכרות" className="fixed inset-0 z-[120] bg-page flex flex-col" dir="rtl" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
       <div className="pt-safe px-5 pt-4 flex items-center gap-3 min-h-14">
         <button
           type="button"
           onClick={back}
           aria-label="חזרה"
+          inert={!showBack}
           className={`w-10 h-10 -ms-2 rounded-full flex items-center justify-center text-muted active:scale-90 transition-[scale,opacity] duration-150 ${showBack ? "" : "opacity-0 pointer-events-none"}`}
         >
           <ArrowRight size={20} />
@@ -533,7 +547,7 @@ export default function OnboardingFlow({ patient, onFinish, onLater, triggerHapt
           type="button"
           onClick={next}
           disabled={isSaving}
-          className={`w-full min-h-14 rounded-2xl font-black text-base flex items-center justify-center gap-2 border-2 transition-[transform,background-color,border-color,color] duration-200 ease-out active:scale-[0.97] ${
+          className={`w-full min-h-14 rounded-2xl font-black text-base flex items-center justify-center gap-2 border-2 transition-ui duration-200 ease-out active:scale-[0.97] ${
             ctaPrimary ? "bg-btn-primary text-btn-primary-fg border-transparent" : "bg-transparent text-muted border-line"
           }`}
         >

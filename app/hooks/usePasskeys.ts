@@ -89,7 +89,7 @@ export function usePasskeys() {
         existingCredentialIdsRef.current
       );
       const registrationResponse = await startRegistration({ optionsJSON });
-      const result = await verifyPasskeyRegistration(registrationResponse, optionsJSON.challenge);
+      const result = await verifyPasskeyRegistration(registrationResponse);
       if (!result.verified) {
         setError(result.error);
         return false;

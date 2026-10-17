@@ -1,7 +1,7 @@
 "use client";
 
-import type { CSSProperties, Dispatch, SetStateAction } from "react";
-import { Activity, Bell, ChevronLeft, ClipboardList, CheckCircle, Crown, Flame, Globe, LogOut, Medal, Receipt, SunMoon } from "lucide-react";
+import { useState, type CSSProperties, type Dispatch, type SetStateAction } from "react";
+import { Activity, Bell, ChevronLeft, ClipboardList, CheckCircle, Crown, Flame, Globe, Loader2, LogOut, Medal, Receipt, SunMoon, Trash2 } from "lucide-react";
 import { useTheme } from "@/app/components/ThemeProvider";
 import type { ThemeSetting } from "@/app/lib/theme";
 import { useAuth } from "@/app/context/AuthContext";
@@ -13,6 +13,10 @@ import { toDateKey } from "@/app/hooks/useWorkoutSession";
 import { countLabel } from "@/app/utils/format";
 import RestAlertSetting from "@/app/components/patient/RestAlertSetting";
 import { useAddress } from "@/app/hooks/useAddress";
+import LegalLinks from "@/app/components/ui/LegalLinks";
+import { supabase } from "@/app/lib/supabase";
+import { deleteMyAccount } from "@/app/actions/account";
+import { confirmAction, notify } from "@/app/components/ui/feedback";
 
 interface ProfileTabProps {
   workoutLogs: WorkoutLog[];
@@ -46,6 +50,27 @@ export default function ProfileTab({
   onOpenOnboarding,
 }: ProfileTabProps) {
   const { loggedInPatient, lang, setLang, handleLogout } = useAuth();
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleDeleteAccount = async () => {
+    const ok = await confirmAction({
+      title: "למחוק את החשבון?",
+      message: "החשבון וכל המידע שלך — תוכניות, היסטוריית אימונים ומידע בריאותי — יימחקו לצמיתות. אי אפשר לשחזר אותם.",
+      confirmLabel: "מחיקה לצמיתות",
+      destructive: true,
+    });
+    if (!ok) return;
+    setIsDeleting(true);
+    const { data } = await supabase.auth.getSession();
+    const result = await deleteMyAccount(data.session?.access_token ?? "");
+    setIsDeleting(false);
+    if (!result.ok) {
+      notify(result.error, "error");
+      return;
+    }
+    notify("החשבון נמחק", "success");
+    handleLogout();
+  };
   const t = useAddress();
   const { setting: themeSetting, setSetting: setThemeSetting } = useTheme();
 
@@ -151,28 +176,28 @@ export default function ProfileTab({
 
       {/* הגדרות — Settings, one grouped list: premium/invoices (still
           non-functional placeholders, dimmed + "בקרוב" per the earlier UX
-          audit fix — not reintroducing a dead-end affordance), notification
+          audit fix — dimmed via muted text, not opacity, which failed AA contrast — not reintroducing a dead-end affordance), notification
           scheduling (its own real inputs, inline within the row), haptics
           toggle, language, logout. */}
       <div className="mb-8">
         <h3 className="text-xs font-bold text-muted px-1 mb-2">הגדרות</h3>
         <div className="on-light bg-surface rounded-2xl shadow-card overflow-hidden">
-          <div className="flex items-center justify-between px-5 py-4 border-b border-line opacity-50 cursor-default">
+          <div className="flex items-center justify-between px-5 py-4 border-b border-line cursor-default">
             <div className="flex items-center gap-3">
               <Crown size={18} className="text-muted" />
               <div className="text-right">
-                <h4 className="font-bold text-fg text-sm">ניהול מנוי פרימיום</h4>
+                <h4 className="font-bold text-muted text-sm">ניהול מנוי פרימיום</h4>
                 <p className="text-xs text-muted">הצטרפות, שדרוג וביטול מסלולים</p>
               </div>
             </div>
             <span className="on-light text-[0.6875rem] font-bold text-muted bg-surface-alt px-2 py-1 rounded-full shrink-0">בקרוב</span>
           </div>
 
-          <div className="flex items-center justify-between px-5 py-4 border-b border-line opacity-50 cursor-default">
+          <div className="flex items-center justify-between px-5 py-4 border-b border-line cursor-default">
             <div className="flex items-center gap-3">
               <Receipt size={18} className="text-muted" />
               <div className="text-right">
-                <h4 className="font-bold text-fg text-sm">חשבוניות וקבלות</h4>
+                <h4 className="font-bold text-muted text-sm">חשבוניות וקבלות</h4>
                 <p className="text-xs text-muted">היסטוריית תשלומים באפליקציה</p>
               </div>
             </div>
@@ -325,12 +350,27 @@ export default function ProfileTab({
             <ChevronLeft size={18} className="text-muted group-hover:text-fg" />
           </button>
 
-          <button onClick={handleLogout} className="w-full flex items-center gap-3 px-5 py-4 hover:bg-danger/10 active:scale-[0.99] transition-ui duration-150 ease-out">
+          <button onClick={handleLogout} className="w-full flex items-center gap-3 px-5 py-4 border-b border-line hover:bg-danger/10 active:scale-[0.99] transition-ui duration-150 ease-out">
             <LogOut size={18} className="text-danger-fg" />
             <h4 className="font-bold text-danger-fg text-sm">התנתק מהמערכת</h4>
           </button>
+
+          {/* Account deletion: the right in /privacy, and required in-app by
+              Apple and Google Play. Admins can't (deleteMyAccount refuses). */}
+          {loggedInPatient?.role !== "admin" && (
+            <button
+              onClick={handleDeleteAccount}
+              disabled={isDeleting}
+              className="w-full flex items-center gap-3 px-5 py-4 hover:bg-danger/10 active:scale-[0.99] transition-ui duration-150 ease-out disabled:opacity-60"
+            >
+              {isDeleting ? <Loader2 size={18} className="text-danger-fg animate-spin" /> : <Trash2 size={18} className="text-danger-fg" />}
+              <h4 className="font-bold text-danger-fg text-sm">מחיקת החשבון</h4>
+            </button>
+          )}
         </div>
       </div>
+
+      <LegalLinks className="mb-8" />
     </div>
   );
 }

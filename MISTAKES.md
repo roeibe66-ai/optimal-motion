@@ -10,6 +10,24 @@ the rule going forward. No fix commentary, no praise, no filler.
 
 ---
 
+## 2026-10-16 — Any patient could make themselves admin (FOR ALL RLS + UPDATE-only guard)
+
+**What happened:** `patients_self_or_admin` was `FOR ALL`, so a patient could DELETE their own row and INSERT a new one with `role = 'admin'` — `protect_patient_privileged_fields` only runs `BEFORE UPDATE`. A leftover `exercises` policy "Enable all for authenticated users" (`FOR ALL using true`) also let any patient edit/delete exercises. Separately, the passkey login took its expected challenge from the client, so a captured response could be replayed.
+**Why:** permissive policies OR together — one broad `FOR ALL` policy silently overrides every narrow one next to it; and column guards written for UPDATE don't cover DELETE+INSERT.
+**Rule:** write RLS per command (select/insert/update/delete), never `FOR ALL` on a table with privileged columns; after any policy change list *all* policies on the table, not just the new one. Anything a guard protects on UPDATE must also be unreachable via INSERT. Security nonces (WebAuthn challenges) live server-side, never round-trip through the client.
+
+## 2026-10-15 — Overlays and zoom were inaccessible (IS 5568 / WCAG)
+
+**What happened:** the viewport set `maximumScale: 1` (pinch-zoom disabled); the shared `Modal` and every full-screen flow (player, pre/post workout, onboarding, coach sheet, passkey prompt) had no `role="dialog"`, no Escape, and didn't move or trap focus; the closed coach sheet stayed tabbable off-screen; the pain-area body diagram was pointer-only; "coming soon" rows were dimmed with `opacity-50` (contrast 2.1:1).
+**Why:** overlays were built visually (fixed + z-index) and checked only by eye and touch; nothing ran an axe scan or a keyboard pass.
+**Rule:** any new overlay gets `role="dialog" aria-modal` + `useDialog` (`app/hooks/useDialog.ts`); anything parked off-screen gets `inert`; pointer-only widgets need a keyboard/button alternative; dim with muted text tokens, never `opacity`; never set `maximumScale`. Update `/accessibility` when what's accessible changes.
+
+## 2026-10-15 — Press feedback snapped instead of animating (`transition-[transform,…]` + `active:scale`)
+
+**What happened:** the onboarding cards, chips and CTA (and the press feedback first added to the login pages) used `transition-[transform,background-color,…]` with `active:scale-[0.97]`. The press shrink happened instantly, with no transition.
+**Why:** in Tailwind v4, `scale-*` / `translate-*` set the CSS `scale` / `translate` properties, not `transform`, so a transition list that names only `transform` never covers them.
+**Rule:** for anything pressable use `transition-ui` (globals.css), or name `scale` / `translate` explicitly in an arbitrary `transition-[…]` list. `transition-transform` is fine — in v4 it includes them.
+
 ## 2026-10-14 — AI server actions had no auth check
 
 **What happened:** `chatWithAssistant` (admin co-pilot + patient coach) and `generateResearchFacts` accepted calls from anyone, signed in or not, and spent Anthropic credits on them. Only `askWorkoutBuilderAssistant` checked the caller.

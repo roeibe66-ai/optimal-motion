@@ -79,6 +79,21 @@ Google Doc via the admin UI — not part of the app itself.
 
 **Deploy**: linked to Vercel (`.vercel/project.json`).
 
+## Legal / compliance rules (Israeli law, pre-launch audit Oct 2026)
+
+- **Accessibility (IS 5568):** every overlay gets `role="dialog" aria-modal` +
+  `useDialog` (`app/hooks/useDialog.ts`); pointer-only widgets need a button
+  alternative; never set `maximumScale`. Keep `/accessibility` truthful.
+- **Privacy:** `/privacy` must match what the app really collects and who it
+  shares it with (Supabase, Vercel, Anthropic…). On a substantive change to it
+  or `/terms`, bump `LEGAL_VERSION` (`app/constants/legal.ts`) — `ConsentGate`
+  then asks every patient to accept again.
+- **RLS:** policies per command, never `FOR ALL` on a table with privileged
+  columns (see MISTAKES.md). Security docs: `docs/security/`.
+- **Messages (spam law, §30A):** push/email today are service-only (reminders
+  the patient scheduled, rest timer, auth emails). Anything promotional needs a
+  separate, unchecked-by-default opt-in and an unsubscribe in every message.
+
 ## Related docs
 
 `PROJECT_BRIEF.md` (vision/design language), `UI-IMPLEMENTATION-BRIEF.md`,

@@ -1,6 +1,6 @@
 "use server";
 
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { generateAuthenticationOptions, generateRegistrationOptions, verifyAuthenticationResponse, verifyRegistrationResponse } from "@simplewebauthn/server";
 import type {
   AuthenticationResponseJSON,
@@ -25,6 +25,33 @@ async function getRpInfo() {
   return { rpID, origin };
 }
 
+// The challenge each ceremony must sign is kept server-side, in a short-lived
+// httpOnly cookie set when the options are generated and consumed (deleted)
+// on verify. It used to come back from the client as a parameter, so a
+// captured login response could be replayed with its own challenge — and
+// platform passkeys (iCloud Keychain) keep their counter at 0, so the
+// counter check didn't stop that either.
+const CHALLENGE_COOKIE = { registration: "om_pk_reg", authentication: "om_pk_auth" } as const;
+const CHALLENGE_TTL_SECONDS = 300;
+
+async function rememberChallenge(kind: keyof typeof CHALLENGE_COOKIE, challenge: string) {
+  (await cookies()).set(CHALLENGE_COOKIE[kind], challenge, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+    path: "/",
+    maxAge: CHALLENGE_TTL_SECONDS,
+  });
+}
+
+// Single use: read and delete in one step.
+async function takeChallenge(kind: keyof typeof CHALLENGE_COOKIE) {
+  const store = await cookies();
+  const value = store.get(CHALLENGE_COOKIE[kind])?.value;
+  store.delete(CHALLENGE_COOKIE[kind]);
+  return value;
+}
+
 // Called right before navigator.credentials.create() — excludeCredentials
 // (the patient's already-registered credential ids, fetched client-side
 // under normal auth.uid()-scoped RLS) stops the same authenticator from
@@ -35,7 +62,7 @@ export async function generatePasskeyRegistrationOptions(
   existingCredentialIds: string[]
 ): Promise<PublicKeyCredentialCreationOptionsJSON> {
   const { rpID } = await getRpInfo();
-  return generateRegistrationOptions({
+  const options = await generateRegistrationOptions({
     rpName: "Eccentric",
     rpID,
     userID: new TextEncoder().encode(String(patientId)),
@@ -48,6 +75,8 @@ export async function generatePasskeyRegistrationOptions(
       authenticatorAttachment: "platform",
     },
   });
+  await rememberChallenge("registration", options.challenge);
+  return options;
 }
 
 export type VerifyPasskeyRegistrationResult =
@@ -55,16 +84,16 @@ export type VerifyPasskeyRegistrationResult =
   | { verified: false; error: string };
 
 // The actual cryptographic proof check — this is the one part of the whole
-// flow that must run server-side (it needs the expected challenge/origin/
-// rpID to reject a forged or replayed response). On success, the CALLER
+// flow that must run server-side (it needs the expected challenge — from the
+// cookie, never the client — plus origin/rpID to reject a forged or replayed
+// response). On success, the CALLER
 // (an already-authenticated browser session) writes the verified credential
 // into patient_passkeys itself via the normal RLS-protected client; this
 // action never touches the database.
-export async function verifyPasskeyRegistration(
-  response: RegistrationResponseJSON,
-  expectedChallenge: string
-): Promise<VerifyPasskeyRegistrationResult> {
+export async function verifyPasskeyRegistration(response: RegistrationResponseJSON): Promise<VerifyPasskeyRegistrationResult> {
   const { rpID, origin } = await getRpInfo();
+  const expectedChallenge = await takeChallenge("registration");
+  if (!expectedChallenge) return { verified: false, error: "פג תוקף הבקשה. נסו שוב." };
   try {
     const verification = await verifyRegistrationResponse({
       response,
@@ -95,10 +124,12 @@ export async function verifyPasskeyRegistration(
 // starts, which is the whole point of skipping the password/email step.
 export async function generatePasskeyAuthenticationOptions(): Promise<PublicKeyCredentialRequestOptionsJSON> {
   const { rpID } = await getRpInfo();
-  return generateAuthenticationOptions({
+  const options = await generateAuthenticationOptions({
     rpID,
     userVerification: "preferred",
   });
+  await rememberChallenge("authentication", options.challenge);
+  return options;
 }
 
 export type VerifyPasskeyAuthenticationResult =
@@ -117,11 +148,10 @@ export type VerifyPasskeyAuthenticationResult =
 // caller finishes it client-side with supabase.auth.verifyOtp({ token_hash,
 // type: "magiclink" }), which is what actually establishes the session and
 // fires the same onAuthStateChange event a password login would.
-export async function verifyPasskeyAuthentication(
-  response: AuthenticationResponseJSON,
-  expectedChallenge: string
-): Promise<VerifyPasskeyAuthenticationResult> {
+export async function verifyPasskeyAuthentication(response: AuthenticationResponseJSON): Promise<VerifyPasskeyAuthenticationResult> {
   const { rpID, origin } = await getRpInfo();
+  const expectedChallenge = await takeChallenge("authentication");
+  if (!expectedChallenge) return { verified: false, error: "פג תוקף הבקשה. נסו שוב." };
 
   const { data: credentialRow, error: lookupError } = await supabaseAdmin
     .from("patient_passkeys")
