@@ -44,6 +44,7 @@ import ExerciseNoteEditor from "@/app/components/ExerciseNoteEditor";
 import AdminCoPilotDrawer from "@/app/components/admin/AdminCoPilotDrawer";
 import CoachKnowledgeTab from "@/app/components/admin/tabs/CoachKnowledgeTab";
 import CoachTestTab from "@/app/components/admin/tabs/CoachTestTab";
+import AdminTasksTab from "@/app/components/admin/tabs/AdminTasksTab";
 import { KNOWLEDGE_TAG_LABELS } from "@/app/constants/knowledgeTags";
 import WorkoutBuilderTab from "@/app/components/admin/tabs/WorkoutBuilderTab";
 import ProgramLibraryTab from "@/app/components/admin/tabs/ProgramLibraryTab";
@@ -1685,6 +1686,8 @@ export default function LegacyAdminApp() {
         {adminTab === "knowledge" && <CoachKnowledgeTab />}
 
         {adminTab === "coach_test" && <CoachTestTab patients={patients} />}
+
+        {adminTab === "tasks" && <AdminTasksTab />}
 
         {adminTab === "research" && (
           <div className="max-w-6xl mx-auto">

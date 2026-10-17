@@ -16,7 +16,7 @@ export const AVAILABLE_MUSCLES = [
   // MUSCLE_REGIONS below is what actually drives the grouped admin UI.
   { id: "serratus-anterior", label: "משונן קדמי" },
   { id: "side-deltoids", label: "כתף אמצעית" }, { id: "rotator-cuff", label: "מסובבי כתף" },
-  { id: "lats", label: "גב רחב (לאטס)" }, { id: "trapezius", label: "טרפז" }, { id: "rhomboids", label: "רומבואיד" },
+  { id: "lats", label: "רחב גבי (לאטס)" }, { id: "trapezius", label: "טרפז" }, { id: "rhomboids", label: "רומבואיד" },
   { id: "brachialis", label: "ברכיאליס" }, { id: "forearm-flexors", label: "כופפי אמה" }, { id: "forearm-extensors", label: "פושטי אמה" },
   { id: "transverse-abdominis", label: "שריר בטן רוחבי" },
   { id: "hip-flexors", label: "כופפי ירך" }, { id: "glute-medius", label: "ישבן תיכון" },

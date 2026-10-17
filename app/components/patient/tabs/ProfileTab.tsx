@@ -12,6 +12,7 @@ import type { WorkoutLog } from "@/app/types";
 import { toDateKey } from "@/app/hooks/useWorkoutSession";
 import { countLabel } from "@/app/utils/format";
 import RestAlertSetting from "@/app/components/patient/RestAlertSetting";
+import RestSoundSetting from "@/app/components/patient/RestSoundSetting";
 import { useAddress } from "@/app/hooks/useAddress";
 import LegalLinks from "@/app/components/ui/LegalLinks";
 import { supabase } from "@/app/lib/supabase";
@@ -280,6 +281,8 @@ export default function ProfileTab({
               </button>
             </div>
           </div>
+
+          <RestSoundSetting />
 
           <div className="flex items-center justify-between px-5 py-4 border-b border-line">
             <div className="flex items-center gap-3">

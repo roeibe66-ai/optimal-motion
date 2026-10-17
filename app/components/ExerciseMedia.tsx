@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
-import { Dumbbell, Play } from "lucide-react";
+import { Dumbbell, Maximize2, Play } from "lucide-react";
 import type { Exercise } from "@/app/types";
 import { getExerciseMediaItems, MEDIA_STUDIO_BG, type ExerciseMediaItem, type MediaAspect } from "@/app/utils/media";
 
@@ -175,6 +175,15 @@ interface ExerciseMediaPlayerProps {
   placeholder?: ReactNode; // shown when the exercise has no media at all
 }
 
+// iOS Safari only has the video element's own full-screen player
+// (webkitEnterFullscreen); elsewhere, the standard Fullscreen API.
+function openVideoFullscreen(box: HTMLElement | null) {
+  const video = box?.querySelector("video") as (HTMLVideoElement & { webkitEnterFullscreen?: () => void }) | null;
+  if (!video) return;
+  if (video.webkitEnterFullscreen) video.webkitEnterFullscreen();
+  else void video.requestFullscreen?.().catch(() => {});
+}
+
 export function ExerciseMediaPlayer({ exercise, label, mode = "box", fillFit = "cover", className = "", wideClassName, placeholder }: ExerciseMediaPlayerProps) {
   const items = getExerciseMediaItems(exercise);
   const reducedMotion = usePrefersReducedMotion();
@@ -194,16 +203,30 @@ export function ExerciseMediaPlayer({ exercise, label, mode = "box", fillFit = "
 
   const current = items[Math.min(angle, items.length - 1)];
   const pickAngle = (i: number) => rememberAngle(exerciseId, i);
+  const isWide = current.aspect === "16:9";
 
   // The angle toggle sits under the box, not over it — overlaid it hid the
   // hands/feet in 16:9 floor clips.
   return (
-    <div className={`flex flex-col items-center gap-2.5 ${current.aspect === "16:9" && wideClassName !== undefined ? wideClassName : `w-full ${className}`}`}>
+    <div className={`flex flex-col items-center gap-2.5 ${isWide && wideClassName !== undefined ? wideClassName : `w-full ${className}`}`}>
       <div
         className={`relative w-full ${ASPECT_CLASS[current.aspect]} rounded-[2rem] overflow-hidden border border-line shadow-card ${current.legacy ? "bg-fg/10" : ""}`}
         style={current.legacy ? undefined : { background: MEDIA_STUDIO_BG }}
       >
         <MediaItemView item={current} label={label} reducedMotion={reducedMotion} fit={current.legacy ? "cover" : "contain"} />
+        {/* A 16:9 clip on a portrait phone can't get much bigger in place;
+            this opens the phone's own full-screen player, which turns with
+            the phone. */}
+        {isWide && current.kind === "video" && (
+          <button
+            type="button"
+            onClick={(e) => openVideoFullscreen(e.currentTarget.parentElement)}
+            aria-label="הגדלה למסך מלא"
+            className="absolute bottom-2.5 left-2.5 w-9 h-9 rounded-full bg-scrim/45 text-white backdrop-blur-sm flex items-center justify-center active:scale-90 transition-transform duration-150 ease-out"
+          >
+            <Maximize2 size={16} />
+          </button>
+        )}
       </div>
 
       {items.length > 1 && (

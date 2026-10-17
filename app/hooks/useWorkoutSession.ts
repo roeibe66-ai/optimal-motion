@@ -8,10 +8,13 @@ import { getExerciseName, parseWeightInput } from "@/app/utils/format";
 import { getLastUsedWeights, parsePerformance } from "@/app/utils/history";
 import { suggestProgression, type ProgressionSuggestion } from "@/app/utils/progression";
 import { extendRestAlarm, startRestAlarm, stopRestAlarm } from "@/app/utils/pushClient";
+import { playRestEnd, playRestTick, primeRestSound } from "@/app/utils/restSound";
 
 // Seconds before the end of a rest at which an on-screen app cancels the
 // push alarm (see the rest countdown below).
 const REST_ALARM_CANCEL_LEAD_S = 2;
+// Ticks before the end-of-rest bell (app/utils/restSound.ts).
+const REST_TICK_SECONDS = 3;
 
 // A wall-clock deadline `seconds` from now. Module-level: only ever called
 // from effects, but the React Compiler flags Date.now() inside the hook body.
@@ -177,6 +180,8 @@ export function useWorkoutSession({
   // froze the clock. Now each tick (and returning to the app) recomputes the
   // remaining seconds from the deadline, so time keeps passing while away.
   const restEndsAt = useRef<number | null>(null);
+  // The last countdown second that ticked, so each of 3-2-1 sounds once.
+  const lastTickRef = useRef<number | null>(null);
   const exEndsAt = useRef<number | null>(null);
 
   // Swipe-to-finish tracking lives in refs, not state: a touchmove fires
@@ -351,6 +356,8 @@ export function useWorkoutSession({
 
   const handleFinishAction = () => {
     triggerHaptic("light");
+    // The tap that starts a rest is the gesture iOS needs to allow its sound.
+    primeRestSound();
     setSetHistory((prev) => [
       ...prev,
       { blockIdx: activeBlockIdx, exInBlockIdx: activeExInBlockIdx, blockSet: currentBlockSet, performanceLength: sessionPerformance.length },
@@ -541,6 +548,7 @@ export function useWorkoutSession({
       // ends (app/utils/pushClient.ts; a no-op without notifications on).
       if (restEndsAt.current === null) {
         restEndsAt.current = deadlineAfter(restTimer);
+        lastTickRef.current = null;
         if (!isSimulation) {
           const next = nextExercise ? getExerciseName(nextExercise.exercise, lang) : null;
           startRestAlarm(restEndsAt.current, "המנוחה נגמרה 💪", next ? `הבא: ${next}` : "חוזרים לאימון");
@@ -550,14 +558,23 @@ export function useWorkoutSession({
         if (restEndsAt.current === null) return;
         const left = secondsUntil(restEndsAt.current);
         setRestTimer(left);
+        // Soft tick on 3, 2, 1 (once each: the interval can fire twice in a second).
+        if (left >= 1 && left <= REST_TICK_SECONDS && lastTickRef.current !== left) {
+          lastTickRef.current = left;
+          playRestTick();
+        }
         // On screen at the end: the app announces it itself, so the push
         // is cancelled just before it would go out. In the background this
         // never runs (iOS suspends the page) and the push arrives.
         if (left <= REST_ALARM_CANCEL_LEAD_S && document.visibilityState === "visible") stopRestAlarm();
       }, 1000);
     }
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- reacting to the countdown's own terminal value, not syncing external state
-    else if (isResting && restTimer <= 0) handleEndRest();
+    else if (isResting && restTimer <= 0) {
+      // Ran out on screen (not skipped): the end-of-rest bell.
+      playRestEnd();
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- reacting to the countdown's own terminal value, not syncing external state
+      handleEndRest();
+    }
     return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isResting, restTimer]);
