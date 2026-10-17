@@ -6,6 +6,7 @@ import { z } from "zod";
 import { XMLParser } from "fast-xml-parser";
 import { verifyCaller } from "@/app/lib/serverAuth";
 import { KNOWLEDGE_AREA_TAGS, KNOWLEDGE_TOPIC_TAGS } from "@/app/constants/knowledgeTags";
+import { fetchOpenAccessFullText, isReputableJournal, PUBMED_JOURNAL_CLAUSE } from "@/app/lib/researchSources";
 import type { ResearchFinding } from "@/app/types";
 
 const SEMANTIC_SCHOLAR_SEARCH_URL = "https://api.semanticscholar.org/graph/v1/paper/search";
@@ -42,6 +43,9 @@ interface CandidatePaper {
   citationCount: number | null; // PubMed's E-utilities don't expose this — always null for "pubmed" candidates
   venue: string | null; // journal/venue name, used for the top-tier-journal ranking boost below
   publicationTypes: string[]; // Semantic Scholar's own classification, or PubMed's MeSH-indexed PublicationTypeList — feeds classifyEvidence
+  // For the full-text lookup (Europe PMC).
+  pmid: string | null;
+  doi: string | null;
 }
 
 interface SemanticScholarPaper {
@@ -52,6 +56,7 @@ interface SemanticScholarPaper {
   citationCount: number | null;
   venue: string | null;
   publicationTypes: string[] | null;
+  externalIds?: { PubMed?: string; DOI?: string } | null;
 }
 
 interface SemanticScholarSearchResponse {
@@ -142,7 +147,7 @@ async function fetchSemanticScholarCandidates(query: string): Promise<CandidateP
   const currentYear = new Date().getFullYear();
   const params = new URLSearchParams({
     query,
-    fields: "title,abstract,year,url,citationCount,venue,publicationTypes",
+    fields: "title,abstract,year,url,citationCount,venue,publicationTypes,externalIds",
     limit: String(SEMANTIC_SCHOLAR_POOL_SIZE),
     year: `${currentYear - RECENCY_YEARS_LIMIT}-${currentYear}`,
   });
@@ -164,6 +169,8 @@ async function fetchSemanticScholarCandidates(query: string): Promise<CandidateP
       citationCount: p.citationCount,
       venue: p.venue,
       publicationTypes: p.publicationTypes ?? [],
+      pmid: p.externalIds?.PubMed ?? null,
+      doi: p.externalIds?.DOI ?? null,
     }));
 }
 
@@ -241,6 +248,8 @@ function parsePubMedArticles(xml: string): CandidatePaper[] {
         citationCount: null,
         venue: nodeText(journal?.["Title"]) || null,
         publicationTypes: extractPublicationTypes(article),
+        pmid,
+        doi: null,
       };
     })
     .filter((c): c is CandidatePaper => c !== null);
@@ -275,7 +284,8 @@ async function fetchPubMedCandidates(queryOrQueries: string | string[]): Promise
   for (const query of queries) {
     const searchParams = new URLSearchParams({
       db: "pubmed",
-      term: query,
+      // Only the reputable journals (researchSources.ts) — the index itself filters.
+      term: `(${query}) AND ${PUBMED_JOURNAL_CLAUSE}`,
       retmax: String(retmax),
       sort: "relevance",
       retmode: "json",
@@ -285,7 +295,8 @@ async function fetchPubMedCandidates(queryOrQueries: string | string[]): Promise
       ...ncbiCommonParams(),
     });
     try {
-      const searchRes = await fetchWithRetry(`${PUBMED_ESEARCH_URL}?${searchParams.toString()}`, {}, "חיפוש PubMed");
+      // POST: the journal clause makes the term too long for a GET URL.
+      const searchRes = await fetchWithRetry(PUBMED_ESEARCH_URL, { method: "POST", body: searchParams }, "חיפוש PubMed");
       const searchJson = await searchRes.json();
       const ids: string[] = searchJson?.esearchresult?.idlist ?? [];
       for (const id of ids) if (!pmids.includes(id)) pmids.push(id);
@@ -347,9 +358,10 @@ function dedupeCandidates(candidates: CandidatePaper[]): CandidatePaper[] {
 // the LLM fabricating a "Q1" or "high impact factor" claim with nothing
 // real behind it. TOP_TIER_JOURNALS below is the closest honest substitute:
 // a small curated allowlist of journals genuinely well known in sports
-// medicine/orthopedics/exercise physiology, used only as a same-tier
-// tiebreaker, never as a hard filter (a hard filter risks zero results for
-// a niche topic, which would break the feature outright).
+// medicine/orthopedics/exercise physiology, used as a same-tier tiebreaker.
+// The hard filter (Roei, 2026-10-17: reputable journals only) is the wider
+// REPUTABLE_JOURNALS list in app/lib/researchSources.ts — a niche topic may
+// now come back empty, which is what he asked for over weaker sources.
 type EvidenceTier = "meta_analysis" | "systematic_review" | "rct" | "cohort" | "other" | "case_report";
 
 const EVIDENCE_TIER_RANK: Record<EvidenceTier, number> = {
@@ -624,7 +636,7 @@ const paperFactSchema = z.object({
     .describe("כותרת 'הידעת' קצרה: משפט אחד בלבד, עד 12 מילים, בעברית, טענה אחת — בלי 'הידעת', בלי הקדמות, בלי 'מחקר מצא ש', בלי פרטים משניים"),
   takeawayHe: z
     .string()
-    .describe("'מה זה אומר בשבילך': משפט מעשי אחד בלבד, עד 15 מילים, שנובע ישירות מהממצא. כללי, בלי פנייה במין ('כדאי', 'אפשר'), לא ייעוץ רפואי אישי, בלי סייגים (הם בסיכום) ובלי מספרים שלא מופיעים בתקציר"),
+    .describe("'מה זה אומר בשבילך': משפט מעשי אחד בלבד, עד 15 מילים, שנובע ישירות מהממצא. כללי, בלי פנייה במין ('כדאי', 'אפשר'), לא ייעוץ רפואי אישי, בלי סייגים (הם בסיכום) ובלי מספרים שלא מופיעים במקור"),
   tags: z.array(z.enum(KNOWLEDGE_TAG_IDS)).describe(`1-4 תגיות מהרשימה: ${KNOWLEDGE_TAG_GUIDE}. אזור גוף רק אם המחקר באמת עוסק בו`),
 });
 
@@ -640,7 +652,7 @@ const reviewSchema = z.object({
 });
 
 const REVIEW_SYSTEM_PROMPT = `את/ה עורך/ת מדעי/ת קפדני/ת של עובדות "הידעת" באפליקציית כושר ושיקום. קיבלת תקציר של מאמר, נתוני איכות הראיות, וטיוטה בעברית. בדוק/י:
-1. כל טענה ומספר בטיוטה מופיעים בתקציר. מספר שלא מופיע — הסר/י.
+1. כל טענה ומספר בטיוטה מופיעים במקור (התקציר או קטעי המאמר המלא). מספר שלא מופיע — הסר/י.
 2. עוצמת הניסוח מתאימה לראיות: ממחקר תצפיתי, פיילוט, מדגם קטן (פחות מכ-50) או מחקר בודד לא כותבים "מונע", "גורם", "מוכח", אלא "קשור ל", "עשוי", "נמצא ש". הכללה מאוכלוסייה מסוימת (למשל ספרינטרים) לכלל המתאמנים אסורה בלי סייג.
 3. הכותרת: טענה אחת, עד 12 מילים, בלי "הידעת", בלי "מחקר מצא".
 4. המשפט המעשי: משפט אחד בלבד, עד 15 מילים, נובע מהממצא, לא חזק ממנו, ואינו ייעוץ רפואי אישי. את הסייגים משאירים לסיכום.
@@ -671,7 +683,7 @@ const RESEARCH_AGENT_SYSTEM_PROMPT = `את/ה עוזר/ת מחקר עבור אפ
    דוגמה ארוכה מדי: "מחקר שבדק מאות משתתפים מצא שאימוני כוח המבוצעים פעמיים בשבוע לאורך שמונה שבועות עשויים להפחית משמעותית כאבי ברך."
 
 כללים:
-- התבסס אך ורק על התוכן שסופק. אל תמציא נתונים, מספרים או פרטים שלא מופיעים בתקציר.
+- התבסס אך ורק על התוכן שסופק (תקציר, ולפעמים גם קטעים מהמאמר המלא). אל תמציא נתונים, מספרים או פרטים שלא מופיעים בו.
 - אל תיתן ייעוץ רפואי אישי או המלצת טיפול - רק עובדה כללית מהמחקר.
 - אל תטען בשום צורה שהמאמר פורסם בכתב עת "Q1" או בעל "Impact Factor" גבוה - מידע כזה לא סופק לך ואסור להמציא אותו.
 - כתוב בעברית תקנית וטבעית בלבד, ללא מילים באנגלית.
@@ -681,7 +693,7 @@ const RESEARCH_AGENT_SYSTEM_PROMPT = `את/ה עוזר/ת מחקר עבור אפ
 - המשפט "מה זה אומר בשבילך" הוא מעשי וכללי (מה כדאי לעשות או לדעת באימון), לא חזק מהממצא, ולא ייעוץ רפואי אישי.`;
 
 async function summarizePaperInHebrew(
-  paper: { title: string; abstract: string; year: number | null },
+  paper: { title: string; abstract: string; year: number | null; fullText: string | null },
   context: { userRequest: string; focusEn: string; aspectEn: string; matchLevel: "direct" | "related" | undefined; evidenceHe: string }
 ) {
   const matchInstructions =
@@ -694,17 +706,17 @@ async function summarizePaperInHebrew(
     model: anthropic(SUMMARY_MODEL),
     schema: paperFactSchema,
     system: RESEARCH_AGENT_SYSTEM_PROMPT,
-    prompt: `הבקשה המקורית של המשתמש: ${context.userRequest}\nהשאלה (באנגלית): ${context.focusEn}\nההיבט הספציפי שנשאל: ${context.aspectEn}\n\n${matchInstructions}\n\nאיכות הראיות: ${context.evidenceHe}\n\nכותרת: ${paper.title}\nשנת פרסום: ${paper.year ?? "לא ידוע"}\nתקציר: ${paper.abstract}`,
+    prompt: `הבקשה המקורית של המשתמש: ${context.userRequest}\nהשאלה (באנגלית): ${context.focusEn}\nההיבט הספציפי שנשאל: ${context.aspectEn}\n\n${matchInstructions}\n\nאיכות הראיות: ${context.evidenceHe}\n\nכותרת: ${paper.title}\nשנת פרסום: ${paper.year ?? "לא ידוע"}\nתקציר: ${paper.abstract}${paper.fullText ? `\n\nקטעים מהמאמר המלא (העדף אותם על התקציר; מספרים ומסקנות לקחת מכאן):\n${paper.fullText}` : ""}`,
   });
   return object;
 }
 
-async function reviewFact(abstract: string, evidenceHe: string, draft: { didYouKnowHe: string; takeawayHe: string; summaryHe: string }) {
+async function reviewFact(source: string, evidenceHe: string, draft: { didYouKnowHe: string; takeawayHe: string; summaryHe: string }) {
   const { object } = await generateObject({
     model: anthropic(SUMMARY_MODEL),
     schema: reviewSchema,
     system: REVIEW_SYSTEM_PROMPT,
-    prompt: `איכות הראיות: ${evidenceHe}\n\nתקציר המאמר:\n${abstract}\n\nהטיוטה:\nכותרת: ${draft.didYouKnowHe}\nמה זה אומר בשבילך: ${draft.takeawayHe}\nסיכום: ${draft.summaryHe}`,
+    prompt: `איכות הראיות: ${evidenceHe}\n\nהמקור (תקציר, ואם יש גם קטעים מהמאמר המלא):\n${source}\n\nהטיוטה:\nכותרת: ${draft.didYouKnowHe}\nמה זה אומר בשבילך: ${draft.takeawayHe}\nסיכום: ${draft.summaryHe}`,
   });
   return object;
 }
@@ -748,7 +760,10 @@ export async function generateResearchFacts(accessToken: string, query: string):
   if (combinedPool.length === 0 && fetched.bothFailed) {
     return { ok: false, error: `החיפוש נכשל בשני מאגרי המידע: ${errorMessage(fetched.firstError)}` };
   }
-  if (combinedPool.length === 0) return { ok: false, error: `לא נמצאו מאמרים עם תקציר זמין בנושא "${plan.topicHe}" ב-20 השנים האחרונות. נסה ניסוח רחב יותר.` };
+  // Reputable journals only (Roei, 2026-10-17). PubMed is already limited at
+  // the query; Semantic Scholar results are checked by venue here.
+  combinedPool = combinedPool.filter((p) => p.source === "pubmed" || isReputableJournal(p.venue));
+  if (combinedPool.length === 0) return { ok: false, error: `לא נמצאו מאמרים בנושא "${plan.topicHe}" בכתבי העת המובילים ב-20 השנים האחרונות. נסה ניסוח רחב יותר.` };
 
   // Pre-rank by how many of the aspect terms a paper's own text contains, so
   // the screener's size-limited slice holds the papers most likely to address
@@ -784,8 +799,11 @@ export async function generateResearchFacts(accessToken: string, query: string):
       const sampleSizeHe = extractSampleSizeHe(paper.abstract, tier === "meta_analysis" || tier === "systematic_review");
       const isPilot = /\bpilot\b|\bfeasibility\b/i.test(`${paper.title} ${paper.abstract}`);
       const evidenceHe = [evidenceLabelHe, sampleSizeHe ? `מדגם: ${sampleSizeHe}` : "מדגם לא צוין", isPilot ? "מחקר פיילוט" : null].filter(Boolean).join(" · ");
+      // Open-access papers are read in full (Europe PMC); otherwise the abstract.
+      const fullText = await fetchOpenAccessFullText({ pmid: paper.pmid, doi: paper.doi });
+      const source = fullText ? `${paper.abstract}\n\n${fullText}` : paper.abstract;
       const draft = await summarizePaperInHebrew(
-        { title: paper.title, abstract: paper.abstract, year: paper.year },
+        { title: paper.title, abstract: paper.abstract, year: paper.year, fullText },
         { userRequest: trimmed, focusEn: plan.focusEn, aspectEn: plan.aspectEn, matchLevel, evidenceHe }
       );
       // The reviewer is a safety net, not a gate: if it fails, the draft
@@ -793,15 +811,15 @@ export async function generateResearchFacts(accessToken: string, query: string):
       let facts = { didYouKnowHe: draft.didYouKnowHe, takeawayHe: draft.takeawayHe, summaryHe: draft.summaryHe };
       const reviewNotes: string[] = [];
       try {
-        const reviewed = await reviewFact(paper.abstract, evidenceHe, facts);
+        const reviewed = await reviewFact(source, evidenceHe, facts);
         facts = { didYouKnowHe: reviewed.didYouKnowHe, takeawayHe: reviewed.takeawayHe, summaryHe: reviewed.summaryHe };
         reviewNotes.push(...reviewed.issues.map((issue) => `תוקן: ${issue}`));
       } catch (err) {
         console.error("Research fact review failed:", err);
         reviewNotes.push("הבדיקה מול התקציר נכשלה. כדאי לקרוא בעיון לפני פרסום.");
       }
-      const missing = numbersMissingFromAbstract([facts.didYouKnowHe, facts.takeawayHe], paper.abstract);
-      if (missing.length > 0) reviewNotes.push(`לבדוק: המספרים ${missing.join(", ")} לא מופיעים בתקציר`);
+      const missing = numbersMissingFromAbstract([facts.didYouKnowHe, facts.takeawayHe], source);
+      if (missing.length > 0) reviewNotes.push(`לבדוק: המספרים ${missing.join(", ")} לא מופיעים במקור`);
       if (isPilot) reviewNotes.push("מחקר פיילוט: ראיות ראשוניות בלבד");
       return {
         paperTitle: paper.title,
@@ -821,6 +839,7 @@ export async function generateResearchFacts(accessToken: string, query: string):
         citationCount: paper.citationCount,
         venue: paper.venue,
         isTopTierJournal: isTopTierJournal(paper.venue),
+        fullTextUsed: !!fullText,
         sampleSizeHe,
         matchLevel,
       };

@@ -344,6 +344,7 @@ export interface ResearchFinding {
   // What the reviewer pass changed, plus deterministic warnings (numbers not
   // in the abstract, pilot study). Empty = nothing to flag.
   reviewNotes: string[];
+  fullTextUsed?: boolean; // read from the open-access full text (Europe PMC), not just the abstract
   // Both computed deterministically in researchAgent.ts from the paper's
   // publication-type/keyword signals (the same ones its evidence-hierarchy
   // ranking used) — not LLM-generated, so they can't drift from what

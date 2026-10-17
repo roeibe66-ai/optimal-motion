@@ -1836,6 +1836,15 @@ export default function LegacyAdminApp() {
                               <span className="on-light inline-flex items-center bg-surface-alt text-muted text-[10px] font-bold px-3 py-1.5 rounded-full border border-line">
                                 {finding.citationLabelHe}
                               </span>
+                              {/* Whether the fact was written from the open-access full
+                                  text or only the abstract (researchSources.ts). */}
+                              <span
+                                className={`inline-flex items-center text-[10px] font-extrabold px-3 py-1.5 rounded-full border ${
+                                  finding.fullTextUsed ? "bg-success/10 text-accent-fg border-success/20" : "on-light bg-surface-alt text-muted border-line"
+                                }`}
+                              >
+                                {finding.fullTextUsed ? "נקרא המאמר המלא" : "תקציר בלבד"}
+                              </span>
                               {finding.matchLevel === "direct" && (
                                 <span className="inline-flex items-center bg-success/10 text-accent-fg text-[10px] font-extrabold px-3 py-1.5 rounded-full border border-success/20">עונה ישירות על השאלה</span>
                               )}
