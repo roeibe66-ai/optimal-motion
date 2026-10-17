@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { AlertTriangle, Check, FlaskConical, Loader2, RotateCcw, Send, Siren } from "lucide-react";
 import RestAlertSetting from "@/app/components/patient/RestAlertSetting";
+import CoachConversations from "@/app/components/admin/CoachConversations";
 import { supabase } from "@/app/lib/supabase";
 import { askCoach, type CoachRedFlag } from "@/app/actions/coach";
 import type { AIChatMessage, Patient } from "@/app/types";
@@ -210,6 +211,7 @@ export default function CoachTestTab({ patients }: CoachTestTabProps) {
       </header>
 
       <CoachFlags />
+      <CoachConversations patients={patients} />
 
       <div className="on-light bg-surface rounded-[1.75rem] border border-line p-5 md:p-6 mb-6 flex flex-wrap items-end gap-4">
         <label className="flex-1 min-w-[14rem]">

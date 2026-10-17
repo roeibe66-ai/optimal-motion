@@ -22,6 +22,10 @@ import type { AIChatMessage } from "@/app/types";
 // message limit (coach_take_message, counted in the database); every reply
 // flagged urgent/emergency is recorded in coach_flags and pushed to the
 // admins' devices — from the test tab too, marked as a test.
+//
+// History (20261017120000_coach_messages.sql): each patient exchange is
+// stored for 6 months, so the chat continues where it stopped and the
+// therapist can read it; the patient can delete it. Test chats aren't stored.
 
 const MODEL = "claude-sonnet-5-5";
 const MAX_HISTORY_MESSAGES = 20;
@@ -89,8 +93,12 @@ export async function askCoach(accessToken: string, messages: AIChatMessage[], t
     const text = response.content.find((b) => b.type === "text")?.text;
     if (!text) return { ok: false, error: "לא התקבלה תשובה" };
     const out = JSON.parse(text) as { reply: string; red_flag: CoachRedFlag };
+    const lastMessage = messages[messages.length - 1].content;
+    if (!testPatientId) {
+      const flag = out.red_flag === "none" ? null : out.red_flag;
+      after(() => storeExchange(patientId, lastMessage, out.reply, flag));
+    }
     if (out.red_flag !== "none") {
-      const lastMessage = messages[messages.length - 1].content;
       const level = out.red_flag;
       // After the reply is on its way: the patient never waits for this.
       after(() => recordRedFlag({ patientId, patientName: patient.firstName, level, message: lastMessage, reply: out.reply, isTest: !!testPatientId }));
@@ -133,4 +141,46 @@ async function recordRedFlag(f: { patientId: string; patientName: string | null;
   } catch (err) {
     console.error("Recording coach red flag failed:", err);
   }
+}
+
+// Service role: rows are only ever written here, never by the client.
+async function storeExchange(patientId: string, message: string, reply: string, redFlag: Exclude<CoachRedFlag, "none"> | null) {
+  const { error } = await supabaseAdmin.from("coach_messages").insert([
+    { patient_id: Number(patientId), role: "user", content: message.slice(0, 8000), red_flag: null },
+    { patient_id: Number(patientId), role: "assistant", content: reply.slice(0, 8000), red_flag: redFlag },
+  ]);
+  if (error) console.error("Storing coach exchange failed:", error);
+}
+
+const HISTORY_LIMIT = 40;
+
+export type CoachHistoryResult = { ok: true; messages: (AIChatMessage & { redFlag: CoachRedFlag })[] } | { ok: false; error: string };
+
+// The patient's own recent conversation (RLS: own rows only), oldest first.
+export async function loadCoachHistory(accessToken: string): Promise<CoachHistoryResult> {
+  const caller = await verifyCaller(accessToken);
+  if (!caller) return { ok: false, error: "אין הרשאה" };
+  const { data: me } = await caller.client.from("patients").select("id").eq("user_id", caller.userId).maybeSingle();
+  if (!me) return { ok: false, error: "אין הרשאה" };
+  const { data, error } = await caller.client
+    .from("coach_messages")
+    .select("role, content, red_flag")
+    .eq("patient_id", me.id)
+    .order("created_at", { ascending: false })
+    .order("id", { ascending: false })
+    .limit(HISTORY_LIMIT);
+  if (error) return { ok: false, error: error.message };
+  return {
+    ok: true,
+    messages: (data ?? []).reverse().map((m) => ({ role: m.role as "user" | "assistant", content: m.content as string, redFlag: ((m.red_flag as CoachRedFlag | null) ?? "none") })),
+  };
+}
+
+export async function clearCoachHistory(accessToken: string): Promise<{ ok: boolean; error?: string }> {
+  const caller = await verifyCaller(accessToken);
+  if (!caller) return { ok: false, error: "אין הרשאה" };
+  const { data: me } = await caller.client.from("patients").select("id").eq("user_id", caller.userId).maybeSingle();
+  if (!me) return { ok: false, error: "אין הרשאה" };
+  const { error } = await caller.client.from("coach_messages").delete().eq("patient_id", me.id);
+  return error ? { ok: false, error: error.message } : { ok: true };
 }

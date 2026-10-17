@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { LegalBox, LegalList, LegalPage, LegalSection } from "@/app/components/legal/LegalPage";
 import { BUSINESS, LEGAL_UPDATED_LABEL } from "@/app/constants/legal";
+import { FEATURES } from "@/app/constants/features";
 
 // מדיניות פרטיות — the notice of חוק הגנת הפרטיות, התשמ"א-1981 (סעיף 11, as
 // amended by תיקון 13), for an app that holds health data. Must match what the
@@ -87,10 +88,21 @@ export default function PrivacyPage() {
           ותשובות שאלון ההיכרות (כולל שנת לידה, גובה, משקל, מגבלות וניתוחים). לפי תנאי השירות של Anthropic, מידע זה אינו
           משמש לאימון המודלים שלה.
         </p>
-        <p>
-          תוכן השיחות אינו נשמר אצלנו, למעט הודעות שהמערכת סימנה כמצב דחוף, שנשמרות כדי שהמטפל יוכל לטפל בהן. נשמר גם מונה
-          של מספר ההודעות היומי.
-        </p>
+        {/* Conversations are stored only once the coach is open to patients
+            (app/actions/coach.ts) — the text follows the same flag. Turning it
+            on is a data-flow change: bump LEGAL_VERSION with it. */}
+        {FEATURES.patientAiCoach ? (
+          <p>
+            השיחות שלך עם המאמן נשמרות אצלנו 6 חודשים, כדי שהשיחה תמשיך מאיפה שנעצרה וכדי שהמטפל יוכל לקרוא אותן ולוודא
+            שההכוונה מתאימה לך. אפשר למחוק את השיחה בכל רגע מתוך מסך המאמן. הודעות שהמערכת סימנה כמצב דחוף נשמרות גם בנפרד,
+            כדי שהמטפל יוכל לטפל בהן. נשמר גם מונה של מספר ההודעות היומי.
+          </p>
+        ) : (
+          <p>
+            תוכן השיחות אינו נשמר אצלנו, למעט הודעות שהמערכת סימנה כמצב דחוף, שנשמרות כדי שהמטפל יוכל לטפל בהן. נשמר גם מונה
+            של מספר ההודעות היומי.
+          </p>
+        )}
       </LegalSection>
 
       <LegalSection id="p-share" title="עם מי המידע משותף">

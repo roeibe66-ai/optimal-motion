@@ -7,6 +7,7 @@ import { Send, Sparkles, X } from "lucide-react";
 import { useAIAssistantChat } from "@/app/hooks/useAIAssistantChat";
 import type { AIAssistantContext } from "@/app/types";
 import { useAddress } from "@/app/hooks/useAddress";
+import { confirmAction } from "@/app/components/ui/feedback";
 import { useDialog } from "@/app/hooks/useDialog";
 
 interface PatientCoachSheetProps {
@@ -26,7 +27,7 @@ export default function PatientCoachSheet({ contextData }: PatientCoachSheetProp
   const t = useAddress();
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState("");
-  const { messages, isLoading, error, sendMessage } = useAIAssistantChat("patient", contextData);
+  const { messages, isLoading, error, sendMessage, clearHistory } = useAIAssistantChat("patient", contextData);
   const sheetRef = useRef<HTMLDivElement>(null);
   useDialog(sheetRef, isOpen, () => setIsOpen(false));
 
@@ -131,12 +132,35 @@ export default function PatientCoachSheet({ contextData }: PatientCoachSheetProp
         </div>
 
         {/* Notice at the point of collection (privacy policy, "מאמן ה-AI"):
-            what this is, where the messages go, and not for emergencies. */}
+            what this is, where the messages go, that they're kept (6 months,
+            readable by the therapist) and can be deleted, not for emergencies. */}
         <p className="px-6 pt-3 border-t border-line text-[0.6875rem] text-muted text-center leading-relaxed shrink-0">
-          מאמן ממוחשב (AI), לא אדם ולא ייעוץ רפואי. ההודעות נשלחות לעיבוד אצל Anthropic ·{" "}
+          מאמן ממוחשב (AI), לא אדם ולא ייעוץ רפואי. ההודעות נשלחות לעיבוד אצל Anthropic, ונשמרות 6 חודשים כך שגם המטפל
+          יכול לקרוא אותן ·{" "}
           <Link href="/privacy" target="_blank" className="underline font-bold">
             פרטים
           </Link>
+          {messages.length > 0 && (
+            <>
+              {" "}·{" "}
+              <button
+                type="button"
+                className="underline font-bold"
+                onClick={async () => {
+                  const ok = await confirmAction({
+                    title: "למחוק את השיחה?",
+                    message: "כל ההודעות שלך עם המאמן יימחקו, ולא יהיה אפשר לשחזר אותן.",
+                    confirmLabel: "מחיקה",
+                    cancelLabel: "ביטול",
+                    destructive: true,
+                  });
+                  if (ok) await clearHistory();
+                }}
+              >
+                מחיקת השיחה
+              </button>
+            </>
+          )}
           {" "}· במצב חירום: 101
         </p>
         <form onSubmit={handleSubmit} className="p-4 pt-2 flex gap-2 shrink-0 pb-[max(1rem,env(safe-area-inset-bottom))]">
